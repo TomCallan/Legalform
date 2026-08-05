@@ -69,25 +69,72 @@ graph TD
 |  - Classy White Legal Typography (Cinzel & Newsreader Fonts)           |
 |  - Mobile Signature Canvas Pad (iOS/Android Touch Support)            |
 |  - Real-Time UTC Timestamp & Client Telemetry Recorder                |
+|  - Integrated Admin Dashboard UI (/admin)                             |
 +-----------------------------------------------------------------------+
                                    |
                                    v
 +-----------------------------------------------------------------------+
 |                           BACKEND (Worker)                            |
 |  - Hono Routing Engine                                                |
-|  - Edge PDF Rendering (PDFKit / PDF-Lib)                             |
+|  - Edge PDF Generator (pdf-lib)                                       |
 |  - Cryptographic Audit Engine (SHA-256 Chain)                         |
-|  - Resend Mail Integration (Dual Party Delivery)                      |
+|  - Resend Mail Integration with Base64 PDF Attachments                |
 +-----------------------------------------------------------------------+
                   /                                    \
                  v                                      v
 +-------------------------------+      +--------------------------------+
 |       DATABASE (D1)           |      |        VAULT (R2)              |
-|  - Documents & Slugs          |      |  - Signed PDF Documents        |
+|  - Documents & Slugs          |      |  - Signed PDF Documents (.pdf) |
 |  - Rate Limits & Tokens       |      |  - JSON Telemetry Bundles       |
 |  - Submissions & Audit Logs   |      +--------------------------------+
 +-------------------------------+
 ```
+
+---
+
+## 📋 Comprehensive Feature Gap Analysis & To-Do List
+
+Below is the exhaustive breakdown of **Current Implementation State vs. Target Requirements** based on real-world user flows and legal requirements:
+
+### 1. Document Creation & Deployment Flow
+- [x] Declare legal documents via YAML specifications (`document`, `sections`, `form`, `signature`).
+- [x] CLI command (`deploy`) to publish document specs to Cloudflare Worker + D1.
+- [x] Dynamic field pre-filling via CLI flags (`-f key=value`) and URL query parameters (`?key=value`).
+- [x] Flexible Admin Email configuration (`--admin-email` flag, `LEGALFORM_ADMIN_EMAIL` env var, or YAML spec).
+- [ ] **[TODO] Edge PDF Generator inside Worker (`pdf-lib`):** Generate the complete executed PDF directly inside the Cloudflare Worker upon submission instead of requiring local Python execution.
+- [ ] **[TODO] Web Document Builder Interface (`/builder`):** Visual WYSIWYG editor on Cloudflare Pages to build, preview, and deploy YAML/JSON document specs without touching the CLI.
+
+---
+
+### 2. Signer Experience & Court Enforcement Flow
+- [x] Mobile-optimized, responsive signature pad with touch-action handling (`touch-action: none`).
+- [x] Classy white legal document typography using *Cinzel* & *Newsreader* Google Fonts.
+- [x] Statutory compliance footer for **US ESIGN Act (15 U.S.C. § 7001)** & **EU eIDAS Regulation (No 910/2014, Art. 25 AdES)**.
+- [x] Non-editable `datetime-auto` execution timestamp field locked to UTC.
+- [x] Field interaction telemetry recorder (focus, blur, value hashing, IP hashing, browser fingerprinting).
+- [ ] **[TODO] Interactive Form Validation Feedback:** Real-time inline field validation indicators for missing required fields before signature canvas touch.
+- [ ] **[TODO] Direct PDF Download Button on Thank You Screen:** Allow the counterparty to download their executed PDF contract immediately upon hitting "Submit" directly in their browser.
+
+---
+
+### 3. Execution, Email & Archiving Flow
+- [x] Save JSON submission records & audit trails to Cloudflare D1 database.
+- [x] Save JSON submission bundles to Cloudflare R2 bucket (`legalform-docs`).
+- [x] Resend email dispatch to both Signer (`signer_email`) and Admin (`admin_notification_email`).
+- [ ] **[TODO] Direct PDF Attachment in Resend Email:** Attach the actual auto-rendered `.pdf` file to the Resend confirmation emails so both parties get an instantly readable PDF in their inbox without opening JSON files.
+- [ ] **[TODO] R2 Storage Direct PDF Upload (`submissions/<doc_id>/<sub_id>.pdf`):** Save both `.json` (audit logs) and `.pdf` (formatted contract) to R2 storage for 1-click downloads.
+
+---
+
+### 4. Admin Management & Dashboard Flow
+- [x] Backend API endpoint `GET /api/documents/list` to fetch deployed document slugs and statuses.
+- [x] Backend API endpoint `POST /api/doc/:slug/close` to force-close active signing links.
+- [x] CLI commands (`list`, `close`, `export`, `pdf`).
+- [ ] **[TODO] Cloudflare Pages Web Admin Dashboard (`/admin`):**
+  - Protected by `ADMIN_API_KEY` authentication.
+  - Table of all deployed documents, status toggles (Active / Closed), and submission counts.
+  - 1-Click "Download Executed PDF" button next to each submission.
+  - 1-Click "Revoke Slug" toggle.
 
 ---
 
@@ -100,17 +147,14 @@ graph TD
 
 ### 2. Signing & Verification (`/api/submit/:slug`)
 - `GET /api/doc/:slug` -> Fetch spec, validate expiry, log `page_open` audit event.
-- `POST /api/submit/:slug` -> Process signature, compute SHA-256 hash, render PDF, save to R2, send dual emails.
-
-### 3. PDF Certificate Engine
-- Auto-generates formal PDF document containing full agreement clauses, filled fields, embedded signature graphic, and SHA-256 audit digest.
+- `POST /api/submit/:slug` -> Process signature, compute SHA-256 hash, render PDF via `pdf-lib`, save `.pdf` + `.json` to R2, send dual emails with PDF attachment.
 
 ---
 
-## 🚀 Future Roadmap & Execution Phases
+## 🚀 Execution Roadmap & Task Priority
 
-- [x] Phase 1: Core Worker API, D1 Schema, and Basic HTML UI.
-- [x] Phase 2: Classy White Legal UI Redesign, R2 Storage, Resend Email.
-- [x] Phase 3: eIDAS & ESIGN Act Compliance, UTC Timestamp Auto-Lock.
-- [ ] **Phase 4 (Next):** Edge PDF Generation directly inside Cloudflare Worker (eliminates need for local python PDF command).
-- [ ] **Phase 5 (Next):** Integrated Web Admin Dashboard in Pages (`/admin`).
+- [x] **Phase 1 (Completed):** Core Worker API, D1 Schema, Hono Router, Basic UI.
+- [x] **Phase 2 (Completed):** Classy White Legal UI Redesign, R2 Storage, Resend Email.
+- [x] **Phase 3 (Completed):** eIDAS & ESIGN Act Compliance, UTC Timestamp Auto-Lock, CLI Commands (`list`, `close`, `export`, `pdf`).
+- [ ] **Phase 4 (In Progress):** Worker Edge PDF Generation (`pdf-lib`) & Resend Email PDF Attachments.
+- [ ] **Phase 5 (Upcoming):** Cloudflare Pages Admin Dashboard (`/admin`).
