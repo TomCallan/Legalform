@@ -13,10 +13,81 @@ LegalForm is an end-to-end legal electronic document platform built on Cloudflar
 
 ---
 
+## 📄 YAML Specification Format Guide
+
+LegalForm documents are declared using simple, expressive YAML specifications (see [`my-nda.yaml`](file:///C:/Users/TomCa/Desktop/Sig/my-nda.yaml) for a complete working example).
+
+### Top-Level Properties (`document`)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | String | Unique internal document identifier (e.g. `nda-2026-001`) |
+| `title` | String | Title displayed at the top of the agreement |
+| `jurisdiction` | String | Legal jurisdiction (e.g. `State of Delaware, USA`) |
+| `expires_in_days` | Integer | Number of days until the signing link expires |
+| `max_submissions_per_email` | Integer | Rate limit ceiling per signer email (default: `1`) |
+| `max_submissions_per_ip` | Integer | Rate limit ceiling per IP address (default: `3`) |
+| `require_email_verification` | Boolean | Whether an email verification link is required (`true`/`false`) |
+| `legal_footer` | String | Legal agreement text shown directly above the signature block |
+
+---
+
+### Sections Structure (`sections`)
+
+Each document consists of a list of sequential section objects. There are 3 supported section types:
+
+#### 1. Static Text Section (`type: "static"`)
+Contains Markdown-formatted text for legal clauses and headings:
+```yaml
+- type: "static"
+  content: |
+    ## 1. Confidential Information
+    "Confidential Information" refers to non-public details...
+```
+
+#### 2. Form Input Section (`type: "form"`)
+Defines interactive form inputs that signers must fill out:
+```yaml
+- type: "form"
+  fields:
+    - name: "disclosing_party"     # Variable key
+      label: "Disclosing Party"   # Input label in UI
+      type: "text"                 # text | email | select | date
+      required: true               # Validation constraint
+      placeholder: "Company Name"  # Ghost text
+      value: "Acme Corp"           # Default / pre-filled value
+    - name: "term"
+      label: "Agreement Term"
+      type: "select"
+      options: ["1 Year", "2 Years", "5 Years"]
+```
+
+#### 3. Signature Section (`type: "signature"`)
+Displays the digital canvas signature pad along with signature metadata fields:
+```yaml
+- type: "signature"
+  signer_label: "Authorized Signer"
+  fields:
+    - name: "signer_title"
+      label: "Title / Position"
+      type: "text"
+      required: true
+    - name: "date_signed"
+      label: "Date"
+      type: "date"
+      required: true
+```
+
+---
+
 ## 🛠 Local Hosting Quick Start
 
-### 1. Start Local Backend API (Worker + D1 in SQLite mode)
+### 1. Install Dependencies & Start Local Backend API
 ```bash
+# Install Python CLI dependencies
+pip install -r requirements.txt
+
+# Start Worker + D1 in SQLite mode
 cd worker
 npm install
 npx wrangler d1 execute legalform-db --local --file=../schema.sql
@@ -35,7 +106,7 @@ python3 cli/legalform.py serve --port 8080
 python3 cli/legalform.py init -o custom-nda.yaml
 
 # Deploy with pre-filled contents via CLI options:
-python3 cli/legalform.py deploy custom-nda.yaml -f counterparty_name="Acme Corp" -f counterparty_email="ceo@acme.com"
+python3 cli/legalform.py deploy my-nda.yaml -f receiving_party="Global Tech Ltd" -f signer_email="ceo@globaltech.com"
 ```
 The CLI will output a local signing URL (e.g. `http://localhost:8080/?slug=a1b2c3d4e5f6`) ready to view and sign in any browser or mobile device.
 
@@ -65,14 +136,14 @@ npx wrangler d1 execute legalform-db --remote --file=schema.sql
 cd worker
 npx wrangler deploy
 
-# Set API authentication & email secrets
+# Set API authentication secret (RESEND_API_KEY is optional)
 npx wrangler secret put ADMIN_API_KEY
-npx wrangler secret put RESEND_API_KEY
 ```
 
 ### Step 3: Deploy Cloudflare Pages Static UI
 ```bash
 cd ../pages
+npx wrangler pages project create legalform-ui --production-branch=main
 npx wrangler pages deploy . --project-name=legalform-ui
 ```
 
@@ -85,15 +156,15 @@ export LEGALFORM_PAGES="https://legalform-ui.pages.dev"
 export LEGALFORM_KEY="your-admin-api-key"
 
 # Deploy document to production Cloudflare Worker & D1
-python3 cli/legalform.py deploy my-nda.yaml -f counterparty_name="Global Tech Ltd" -f counterparty_email="signer@globaltech.com"
+python3 cli/legalform.py deploy my-nda.yaml -f receiving_party="Global Tech Ltd" -f signer_email="signer@globaltech.com"
 ```
 
 **Output Signable Link Example:**
 ```text
 🚀 Document Deployed Successfully!
-• Document ID: nda-20260805-170000
+• Document ID: nda-sample-2026
 • Signing URL: https://legalform-ui.pages.dev/?slug=9f8e7d6c5b4a
-• Pre-filled Fields: {'counterparty_name': 'Global Tech Ltd', 'counterparty_email': 'signer@globaltech.com'}
+• Pre-filled Fields: {'receiving_party': 'Global Tech Ltd', 'signer_email': 'signer@globaltech.com'}
 • Expiry Date: 2026-09-04 17:00:00
 ```
 

@@ -1,0 +1,62 @@
+document:
+  id: "nda-sample-2026"
+  title: "Mutual Non-Disclosure Agreement"
+  jurisdiction: "State of Delaware, USA"
+  expires_in_days: 30
+  max_submissions_per_email: 1
+  max_submissions_per_ip: 3
+  require_email_verification: false
+  legal_footer: "By signing below, you agree that your electronic signature constitutes your intent to be legally bound under the US ESIGN Act and UETA."
+
+sections:
+  - type: "static"
+    content: |
+      ## 1. Purpose & Scope
+      The parties wish to explore a potential business relationship ("Purpose"). In connection with the Purpose, each party may disclose confidential business, technical, or financial information to the other.
+
+  - type: "form"
+    fields:
+      - name: "disclosing_party"
+        label: "Disclosing Party Name"
+        type: "text"
+        required: true
+        placeholder: "Legal entity or individual name"
+        value: "Acme Corporation"  # Pre-filled default value
+
+      - name: "receiving_party"
+        label: "Receiving Party (Signer Name)"
+        type: "text"
+        required: true
+        placeholder: "Full legal name"
+
+      - name: "signer_email"
+        label: "Signer Email Address"
+        type: "email"
+        required: true
+        placeholder: "name@company.com"
+
+      - name: "term_years"
+        label: "Confidentiality Term (Years)"
+        type: "select"
+        required: true
+        options: ["1 Year", "2 Years", "3 Years", "5 Years"]
+        value: "3 Years"
+
+  - type: "static"
+    content: |
+      ## 2. Non-Disclosure Obligations
+      The Receiving Party agrees to hold and maintain in strict confidence all Confidential Information and shall not disclose such information to any third party without prior written authorization.
+
+  - type: "signature"
+    signer_label: "Authorized Signer"
+    fields:
+      - name: "signer_title"
+        label: "Signer Title / Capacity"
+        type: "text"
+        required: true
+        placeholder: "e.g., Chief Executive Officer"
+
+      - name: "signature_date"
+        label: "Date of Execution"
+        type: "date"
+        required: true
