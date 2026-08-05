@@ -386,7 +386,21 @@ function renderForm(sections, requireVerification) {
         const group = renderSingleField(f);
         div.appendChild(group);
       });
-      const sigGroup = renderSingleField({ type: 'signature', label: 'Signature of Record', name: 'signature' });
+
+      if (section.pre_signed && section.pre_signature_data) {
+        const preSigGroup = document.createElement('div');
+        preSigGroup.className = 'form-group';
+        preSigGroup.innerHTML = `
+          <label style="color:var(--primary-navy)">Owner Pre-Executed Signature of Record</label>
+          <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:0.75rem;border-radius:4px;display:inline-block;margin-top:0.25rem;">
+            <img src="${section.pre_signature_data}" style="max-height:70px;display:block;" alt="Owner Signature">
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;">Digitally Pre-Executed by Document Owner</div>
+        `;
+        div.appendChild(preSigGroup);
+      }
+
+      const sigGroup = renderSingleField({ type: 'signature', label: 'Counterparty Signature of Record', name: 'signature' });
       div.appendChild(sigGroup);
     }
     else if (section.type === 'field') {

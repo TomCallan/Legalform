@@ -562,85 +562,164 @@ async function exportDocPdf(docId) {
       const submittedAt = sub.submitted_at ? new Date(sub.submitted_at * 1000).toUTCString() : 'N/A';
       const auditHash = sub.audit_hash || 'N/A';
       
-      let fields = {};
-      try { fields = typeof sub.data_json === 'string' ? JSON.parse(sub.data_json) : (sub.data_json || {}); }
-      catch(e) {}
+      let specObj = null;
+      if (sub.spec) {
+        specObj = typeof sub.spec === 'string' ? JSON.parse(sub.spec) : sub.spec;
+      }
 
-      // Title
+      const docTitle = (specObj?.document?.title || "OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION").toUpperCase();
+      const jurisdiction = specObj?.document?.jurisdiction || "";
+      const legalFooter = specObj?.document?.legal_footer || "";
+      const sections = specObj?.sections || [];
+
+      // Header Title
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setTextColor(15, 23, 42);
-      doc.text("OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION", 105, 20, { align: "center" });
+      doc.text(docTitle, 105, 18, { align: "center", maxWidth: 180 });
 
-      // Subtitle
-      doc.setFont("helvetica", "oblique");
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text("Legally Enforceable Instrument under EU eIDAS (Art. 25 AdES) & US ESIGN Act (15 U.S.C. § 7001)", 105, 26, { align: "center" });
+      // Subtitle / Jurisdiction
+      let currentY = 25;
+      if (jurisdiction) {
+        doc.setFont("helvetica", "oblique");
+        doc.setFontSize(8.5);
+        doc.setTextColor(71, 85, 105);
+        doc.text(`Jurisdiction: ${jurisdiction}`, 105, currentY, { align: "center", maxWidth: 180 });
+        currentY += 6;
+      }
 
       doc.setLineWidth(0.8);
       doc.setDrawColor(15, 23, 42);
-      doc.line(14, 30, 196, 30);
+      doc.line(14, currentY, 196, currentY);
+      currentY += 6;
 
-      // Metadata Table
-      const tableRows = [
-        ["Document ID", docId],
-        ["Submission ID", subId],
+      // Render Contract Clauses if spec sections present
+      if (sections.length > 0) {
+        sections.forEach(sec => {
+          if (sec.type === 'static' && sec.content) {
+            const lines = sec.content.split('\n');
+            lines.forEach(l => {
+              const trimmed = l.trim();
+              if (!trimmed) return;
+              if (currentY > 270) { doc.addPage(); currentY = 20; }
+              
+              if (trimmed.startsWith('## ')) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10.5);
+                doc.setTextColor(15, 23, 42);
+                doc.text(trimmed.replace('## ', ''), 14, currentY);
+                currentY += 6;
+              } else if (trimmed.startsWith('# ')) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
+                doc.setTextColor(15, 23, 42);
+                doc.text(trimmed.replace('# ', ''), 14, currentY);
+                currentY += 7;
+              } else {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8.5);
+                doc.setTextColor(30, 41, 59);
+                const splitText = doc.splitTextToSize(trimmed, 180);
+                doc.text(splitText, 14, currentY);
+                currentY += (splitText.length * 4) + 2;
+              }
+            });
+            currentY += 4;
+          } else if (sec.type === 'form' && sec.fields) {
+            const formRows = [];
+            sec.fields.forEach(f => {
+              const val = fields[f.name] !== undefined ? fields[f.name] : (f.value || '');
+              formRows.push([f.label || f.name, String(val)]);
+            });
+            if (formRows.length > 0) {
+              if (currentY > 250) { doc.addPage(); currentY = 20; }
+              doc.autoTable({
+                startY: currentY,
+                body: formRows,
+                theme: 'grid',
+                styles: { fontSize: 8.5, cellPadding: 3 }
+              });
+              currentY = doc.lastAutoTable.finalY + 6;
+            }
+          }
+        });
+      } else {
+        // Fallback metadata table
+        const tableRows = [
+          ["Document ID", docId],
+          ["Submission ID", subId],
+          ["Execution UTC Timestamp", submittedAt],
+          ["Signer Email", email]
+        ];
+
+        Object.entries(fields).forEach(([k, v]) => {
+          tableRows.push([k, String(v)]);
+        });
+
+        doc.autoTable({
+          startY: currentY,
+          head: [['Field Name', 'Value / Execution Data']],
+          body: tableRows,
+          theme: 'grid',
+          headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+          styles: { fontSize: 8.5, cellPadding: 3.5 }
+        });
+        currentY = doc.lastAutoTable.finalY + 8;
+      }
+
+      if (currentY > 240) { doc.addPage(); currentY = 20; }
+
+      // Legal Footer
+      if (legalFooter) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        const splitFooter = doc.splitTextToSize(legalFooter, 180);
+        doc.text(splitFooter, 14, currentY);
+        currentY += (splitFooter.length * 3.5) + 6;
+      }
+
+      // Metadata Summary Table
+      const sigMeta = [
         ["Execution UTC Timestamp", submittedAt],
-        ["Signer Email", email]
+        ["Signer Email", email],
+        ["Submission ID", subId],
+        ["Cryptographic Audit SHA-256 Digest", auditHash]
       ];
 
-      Object.entries(fields).forEach(([k, v]) => {
-        tableRows.push([k, String(v)]);
-      });
-
       doc.autoTable({
-        startY: 35,
-        head: [['Field Name', 'Value / Execution Data']],
-        body: tableRows,
+        startY: currentY,
+        body: sigMeta,
         theme: 'grid',
-        headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 9, cellPadding: 4 }
+        styles: { fontSize: 8, cellPadding: 3 }
       });
 
-      let finalY = doc.lastAutoTable.finalY + 10;
-
-      // Audit Hash Box
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9.5);
-      doc.setTextColor(15, 23, 42);
-      doc.text("CRYPTOGRAPHIC AUDIT SHA-256 DIGEST:", 14, finalY);
-
-      doc.setFont("courier", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(30, 58, 138);
-      doc.text(auditHash, 14, finalY + 6);
-
-      finalY += 16;
+      currentY = doc.lastAutoTable.finalY + 8;
+      if (currentY > 250) { doc.addPage(); currentY = 20; }
 
       // Signature Image
       const sigData = sub.signature_svg || '';
       if (sigData && sigData.startsWith('data:image')) {
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(9.5);
+        doc.setFontSize(9);
         doc.setTextColor(15, 23, 42);
-        doc.text("SIGNATURE OF RECORD:", 14, finalY);
+        doc.text("SIGNATURE OF RECORD:", 14, currentY);
         try {
-          doc.addImage(sigData, 'PNG', 14, finalY + 4, 70, 25);
-          finalY += 34;
+          doc.addImage(sigData, 'PNG', 14, currentY + 3, 65, 22);
+          currentY += 28;
         } catch(imgErr) {
-          finalY += 10;
+          currentY += 8;
         }
       }
 
       doc.setLineWidth(0.4);
       doc.setDrawColor(203, 213, 225);
-      doc.line(14, finalY, 196, finalY);
+      doc.line(14, currentY, 196, currentY);
 
       doc.setFont("helvetica", "italic");
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
-      doc.text("Recorded to Cloudflare D1 Ledger & Archived in R2 Storage Vault", 105, finalY + 6, { align: "center" });
+      doc.text("Legally Binding Advanced Electronic Signature (eIDAS Regulation EU No 910/2014 & US ESIGN Act)", 105, currentY + 5, { align: "center" });
 
       doc.save(`executed_contract_${docId}_${idx + 1}.pdf`);
     });
