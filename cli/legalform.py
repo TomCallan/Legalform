@@ -15,10 +15,11 @@ console = Console()
 REGISTRY_FILE = Path(".legalform_registry.json")
 
 def get_config():
-    api_base = os.getenv("LEGALFORM_API", "http://127.0.0.1:8787").rstrip("/")
-    api_key = os.getenv("LEGALFORM_KEY", "")
-    pages_base = os.getenv("LEGALFORM_PAGES", "http://localhost:8080").rstrip("/")
+    api_base = os.getenv("LEGALFORM_API", "http://127.0.0.1:8787").strip(' "\'').rstrip("/")
+    api_key = os.getenv("LEGALFORM_KEY", "").strip(' "\'')
+    pages_base = os.getenv("LEGALFORM_PAGES", "http://localhost:8080").strip(' "\'').rstrip("/")
     return api_base, api_key, pages_base
+
 
 @app.command()
 def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Output YAML filename")):
