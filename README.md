@@ -29,7 +29,7 @@ In a separate terminal window:
 python3 cli/legalform.py serve --port 8080
 ```
 
-### 3. Deploy & Sign a Pre-Filled Document
+### 3. Deploy & Sign a Pre-Filled Document Locally
 ```bash
 # Create starter template
 python3 cli/legalform.py init -o custom-nda.yaml
@@ -37,26 +37,64 @@ python3 cli/legalform.py init -o custom-nda.yaml
 # Deploy with pre-filled contents via CLI options:
 python3 cli/legalform.py deploy custom-nda.yaml -f counterparty_name="Acme Corp" -f counterparty_email="ceo@acme.com"
 ```
-The CLI will output a signing URL (e.g. `http://localhost:8080/?slug=a1b2c3d4e5f6`) ready to view and sign in any browser or mobile device.
+The CLI will output a local signing URL (e.g. `http://localhost:8080/?slug=a1b2c3d4e5f6`) ready to view and sign in any browser or mobile device.
 
 ---
 
-## ☁️ Cloudflare Production Deployment
+## ☁️ Cloudflare Production Deployment & Publishing Signable Links
 
-### Step 1: Initialize Cloudflare Services
+### Step 1: Initialize Cloudflare Infrastructure
 ```bash
+# Login to your Cloudflare account
 npx wrangler login
+
+# Create production D1 database
 npx wrangler d1 create legalform-db
+# Note: Copy the database_id output into worker/wrangler.toml
+
+# Create production R2 bucket
 npx wrangler r2 bucket create legalform-docs
 ```
 
-### Step 2: Apply Database Schema & Deploy Worker
+### Step 2: Apply Schema & Deploy Worker Backend
 ```bash
+# Execute D1 SQL schema on production
 npx wrangler d1 execute legalform-db --remote --file=schema.sql
-cd worker && npx wrangler deploy
+
+# Deploy Worker API
+cd worker
+npx wrangler deploy
+
+# Set API authentication & email secrets
+npx wrangler secret put ADMIN_API_KEY
+npx wrangler secret put RESEND_API_KEY
 ```
 
-### Step 3: Deploy Pages Frontend
+### Step 3: Deploy Cloudflare Pages Static UI
 ```bash
-cd pages && npx wrangler pages deploy . --project-name=legalform-ui
+cd ../pages
+npx wrangler pages deploy . --project-name=legalform-ui
 ```
+
+### Step 4: Deploy & Generate a Production Signable Link via CLI
+Configure your CLI environment variables to point to your live Cloudflare endpoints:
+
+```bash
+export LEGALFORM_API="https://legalform-api.your-subdomain.workers.dev"
+export LEGALFORM_PAGES="https://legalform-ui.pages.dev"
+export LEGALFORM_KEY="your-admin-api-key"
+
+# Deploy document to production Cloudflare Worker & D1
+python3 cli/legalform.py deploy my-nda.yaml -f counterparty_name="Global Tech Ltd" -f counterparty_email="signer@globaltech.com"
+```
+
+**Output Signable Link Example:**
+```text
+🚀 Document Deployed Successfully!
+• Document ID: nda-20260805-170000
+• Signing URL: https://legalform-ui.pages.dev/?slug=9f8e7d6c5b4a
+• Pre-filled Fields: {'counterparty_name': 'Global Tech Ltd', 'counterparty_email': 'signer@globaltech.com'}
+• Expiry Date: 2026-09-04 17:00:00
+```
+
+Share the generated `https://legalform-ui.pages.dev/?slug=...` link with your counterparty to collect cryptographically audited electronic signatures over Cloudflare's global edge network.
