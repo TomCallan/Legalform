@@ -5,7 +5,7 @@ compatibility_date = "2026-08-05"
 [[d1_databases]]
 binding = "DB"
 database_name = "legalform-db"
-database_id = "YOUR_D1_DATABASE_ID"
+database_id = "ef2bce22-24a5-4e2c-9df9-31baf909aa4e"
 
 [[r2_buckets]]
 binding = "R2"
