@@ -10,6 +10,7 @@ LegalForm is an end-to-end legal electronic document platform built on Cloudflar
 * ✍️ **Pre-Filled Document Specs:** Supply pre-filled values inside the YAML spec or pass `--fill field_name="Value"` dynamically via the CLI.
 * 🇪🇺 **EU & US Court-Enforceable Legal Framework:** Native legal clauses and cryptographic audit chain compliant with EU eIDAS (Advanced Electronic Signature - AdES), UETA, and ESIGN.
 * 📧 **Dual Resend Execution Certificates:** Automatically emails both the signer and the document owner / admin with official execution certificates.
+* 📄 **R2 JSON & PDF Certificate Generation:** Exports JSON records from Cloudflare R2 and converts them into court-grade PDF certificates with embedded signature images.
 * 🛡️ **Cryptographic Audit Trail:** Telemetry records field focus, value hashing, IP hashes, UTC NTP server timestamps, and archives JSON records to Cloudflare R2 storage.
 
 ---
@@ -73,6 +74,42 @@ Displays the digital canvas signature pad along with automatic date/timestamp fi
       label: "Date & Timestamp of Execution"
       type: "datetime-auto"       # Auto-locks exact current UTC date & time
       required: true
+```
+
+---
+
+## 🛠 Command-Line Interface (CLI) Guide
+
+LegalForm includes a full Python CLI (`cli/legalform.py`) for deploying documents, inspecting active links, closing slugs, exporting audit logs, and generating PDFs.
+
+### 1. Deploy Document (`deploy`)
+Deploy a YAML spec to production or local backend API:
+```bash
+python3 cli/legalform.py deploy my-nda.yaml --admin-email "admin@yourcompany.com" -f receiving_party="Global Tech Ltd" -f signer_email="signer@globaltech.com"
+```
+
+### 2. List Deployed Slugs & Status (`list`)
+View all deployed document slugs, their active/closed status, and direct signing URLs:
+```bash
+python3 cli/legalform.py list
+```
+
+### 3. Force Close a Document Slug (`close`)
+Revoke access to an active document slug so it can no longer be viewed or signed:
+```bash
+python3 cli/legalform.py close d988f9599f0d
+```
+
+### 4. Export Submission Audit Dataset (`export`)
+Download full submission JSON records and client audit logs from the database:
+```bash
+python3 cli/legalform.py export nda-sample-2026 -o submission.json
+```
+
+### 5. Convert Submission JSON to Court-Grade PDF (`pdf`)
+Convert an R2 submission JSON record or exported JSON into an official PDF certificate with embedded signature images:
+```bash
+python3 cli/legalform.py pdf submission.json -o executed-agreement.pdf
 ```
 
 ---
