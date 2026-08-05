@@ -404,6 +404,10 @@ app.get('/api/export/:doc_id', async (c) => {
 
   const docId = c.req.param('doc_id');
 
+  const doc = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE id = ? OR slug = ?'
+  ).bind(docId, docId).first();
+
   const submissions = await c.env.DB.prepare(
     'SELECT * FROM submissions WHERE document_id = ? ORDER BY submitted_at DESC'
   ).bind(docId).all();
@@ -414,9 +418,39 @@ app.get('/api/export/:doc_id', async (c) => {
 
   return c.json({
     document_id: docId,
+    doc: doc,
     submissions: submissions.results,
     audit_logs: auditLogs.results
   });
+});
+
+// ── Admin: Delete Document & Purge R2 Archives ──────────────
+app.delete('/api/doc/:id', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
+  const adminKey = c.env.ADMIN_API_KEY;
+
+  if (adminKey && apiKey !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const id = c.req.param('id');
+
+  // Fetch submissions to purge from R2
+  const subs = await c.env.DB.prepare(
+    'SELECT id FROM submissions WHERE document_id = ?'
+  ).bind(id).all();
+
+  for (const sub of (subs.results || [])) {
+    const r2Key = `submissions/${id}/${sub.id}.json`;
+    try { await c.env.R2.delete(r2Key); } catch(e) {}
+  }
+
+  await c.env.DB.prepare('DELETE FROM submissions WHERE document_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM audit_logs WHERE document_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM documents WHERE id = ? OR slug = ?').bind(id, id).run();
+
+  return c.json({ success: true, message: `Document '${id}' and all R2 archived objects purged.` });
 });
 
 // ── Admin: Force Close Document / Slug ───────────────────────

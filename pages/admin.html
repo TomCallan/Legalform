@@ -6,24 +6,25 @@
   <title>LegalForm Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
-      --bg: #f8fafc;
+      --bg: #f5f5f7;
       --paper: #ffffff;
-      --border: #cbd5e1;
-      --text: #0f172a;
-      --muted: #64748b;
-      --primary: #1e3a8a;
-      --primary-hover: #1e40af;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --muted: #86868b;
+      --primary: #0066cc;
+      --primary-hover: #004499;
+      --success: #34c759;
+      --danger: #ff3b30;
+      --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+      --radius: 10px;
     }
-    * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Inter, sans-serif; -webkit-font-smoothing: antialiased; }
     body {
       margin: 0;
       background: var(--bg);
@@ -31,37 +32,41 @@
       min-height: 100vh;
     }
     .header {
-      background: #ffffff;
-      border-bottom: 2px solid var(--primary);
-      padding: 1.25rem 2rem;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: var(--card-shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     .header h1 {
       margin: 0;
-      font-family: 'Cinzel', serif;
-      font-size: 1.4rem;
-      color: var(--primary);
-      letter-spacing: 0.02em;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
     }
     .main {
-      max-width: 1100px;
+      max-width: 1060px;
       margin: 2rem auto;
-      padding: 0 1rem;
+      padding: 0 1.25rem;
     }
     .card {
       background: var(--paper);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: var(--radius);
       padding: 1.5rem;
       margin-bottom: 1.5rem;
       box-shadow: var(--card-shadow);
     }
     .auth-box {
-      max-width: 420px;
-      margin: 4rem auto;
+      max-width: 380px;
+      margin: 5rem auto;
       text-align: center;
     }
     .form-group {
@@ -70,115 +75,181 @@
     }
     label {
       display: block;
-      font-weight: 600;
-      font-size: 0.85rem;
+      font-weight: 500;
+      font-size: 0.8rem;
       margin-bottom: 0.4rem;
-      color: var(--text);
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
+      color: var(--muted);
+      letter-spacing: -0.01em;
     }
     input[type="password"], input[type="text"], input[type="email"], select {
       width: 100%;
-      padding: 0.75rem 1rem;
+      padding: 0.65rem 0.85rem;
       border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 0.95rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
       outline: none;
+      background: #fafafa;
+      transition: all 0.15s ease;
     }
     textarea {
       width: 100%;
       height: 320px;
       font-family: 'Fira Code', monospace;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       padding: 1rem;
       border: 1px solid var(--border);
-      border-radius: 4px;
-      background: #0f172a;
-      color: #f8fafc;
+      border-radius: 8px;
+      background: #1c1c1e;
+      color: #f2f2f7;
       outline: none;
       line-height: 1.5;
     }
-    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.15);
+    }
     .btn {
       background: var(--primary);
       color: white;
       border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 4px;
-      font-weight: 600;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
     }
     .btn:hover { background: var(--primary-hover); }
-    .btn-secondary { background: #475569; }
-    .btn-secondary:hover { background: #334155; }
-    .btn-success { background: var(--success); }
-    .btn-success:hover { background: #15803d; }
-    .btn-danger { background: var(--danger); }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-    .action-group { display: flex; gap: 0.5rem; }
+    .btn-secondary { background: #e5e5ea; color: #1d1d1f; }
+    .btn-secondary:hover { background: #d1d1d6; }
+    .btn-danger { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: white; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    
+    /* Apple Minimal Dropdown Menu */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background-color: #ffffff;
+      min-width: 180px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      z-index: 50;
+      padding: 0.4rem;
+    }
+    .dropdown-content a, .dropdown-content button {
+      color: #1d1d1f;
+      padding: 0.5rem 0.75rem;
+      text-decoration: none;
+      display: block;
+      font-size: 0.82rem;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .dropdown-content a:hover, .dropdown-content button:hover {
+      background-color: #f2f2f7;
+    }
+    .dropdown-content button.danger:hover {
+      background-color: rgba(255, 59, 48, 0.1);
+      color: var(--danger);
+    }
+    .dropdown:hover .dropdown-content { display: block; }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
     }
     th, td {
-      padding: 0.75rem 1rem;
+      padding: 0.85rem 1rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
     th {
-      background: #f1f5f9;
-      font-weight: 600;
-      text-transform: uppercase;
+      font-weight: 500;
+      color: var(--muted);
       font-size: 0.75rem;
-      letter-spacing: 0.05em;
+      letter-spacing: -0.01em;
     }
     .badge {
       display: inline-block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 500;
     }
-    .badge-active { background: #dcfce7; color: #15803d; }
-    .badge-closed { background: #fee2e2; color: #b91c1c; }
+    .badge-active { background: #e4f9ec; color: #1b8a43; }
+    .badge-closed { background: #ffebeb; color: #d70015; }
     .url-link {
       color: var(--primary);
       text-decoration: none;
       font-family: monospace;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
     .url-link:hover { text-decoration: underline; }
-    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); }
+    .tabs { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
     .tab {
-      padding: 0.75rem 1.25rem;
+      padding: 0.75rem 0;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 500;
       font-size: 0.9rem;
-      border-bottom: 3px solid transparent;
+      border-bottom: 2px solid transparent;
       color: var(--muted);
+      transition: all 0.15s ease;
     }
     .tab.active {
       border-bottom-color: var(--primary);
-      color: var(--primary);
+      color: var(--text);
+    }
+
+    /* Pre-Sign Modal Styling */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(5px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-paper {
+      background: #ffffff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 520px;
+      padding: 1.75rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
     }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h1>LegalForm Admin Portal</h1>
-    <div id="auth-status" style="font-size:0.85rem;color:var(--muted)"></div>
+    <h1>LegalForm Admin</h1>
+    <div id="auth-status" style="font-size:0.82rem;color:var(--muted)"></div>
   </div>
 
   <div class="main">
     <div id="login-view" class="card auth-box">
-      <h2 style="font-family:'Cinzel',serif;margin-top:0">Admin Authentication</h2>
-      <p style="color:var(--muted);font-size:0.9rem">Enter your secret ADMIN_API_KEY to access your legal documents.</p>
+      <h2 style="font-size:1.25rem;font-weight:600;margin-top:0">Authentication</h2>
+      <p style="color:var(--muted);font-size:0.85rem">Enter your secret ADMIN_API_KEY to access your legal documents.</p>
       <form id="login-form">
         <div class="form-group">
           <label for="admin-key">Admin Secret Key</label>
@@ -196,12 +267,12 @@
 
       <!-- TAB 1: LEDGER -->
       <div id="tab-ledger" class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
           <div>
-            <h2 style="margin:0;font-family:'Cinzel',serif">Deployed Documents & Slugs</h2>
-            <p style="margin:0.25rem 0 0 0;color:var(--muted);font-size:0.85rem">Live overview of active electronic agreements on Cloudflare D1</p>
+            <h2 style="margin:0;font-size:1.1rem;font-weight:600">Documents</h2>
+            <p style="margin:0.2rem 0 0 0;color:var(--muted);font-size:0.8rem">Overview of active agreements and execution records</p>
           </div>
-          <button id="refresh-btn" class="btn btn-sm">Refresh Table</button>
+          <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
         </div>
 
         <div style="overflow-x:auto">
@@ -211,9 +282,9 @@
                 <th>Document ID</th>
                 <th>Slug</th>
                 <th>Status</th>
-                <th>Live Signing URL</th>
+                <th>Signing URL</th>
                 <th>Expires</th>
-                <th>Actions</th>
+                <th style="text-align:right">Actions</th>
               </tr>
             </thead>
             <tbody id="docs-tbody">
@@ -225,14 +296,14 @@
 
       <!-- TAB 2: DEPLOY NEW SPEC -->
       <div id="tab-deploy" class="card" style="display:none">
-        <h2 style="margin-top:0;font-family:'Cinzel',serif">Deploy New Legal Document</h2>
-        <p style="color:var(--muted);font-size:0.85rem">Paste a YAML spec or load a starter template to publish a signable agreement link.</p>
+        <h2 style="margin-top:0;font-size:1.1rem;font-weight:600">Deploy New Document</h2>
+        <p style="color:var(--muted);font-size:0.8rem">Paste a YAML spec or load a starter template to publish a signable agreement link.</p>
 
-        <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center;">
-          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Load Mutual NDA Spec</button>
-          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Load Liability Waiver Spec</button>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Mutual NDA Spec</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Liability Waiver Spec</button>
           <input type="file" id="yaml-file-input" accept=".yaml,.yml" style="display:none" onchange="uploadYamlFile(event)">
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('yaml-file-input').click()">Upload YAML File</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('yaml-file-input').click()">Upload YAML</button>
         </div>
 
         <form id="deploy-form">
@@ -252,10 +323,29 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-success" style="width:100%;margin-top:1rem">Publish Document & Generate Signing Link</button>
+          <button type="submit" class="btn" style="width:100%;margin-top:0.5rem">Publish & Generate Link</button>
         </form>
       </div>
 
+    </div>
+  </div>
+
+  <!-- PRE-SIGN MODAL -->
+  <div id="presign-modal" class="modal-backdrop">
+    <div class="modal-paper">
+      <h3 style="margin-top:0;font-size:1.1rem;font-weight:600">Pre-Sign Document</h3>
+      <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1rem">Affix your owner pre-signature to this document before sharing the link.</p>
+      
+      <div class="form-group">
+        <label>Owner Signature Canvas</label>
+        <canvas id="presign-canvas" style="width:100%;height:150px;border:1px solid var(--border);border-radius:8px;background:#fafafa;touch-action:none;"></canvas>
+        <button type="button" id="clear-presign-btn" class="btn btn-secondary btn-sm" style="margin-top:0.4rem">Clear Signature</button>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1.5rem">
+        <button class="btn btn-secondary" onclick="closePreSignModal()">Cancel</button>
+        <button class="btn" onclick="savePreSignature()">Save Pre-Signature</button>
+      </div>
     </div>
   </div>
 
@@ -267,14 +357,18 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 const PAGES_BASE = window.location.origin;
 
 let apiKey = localStorage.getItem('LEGALFORM_ADMIN_KEY') || '';
+let currentPresignDocId = null;
+let currentPresignSpec = null;
+let presignCanvasCtx = null;
+let presignDataUrl = null;
 
 const STARTER_NDA_YAML = `document:
   id: "nda-sample-${Date.now()}"
   title: "MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT"
   jurisdiction: "International, European Union (eIDAS Regulation EU No 910/2014) & State of Delaware, USA"
   expires_in_days: 30
-  max_submissions_per_email: 1
-  max_submissions_per_ip: 3
+  max_submissions_per_email: 99
+  max_submissions_per_ip: 99
   require_email_verification: false
   admin_notification_email: "tomcallan0@outlook.com"
   legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement electronically as of the timestamp recorded below."
@@ -408,8 +502,8 @@ document.getElementById('deploy-form').addEventListener('submit', async (e) => {
       slug: slug,
       spec: JSON.stringify(parsedSpec),
       expires_at: expiresAt,
-      max_per_email: parsedSpec.document.max_submissions_per_email || 1,
-      max_per_ip: parsedSpec.document.max_submissions_per_ip || 3,
+      max_per_email: parsedSpec.document.max_submissions_per_email || 99,
+      max_per_ip: parsedSpec.document.max_submissions_per_ip || 99,
       require_verification: parsedSpec.document.require_email_verification ? 1 : 0
     };
 
@@ -509,7 +603,7 @@ async function loadDocs() {
       const isActive = d.status === 'active';
       const badgeClass = isActive ? 'badge-active' : 'badge-closed';
       const signingUrl = `${PAGES_BASE}/?slug=${d.slug}`;
-      const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleString() : 'Never';
+      const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleDateString() : 'Never';
 
       return `
         <tr>
@@ -518,11 +612,16 @@ async function loadDocs() {
           <td><span class="badge ${badgeClass}">${d.status}</span></td>
           <td><a href="${signingUrl}" target="_blank" class="url-link">${signingUrl}</a></td>
           <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
-          <td>
-            <div class="action-group">
-              <button class="btn btn-success btn-sm" onclick="exportDocPdf('${d.id}')">Export PDF</button>
-              <button class="btn btn-secondary btn-sm" onclick="exportDocJson('${d.id}')">Export JSON</button>
-              ${isActive ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : '<span style="color:var(--muted);font-size:0.8rem">Closed</span>'}
+          <td style="text-align:right">
+            <div class="dropdown">
+              <button class="btn btn-secondary btn-sm">Options ▾</button>
+              <div class="dropdown-content">
+                <button onclick="exportDocPdf('${d.id}')">Export PDF</button>
+                <button onclick="exportDocJson('${d.id}')">Export JSON</button>
+                <button onclick="openPreSignModal('${d.id}')">Pre-Sign Document</button>
+                ${isActive ? `<button onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : ''}
+                <button class="danger" onclick="deleteDocPurgeR2('${d.id}')">Delete & Purge R2</button>
+              </div>
             </div>
           </td>
         </tr>
@@ -530,6 +629,125 @@ async function loadDocs() {
     }).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+  }
+}
+
+async function openPreSignModal(docId) {
+  currentPresignDocId = docId;
+  document.getElementById('presign-modal').style.display = 'flex';
+  
+  const canvas = document.getElementById('presign-canvas');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 150;
+  presignCanvasCtx = canvas.getContext('2d');
+  presignCanvasCtx.strokeStyle = '#0f172a';
+  presignCanvasCtx.lineWidth = 2.2;
+  presignCanvasCtx.lineCap = 'round';
+
+  let drawing = false;
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  };
+
+  canvas.onmousedown = canvas.ontouchstart = (e) => {
+    drawing = true;
+    const p = getPos(e);
+    presignCanvasCtx.beginPath();
+    presignCanvasCtx.moveTo(p.x, p.y);
+  };
+  canvas.onmousemove = canvas.ontouchmove = (e) => {
+    if (!drawing) return;
+    const p = getPos(e);
+    presignCanvasCtx.lineTo(p.x, p.y);
+    presignCanvasCtx.stroke();
+  };
+  canvas.onmouseup = canvas.ontouchend = () => {
+    drawing = false;
+    presignDataUrl = canvas.toDataURL();
+  };
+
+  document.getElementById('clear-presign-btn').onclick = () => {
+    presignCanvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    presignDataUrl = null;
+  };
+}
+
+function closePreSignModal() {
+  document.getElementById('presign-modal').style.display = 'none';
+}
+
+async function savePreSignature() {
+  if (!presignDataUrl) {
+    alert('Please draw your pre-signature on the canvas first.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/export/${currentPresignDocId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const data = await res.json();
+    if (!data.doc || !data.doc.spec) {
+      alert('Could not fetch document spec to update pre-signature.');
+      return;
+    }
+
+    const specObj = typeof data.doc.spec === 'string' ? JSON.parse(data.doc.spec) : data.doc.spec;
+    (specObj.sections || []).forEach(s => {
+      if (s.type === 'signature') {
+        s.pre_signed = true;
+        s.pre_signature_data = presignDataUrl;
+      }
+    });
+
+    const updateRes = await fetch(`${API_BASE}/api/documents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        id: data.doc.id,
+        slug: data.doc.slug,
+        spec: JSON.stringify(specObj),
+        expires_at: data.doc.expires_at,
+        max_per_email: data.doc.max_per_email,
+        max_per_ip: data.doc.max_per_ip,
+        require_verification: data.doc.require_verification
+      })
+    });
+
+    if (updateRes.ok) {
+      alert('Owner Pre-Signature successfully saved to document!');
+      closePreSignModal();
+    } else {
+      alert('Failed to save pre-signature.');
+    }
+  } catch(err) {
+    alert('Error saving pre-signature: ' + err.message);
+  }
+}
+
+async function deleteDocPurgeR2(docId) {
+  if (!confirm(`Are you sure you want to PERMANENTLY DELETE document '${docId}' and purge all associated JSON records from R2 vault?`)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/doc/${docId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const result = await res.json();
+    if (res.ok) {
+      alert(result.message || 'Document and R2 objects purged.');
+      loadDocs();
+    } else {
+      alert(result.error || 'Failed to delete document.');
+    }
+  } catch(err) {
+    alert('Error deleting document: ' + err.message);
   }
 }
 
@@ -562,9 +780,15 @@ async function exportDocPdf(docId) {
       const submittedAt = sub.submitted_at ? new Date(sub.submitted_at * 1000).toUTCString() : 'N/A';
       const auditHash = sub.audit_hash || 'N/A';
       
+      let fields = {};
+      try { fields = typeof sub.data_json === 'string' ? JSON.parse(sub.data_json) : (sub.data_json || {}); }
+      catch(e) {}
+
       let specObj = null;
       if (sub.spec) {
         specObj = typeof sub.spec === 'string' ? JSON.parse(sub.spec) : sub.spec;
+      } else if (data.doc && data.doc.spec) {
+        specObj = typeof data.doc.spec === 'string' ? JSON.parse(data.doc.spec) : data.doc.spec;
       }
 
       const docTitle = (specObj?.document?.title || "OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION").toUpperCase();
