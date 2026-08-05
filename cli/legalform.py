@@ -18,7 +18,8 @@ def get_config():
     api_base = os.getenv("LEGALFORM_API", "http://127.0.0.1:8787").strip(' "\'').rstrip("/")
     api_key = os.getenv("LEGALFORM_KEY", "").strip(' "\'')
     pages_base = os.getenv("LEGALFORM_PAGES", "http://localhost:8080").strip(' "\'').rstrip("/")
-    return api_base, api_key, pages_base
+    admin_email = os.getenv("LEGALFORM_ADMIN_EMAIL", "").strip(' "\'')
+    return api_base, api_key, pages_base, admin_email
 
 
 @app.command()
@@ -28,12 +29,13 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
         "document": {
             "id": f"nda-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
             "title": "Mutual Non-Disclosure Agreement",
-            "jurisdiction": "Delaware, USA",
+            "jurisdiction": "State of Delaware, USA",
             "expires_in_days": 30,
             "max_submissions_per_email": 1,
             "max_submissions_per_ip": 3,
             "require_email_verification": False,
-            "legal_footer": "By signing, you agree that this electronic signature constitutes your intent to be bound under the ESIGN Act."
+            "admin_notification_email": "",
+            "legal_footer": "By signing, you agree that this electronic signature constitutes your intent to be bound under the ESIGN Act and eIDAS Regulation."
         },
         "sections": [
             {
@@ -64,16 +66,7 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
             },
             {
                 "type": "signature",
-                "name": "signature",
-                "label": "Draw Your Signature",
-                "required": True
-            },
-            {
-                "type": "checkbox",
-                "name": "esign_consent",
-                "label": "I consent to execute this document electronically in accordance with ESIGN / UETA regulations.",
-                "required": True,
-                "value": True  # Pre-filled default state
+                "signer_label": "Authorized Signer"
             }
         ]
     }
@@ -85,14 +78,23 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
 @app.command()
 def deploy(
     spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec"),
-    fill: list[str] = typer.Option([], "--fill", "-f", help="Pre-fill field values (e.g. -f counterparty_name='Acme Corp' -f counterparty_email='jane@acme.com')")
+    fill: list[str] = typer.Option([], "--fill", "-f", help="Pre-fill field values (e.g. -f counterparty_name='Acme Corp')"),
+    admin_email: str = typer.Option("", "--admin-email", "-a", help="Recipient email for admin notification copy of signed document")
 ):
     """Deploy a document specification to Cloudflare Worker or local backend API with optional field pre-filling."""
     if not spec_path.exists():
         console.print(f"[bold red]Error:[/bold red] File {spec_path} does not exist.")
         raise typer.Exit(code=1)
 
+    api_base, api_key, pages_base, env_admin_email = get_config()
     spec = yaml.safe_load(spec_path.read_text())
+    doc_meta = spec.get("document", {})
+
+    # Set admin notification email priority: CLI option > ENV var > YAML spec
+    final_admin_email = admin_email or env_admin_email or doc_meta.get("admin_notification_email", "")
+    if final_admin_email:
+        doc_meta["admin_notification_email"] = final_admin_email
+        spec["document"] = doc_meta
     doc_meta = spec.get("document", {})
     doc_id = doc_meta.get("id")
     if not doc_id:
@@ -129,7 +131,7 @@ def deploy(
         "require_verification": doc_meta.get("require_email_verification", False)
     }
 
-    api_base, api_key, pages_base = get_config()
+    api_base, api_key, pages_base, env_admin_email = get_config()
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"

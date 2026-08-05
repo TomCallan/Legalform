@@ -1,13 +1,13 @@
 document:
   id: "nda-sample-2026"
   title: "MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT"
-  jurisdiction: "State of Delaware, United States of America"
+  jurisdiction: "International, European Union (eIDAS Regulation EU No 910/2014) & State of Delaware, USA"
   expires_in_days: 30
   max_submissions_per_email: 1
   max_submissions_per_ip: 3
   require_email_verification: false
   admin_notification_email: "tomcallan0@outlook.com"
-  legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement electronically as of the timestamp recorded below, agreeing that such electronic execution constitutes a legally binding signature pursuant to the Electronic Signatures in Global and National Commerce Act (ESIGN, 15 U.S.C. § 7001 et seq.) and the Uniform Electronic Transactions Act (UETA)."
+  legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement electronically as of the timestamp recorded below, agreeing that such electronic execution constitutes a legally binding Advanced Electronic Signature (AdES) pursuant to EU Regulation No 910/2014 (eIDAS), Article 25(1), the US ESIGN Act (15 U.S.C. § 7001 et seq.), UETA, and applicable national laws."
 
 sections:
   - type: "static"
@@ -46,10 +46,13 @@ sections:
       ## 3. TERM & DURATION OF CONFIDENTIALITY
       The non-disclosure obligations of this Agreement shall survive and remain binding upon the Receiving Party for a period of five (5) years from the execution timestamp recorded herein, or for as long as the Confidential Information remains a trade secret under applicable law, whichever is longer.
 
-      ## 4. GOVERNING LAW & JURISDICTION
-      This Agreement shall be governed by, construed, and enforced in accordance with the laws of the State of Delaware, without regard to its conflict of law principles. Any legal suit, action, or proceeding arising out of or related to this Agreement shall be instituted exclusively in the federal or state courts located in the State of Delaware.
+      ## 4. EUROPEAN & INTERNATIONAL ELECTRONIC SIGNATURE VALIDITY (eIDAS REGULATION)
+      The Parties explicitly acknowledge and agree that this Agreement is executed using an Advanced Electronic Signature (AdES) compliant with Regulation (EU) No 910/2014 of the European Parliament and of the Council (eIDAS Regulation), Article 25(1), which mandates that an electronic signature shall not be denied legal effect and admissibility as evidence in legal proceedings solely on the grounds that it is in an electronic form. Telemetry recorded includes SHA-256 field hashing, IP hashing, browser fingerprinting, and NTP server-verified timestamping stored in immutable Cloudflare D1 and R2 infrastructure.
 
-      ## 5. SEVERABILITY & INTEGRATION
+      ## 5. GOVERNING LAW & JURISDICTION
+      This Agreement shall be governed by, construed, and enforced in accordance with the laws of the State of Delaware, USA, and applicable European Union directives for cross-border electronic agreements, without regard to conflict of law principles. Any legal suit, action, or proceeding arising out of or related to this Agreement shall be instituted in competent judicial courts.
+
+      ## 6. SEVERABILITY & INTEGRATION
       If any provision of this Agreement is held to be invalid or unenforceable, such provision shall be modified to the minimum extent necessary to make it valid and enforceable, and the remaining provisions shall continue in full force and effect. This Agreement constitutes the entire understanding between the Parties relative to the subject matter hereof.
 
   - type: "signature"
