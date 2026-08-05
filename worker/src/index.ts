@@ -303,6 +303,7 @@ app.post('/api/submit/:slug', async (c) => {
   const r2Record = {
     submission_id: submissionId,
     document_id: doc.id,
+    spec: typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec,
     email,
     submitted_at: now(),
     fields: body.fields,

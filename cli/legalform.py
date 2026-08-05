@@ -267,6 +267,7 @@ def close_doc(slug: str = typer.Argument(..., help="Slug or Document ID to force
 @app.command()
 def pdf(
     json_path: Path = typer.Argument(..., help="Path to submission JSON file (downloaded from R2 or export)"),
+    spec_path: Path = typer.Option(Path("my-nda.yaml"), "--spec", "-s", help="Path to document YAML spec to render full contract clauses"),
     output: Path = typer.Option(Path("executed-agreement.pdf"), "--output", "-o", help="Output PDF file path")
 ):
     """Convert an R2 submission JSON record into an official, court-grade PDF legal certificate."""
@@ -350,41 +351,137 @@ def pdf(
 
     story = []
 
-    # Header Title
-    story.append(Paragraph("OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION", title_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("Legally Enforceable Instrument under EU eIDAS (Art. 25 AdES) & US ESIGN Act (15 U.S.C. § 7001)", subtitle_style))
-    story.append(Spacer(1, 15))
+    # Parse spec if available
+    spec_data = sub.get("spec")
+    if not spec_data and spec_path and spec_path.exists():
+        try: spec_data = yaml.safe_load(spec_path.read_text())
+        except Exception: spec_data = None
+
+    doc_title = "OFFICIAL EXECUTED LEGAL INSTRUMENT"
+    jurisdiction = ""
+    legal_footer = ""
+    sections = []
+
+    if isinstance(spec_data, dict):
+        doc_title = spec_data.get("document", {}).get("title", doc_title).upper()
+        jurisdiction = spec_data.get("document", {}).get("jurisdiction", "")
+        legal_footer = spec_data.get("document", {}).get("legal_footer", "")
+        sections = spec_data.get("sections", [])
+
+    # Document Header Title
+    story.append(Paragraph(doc_title, title_style))
+    if jurisdiction:
+        story.append(Spacer(1, 2))
+        story.append(Paragraph(f"Jurisdiction: {jurisdiction}", subtitle_style))
+    story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0f172a'), spaceAfter=15))
 
-    # Meta Table
-    table_data = [
-        [Paragraph("Document ID", header_label_style), Paragraph(str(doc_id), cell_style)],
-        [Paragraph("Submission ID", header_label_style), Paragraph(str(sub_id), cell_style)],
+    # Render Contract Body Clauses if spec is present
+    if sections:
+        body_style = ParagraphStyle(
+            'DocBody',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9.5,
+            leading=14,
+            textColor=colors.HexColor('#1e293b')
+        )
+        h2_style = ParagraphStyle(
+            'DocH2',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            leading=15,
+            textColor=colors.HexColor('#0f172a'),
+            spaceBefore=10,
+            spaceAfter=5
+        )
+
+        for sec in sections:
+            sec_type = sec.get("type")
+            if sec_type == "static":
+                content = sec.get("content", "")
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if not line: continue
+                    if line.startswith("## "):
+                        story.append(Paragraph(line.replace("## ", ""), h2_style))
+                    elif line.startswith("# "):
+                        story.append(Paragraph(line.replace("# ", ""), title_style))
+                    else:
+                        story.append(Paragraph(line, body_style))
+                        story.append(Spacer(1, 4))
+            elif sec_type == "form":
+                form_rows = []
+                for f in sec.get("fields", []):
+                    fname = f.get("name")
+                    flabel = f.get("label", fname)
+                    val = fields.get(fname, f.get("value", ""))
+                    form_rows.append([Paragraph(str(flabel), header_label_style), Paragraph(str(val), cell_style)])
+                if form_rows:
+                    story.append(Spacer(1, 6))
+                    ftable = Table(form_rows, colWidths=[180, 350])
+                    ftable.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+                        ('PADDING', (0, 0), (-1, -1), 5),
+                    ]))
+                    story.append(ftable)
+                    story.append(Spacer(1, 10))
+
+    else:
+        # Fallback metadata table if spec not provided
+        table_data = [
+            [Paragraph("Document ID", header_label_style), Paragraph(str(doc_id), cell_style)],
+            [Paragraph("Submission ID", header_label_style), Paragraph(str(sub_id), cell_style)],
+            [Paragraph("Execution UTC Timestamp", header_label_style), Paragraph(str(time_str), cell_style)],
+            [Paragraph("Signer Email", header_label_style), Paragraph(str(email), cell_style)]
+        ]
+
+        for k, v in fields.items():
+            table_data.append([Paragraph(str(k), header_label_style), Paragraph(str(v), cell_style)])
+
+        t = Table(table_data, colWidths=[180, 350])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+            ('PADDING', (0, 0), (-1, -1), 6),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(t)
+        story.append(Spacer(1, 15))
+
+    # Signature Block & Legal Footer
+    story.append(Spacer(1, 15))
+    if legal_footer:
+        footer_style = ParagraphStyle(
+            'FooterText',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=8.5,
+            leading=12,
+            textColor=colors.HexColor('#475569')
+        )
+        story.append(Paragraph(legal_footer, footer_style))
+        story.append(Spacer(1, 10))
+
+    # Signature Image & Metadata Table
+    sig_meta = [
         [Paragraph("Execution UTC Timestamp", header_label_style), Paragraph(str(time_str), cell_style)],
-        [Paragraph("Signer Email", header_label_style), Paragraph(str(email), cell_style)]
+        [Paragraph("Signer Email", header_label_style), Paragraph(str(email), cell_style)],
+        [Paragraph("Submission ID", header_label_style), Paragraph(str(sub_id), cell_style)],
+        [Paragraph("Cryptographic Audit SHA-256 Digest", header_label_style), Paragraph(str(audit_hash), hash_style)]
     ]
 
-    for k, v in fields.items():
-        table_data.append([Paragraph(str(k), header_label_style), Paragraph(str(v), cell_style)])
-
-    t = Table(table_data, colWidths=[180, 350])
-    t.setStyle(TableStyle([
+    sig_table = Table(sig_meta, colWidths=[180, 350])
+    sig_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
-        ('PADDING', (0, 0), (-1, -1), 6),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('PADDING', (0, 0), (-1, -1), 5),
     ]))
-    story.append(t)
-    story.append(Spacer(1, 20))
+    story.append(sig_table)
+    story.append(Spacer(1, 15))
 
-    # Cryptographic Hash Box
-    story.append(Paragraph("CRYPTOGRAPHIC AUDIT SHA-256 DIGEST", header_label_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph(str(audit_hash), hash_style))
-    story.append(Spacer(1, 20))
-
-    # Signature Image
     if sig_data and ',' in sig_data:
         try:
             b64_str = sig_data.split(',', 1)[1]
@@ -393,14 +490,14 @@ def pdf(
             sig_img = Image(img_buf, width=220, height=80)
             
             story.append(Paragraph("SIGNATURE OF RECORD", header_label_style))
-            story.append(Spacer(1, 6))
+            story.append(Spacer(1, 4))
             story.append(sig_img)
-            story.append(Spacer(1, 15))
+            story.append(Spacer(1, 10))
         except Exception as img_err:
             console.print(f"[dim yellow]Notice: Could not render embedded signature image: {img_err}[/dim yellow]")
 
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#cbd5e1'), spaceBefore=10, spaceAfter=10))
-    story.append(Paragraph("Recorded to Cloudflare D1 Ledger & Archived in R2 Storage Vault", subtitle_style))
+    story.append(Paragraph("Legally Binding Advanced Electronic Signature (eIDAS Regulation EU No 910/2014 & US ESIGN Act)", subtitle_style))
 
     pdf_doc.build(story)
     console.print(f"[bold green]Successfully generated court-grade PDF certificate:[/bold green] {output.resolve()}")
