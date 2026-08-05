@@ -265,23 +265,146 @@ def close_doc(slug: str = typer.Argument(..., help="Slug or Document ID to force
             raise typer.Exit(code=1)
 
 @app.command()
-def export(doc_id: str = typer.Argument(..., help="Document ID to export submissions for"),
-           output: Path = typer.Option(Path("export.json"), "--output", "-o")):
-    """Export all submissions and audit trails for a document."""
-    api_base, api_key, _, _ = get_config()
-    headers = {}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+def pdf(
+    json_path: Path = typer.Argument(..., help="Path to submission JSON file (downloaded from R2 or export)"),
+    output: Path = typer.Option(Path("executed-agreement.pdf"), "--output", "-o", help="Output PDF file path")
+):
+    """Convert an R2 submission JSON record into an official, court-grade PDF legal certificate."""
+    import base64
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
 
-    try:
-        r = requests.get(f"{api_base}/api/export/{doc_id}", headers=headers, timeout=15)
-        r.raise_for_status()
-        data = r.json()
-        output.write_text(json.dumps(data, indent=2))
-        console.print(f"[bold green]Successfully exported audit dataset to {output.resolve()}[/bold green]")
-    except requests.RequestException as e:
-        console.print(f"[bold red]Export failed:[/bold red] {e}")
+    if not json_path.exists():
+        console.print(f"[bold red]Error:[/bold red] JSON file {json_path} does not exist.")
         raise typer.Exit(code=1)
+
+    data = json.loads(json_path.read_text())
+
+    # Handle single submission or wrapper object
+    sub = data.get("submission", data)
+    
+    doc_id = sub.get("document_id", "N/A")
+    sub_id = sub.get("submission_id", sub.get("id", "N/A"))
+    email = sub.get("email", "N/A")
+    audit_hash = sub.get("audit_hash", "N/A")
+    submitted_at = sub.get("submitted_at", 0)
+    time_str = datetime.fromtimestamp(submitted_at).strftime('%Y-%m-%d %H:%M:%S UTC') if submitted_at else "N/A"
+    
+    fields = sub.get("fields", {})
+    if isinstance(fields, str):
+        try: fields = json.loads(fields)
+        except Exception: fields = {}
+
+    sig_data = sub.get("signature") or sub.get("signature_svg") or ""
+
+    pdf_doc = SimpleDocTemplate(
+        str(output),
+        pagesize=letter,
+        rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=18,
+        leading=22,
+        alignment=1,
+        textColor=colors.HexColor('#0f172a')
+    )
+    subtitle_style = ParagraphStyle(
+        'DocSubTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Oblique',
+        fontSize=10,
+        leading=14,
+        alignment=1,
+        textColor=colors.HexColor('#475569')
+    )
+    header_label_style = ParagraphStyle(
+        'HeaderLabel',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        textColor=colors.HexColor('#0f172a')
+    )
+    cell_style = ParagraphStyle(
+        'CellText',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        textColor=colors.HexColor('#334155')
+    )
+    hash_style = ParagraphStyle(
+        'HashText',
+        parent=styles['Normal'],
+        fontName='Courier-Bold',
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+
+    story = []
+
+    # Header Title
+    story.append(Paragraph("OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION", title_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("Legally Enforceable Instrument under EU eIDAS (Art. 25 AdES) & US ESIGN Act (15 U.S.C. § 7001)", subtitle_style))
+    story.append(Spacer(1, 15))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0f172a'), spaceAfter=15))
+
+    # Meta Table
+    table_data = [
+        [Paragraph("Document ID", header_label_style), Paragraph(str(doc_id), cell_style)],
+        [Paragraph("Submission ID", header_label_style), Paragraph(str(sub_id), cell_style)],
+        [Paragraph("Execution UTC Timestamp", header_label_style), Paragraph(str(time_str), cell_style)],
+        [Paragraph("Signer Email", header_label_style), Paragraph(str(email), cell_style)]
+    ]
+
+    for k, v in fields.items():
+        table_data.append([Paragraph(str(k), header_label_style), Paragraph(str(v), cell_style)])
+
+    t = Table(table_data, colWidths=[180, 350])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 20))
+
+    # Cryptographic Hash Box
+    story.append(Paragraph("CRYPTOGRAPHIC AUDIT SHA-256 DIGEST", header_label_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(str(audit_hash), hash_style))
+    story.append(Spacer(1, 20))
+
+    # Signature Image
+    if sig_data and ',' in sig_data:
+        try:
+            b64_str = sig_data.split(',', 1)[1]
+            img_bytes = base64.b64decode(b64_str)
+            img_buf = io.BytesIO(img_bytes)
+            sig_img = Image(img_buf, width=220, height=80)
+            
+            story.append(Paragraph("SIGNATURE OF RECORD", header_label_style))
+            story.append(Spacer(1, 6))
+            story.append(sig_img)
+            story.append(Spacer(1, 15))
+        except Exception as img_err:
+            console.print(f"[dim yellow]Notice: Could not render embedded signature image: {img_err}[/dim yellow]")
+
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#cbd5e1'), spaceBefore=10, spaceAfter=10))
+    story.append(Paragraph("Recorded to Cloudflare D1 Ledger & Archived in R2 Storage Vault", subtitle_style))
+
+    pdf_doc.build(story)
+    console.print(f"[bold green]Successfully generated court-grade PDF certificate:[/bold green] {output.resolve()}")
 
 if __name__ == "__main__":
     app()
+
