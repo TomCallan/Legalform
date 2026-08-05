@@ -203,7 +203,7 @@
 // API Config: auto-detect local vs production worker
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8787'
-  : 'https://legalform-api.your-subdomain.workers.dev';
+  : 'https://legalform-api.tomcallan0.workers.dev';
 
 const params = new URLSearchParams(window.location.search);
 const slug = params.get('slug') || window.location.pathname.split('/').pop();
