@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Sign Legal Document</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,16 +19,19 @@
       --danger: #ef4444;
       --success: #10b981;
     }
-    * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
     body {
       min-height: 100vh;
       margin: 0;
-      padding: 2rem 1rem;
+      padding: 1rem 0.75rem;
       background: var(--bg-gradient);
       color: var(--text-main);
       display: flex;
       justify-content: center;
       align-items: flex-start;
+    }
+    @media (min-width: 640px) {
+      body { padding: 2rem 1rem; }
     }
     .container {
       width: 100%;
@@ -37,31 +40,40 @@
     .card {
       background: var(--card-bg);
       backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 2rem;
-      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    @media (min-width: 640px) {
+      .card { padding: 2rem; margin-bottom: 1.5rem; }
     }
     .doc-header {
       text-align: center;
     }
     .doc-header h1 {
       margin: 0 0 0.5rem 0;
-      font-size: 1.875rem;
+      font-size: 1.5rem;
       font-weight: 700;
       background: linear-gradient(90deg, #818cf8, #c084fc);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    @media (min-width: 640px) {
+      .doc-header h1 { font-size: 1.875rem; }
+    }
     .doc-header p {
       margin: 0;
       color: var(--text-muted);
-      font-size: 0.875rem;
+      font-size: 0.85rem;
     }
     .prose {
       color: #cbd5e1;
       line-height: 1.6;
+      font-size: 0.95rem;
+      overflow-wrap: break-word;
     }
     .prose h1, .prose h2, .prose h3 {
       color: var(--text-main);
@@ -85,7 +97,7 @@
       border: 1px solid var(--card-border);
       border-radius: 8px;
       color: var(--text-main);
-      font-size: 0.95rem;
+      font-size: 16px; /* Prevents iOS auto-zoom on input focus */
       outline: none;
       transition: border-color 0.2s;
     }
@@ -94,6 +106,7 @@
     }
     .signature-container {
       position: relative;
+      width: 100%;
     }
     .signature-pad {
       border: 2px dashed var(--card-border);
@@ -102,20 +115,27 @@
       cursor: crosshair;
       touch-action: none;
       width: 100%;
-      height: 160px;
+      height: 180px;
+      display: block;
     }
     .signature-actions {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 0.5rem;
+    }
+    .signature-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
     }
     .btn-clear {
       background: transparent;
       border: none;
       color: var(--text-muted);
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       cursor: pointer;
       text-decoration: underline;
+      padding: 0.25rem 0.5rem;
     }
     .checkbox-group {
       display: flex;
@@ -123,15 +143,16 @@
       gap: 0.75rem;
     }
     .checkbox-group input[type="checkbox"] {
-      width: 1.1rem;
-      height: 1.1rem;
-      margin-top: 0.15rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin-top: 0.1rem;
       accent-color: var(--primary);
+      flex-shrink: 0;
     }
     .btn-submit {
       background: linear-gradient(90deg, #6366f1, #8b5cf6);
       color: white;
-      padding: 0.875rem 1.5rem;
+      padding: 1rem 1.5rem;
       border: none;
       border-radius: 8px;
       font-size: 1rem;
@@ -139,6 +160,7 @@
       cursor: pointer;
       width: 100%;
       transition: opacity 0.2s, transform 0.1s;
+      min-height: 48px; /* Mobile touch friendly target */
     }
     .btn-submit:hover { opacity: 0.95; }
     .btn-submit:active { transform: scale(0.99); }
@@ -150,8 +172,11 @@
       border-radius: 8px;
       margin-bottom: 1.5rem;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    @media (min-width: 640px) {
+      .verify-banner { flex-direction: row; justify-content: space-between; align-items: center; }
     }
     .audit-notice {
       font-size: 0.75rem;
@@ -160,6 +185,7 @@
       padding-top: 1rem;
       border-top: 1px solid var(--card-border);
       text-align: center;
+      line-height: 1.4;
     }
     .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; display: none; }
   </style>
@@ -262,6 +288,8 @@ function renderForm(sections, requireVerification) {
 
         const actions = document.createElement('div');
         actions.className = 'signature-actions';
+        actions.innerHTML = '<span class="signature-hint">✍️ Draw inside box</span>';
+        
         const clearBtn = document.createElement('button');
         clearBtn.type = 'button';
         clearBtn.className = 'btn-clear';
@@ -277,7 +305,14 @@ function renderForm(sections, requireVerification) {
         input.required = !!section.required;
         if (section.validation) input.pattern = section.validation;
         if (section.field_type) input.type = section.field_type;
-        if (section.default === 'today' && section.field_type === 'date') {
+
+        // Apply pre-filled content if provided in YAML spec or URL query string
+        const urlPrefill = params.get(`field_${section.name}`) || params.get(section.name);
+        if (urlPrefill !== null) {
+          input.value = urlPrefill;
+        } else if (section.value !== undefined) {
+          input.value = section.value;
+        } else if (section.default === 'today' && section.field_type === 'date') {
           input.valueAsDate = new Date();
         }
 
@@ -298,9 +333,12 @@ function renderForm(sections, requireVerification) {
       div.appendChild(group);
     }
     else if (section.type === 'checkbox') {
+      const urlPrefill = params.get(`field_${section.name}`) || params.get(section.name);
+      const isChecked = urlPrefill !== null ? (urlPrefill === 'true' || urlPrefill === '1') : !!section.value;
+
       div.innerHTML = `
         <div class="checkbox-group">
-          <input type="checkbox" id="${section.name}" name="${section.name}" ${section.required ? 'required' : ''}>
+          <input type="checkbox" id="${section.name}" name="${section.name}" ${section.required ? 'required' : ''} ${isChecked ? 'checked' : ''}>
           <label for="${section.name}" class="${section.required ? 'required' : ''}">${section.label}</label>
         </div>
         <div class="error-msg" id="error-${section.name}"></div>
@@ -333,15 +371,20 @@ function formatMarkdown(text) {
 
 function setupSignaturePad(canvas, clearBtn) {
   let ctx;
-  // Adjust inner dimensions to match parent container width
-  setTimeout(() => {
+  const initCanvas = () => {
     canvas.width = canvas.offsetWidth;
-    canvas.height = 160;
+    canvas.height = 180;
     ctx = canvas.getContext('2d');
     ctx.strokeStyle = '#818cf8';
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-  }, 100);
+    ctx.lineJoin = 'round';
+  };
+
+  setTimeout(initCanvas, 100);
+  window.addEventListener('resize', () => {
+    if (signatureData === null) initCanvas();
+  });
 
   let drawing = false;
   let points = [];
@@ -353,10 +396,14 @@ function setupSignaturePad(canvas, clearBtn) {
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  const start = (e) => { drawing = true; points = [getPos(e)]; };
+  const start = (e) => {
+    drawing = true;
+    points = [getPos(e)];
+  };
+
   const move = (e) => {
     if (!drawing || !ctx) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault(); // Prevent page touch scrolling while drawing signature
     const pos = getPos(e);
     points.push(pos);
     ctx.beginPath();
@@ -364,6 +411,7 @@ function setupSignaturePad(canvas, clearBtn) {
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   };
+
   const end = () => {
     if (!drawing) return;
     drawing = false;
@@ -374,8 +422,8 @@ function setupSignaturePad(canvas, clearBtn) {
   canvas.addEventListener('mousedown', start);
   canvas.addEventListener('mousemove', move);
   canvas.addEventListener('mouseup', end);
-  canvas.addEventListener('touchstart', start);
-  canvas.addEventListener('touchmove', move);
+  canvas.addEventListener('touchstart', start, { passive: true });
+  canvas.addEventListener('touchmove', move, { passive: false });
   canvas.addEventListener('touchend', end);
 
   clearBtn.addEventListener('click', () => {
@@ -439,13 +487,13 @@ async function handleSubmit(e) {
 
     if (res.ok) {
       document.getElementById('app').innerHTML = `
-        <div class="card" style="text-align:center; padding:3rem 1.5rem">
+        <div class="card" style="text-align:center; padding:2.5rem 1rem">
           <div style="font-size:3rem;margin-bottom:1rem">✍️</div>
           <h2>Document Successfully Signed</h2>
           <p style="color:var(--text-muted)">Your non-repudiable electronic signature has been cryptographically recorded.</p>
-          <div style="background:rgba(15,23,42,0.8);padding:1rem;border-radius:8px;text-align:left;font-family:monospace;font-size:0.85rem;margin:1.5rem 0;">
+          <div style="background:rgba(15,23,42,0.8);padding:1rem;border-radius:8px;text-align:left;font-family:monospace;font-size:0.8rem;margin:1.5rem 0;word-break:break-all;">
             <div><strong>Submission ID:</strong> ${result.submission_id}</div>
-            <div style="word-break:break-all;margin-top:0.5rem"><strong>Audit Hash (SHA-256):</strong> ${result.audit_hash}</div>
+            <div style="margin-top:0.5rem"><strong>Audit Hash:</strong> ${result.audit_hash}</div>
           </div>
         </div>
       `;

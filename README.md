@@ -1,104 +1,62 @@
 # LegalForm: Production Architecture for CLI-Driven Legal Document Platform
 
-LegalForm is an end-to-end, zero-cost, always-on legal electronic document platform built on Cloudflare Workers, Cloudflare D1, Cloudflare R2, Cloudflare Pages, and Python.
+LegalForm is an end-to-end legal electronic document platform built on Cloudflare Workers, Cloudflare D1, Cloudflare R2, Cloudflare Pages, and Python. It features complete support for **both cloud deployment and 100% local hosting**.
 
 ---
 
-## 🏗 Architecture Diagram
+## 🚀 Key Features
 
-```
-┌──────────────┐      ┌──────────────────┐      ┌──────────────────┐
-│  Python CLI  │─────▶│ Cloudflare Pages │─────▶│ Cloudflare       │
-│ (legalform)  │      │ (Form Renderer)  │      │ Workers API + D1 │
-└──────────────┘      └──────────────────┘      └──────────────────┘
-       │                                                  │
-       └─────────────────── API Calls ────────────────────┘
-```
+* 💻 **Local & Cloud Hosting Support:** Run locally via Wrangler dev & Python static HTTP server, or publish to Cloudflare Workers + Pages.
+* ✍️ **Pre-Filled Document Specs:** Supply pre-filled values inside the YAML spec or pass `--fill field_name="Value"` dynamically via the CLI.
+* 📱 **Mobile Optimized UI:** Glassmorphism UI engineered with touch event handling (`touch-action: none`) for signature pads on iOS & Android, font scaling (16px base input prevention for iOS zoom), and flex/grid responsive breakpoints.
+* 🛡️ **Cryptographic Audit Trail:** Telemetry records field focus, value hashing, IP hashes, and NTP timestamps.
 
 ---
 
-## 📁 Repository Structure
+## 🛠 Local Hosting Quick Start
 
-```
-.
-├── schema.sql              # Cloudflare D1 SQLite database schema
-├── worker/                 # Cloudflare Worker backend API (TypeScript / Hono)
-│   ├── src/index.ts        # Worker routes, audit trail hashing, rate limits
-│   ├── wrangler.toml       # Cloudflare Wrangler configuration
-│   └── package.json
-├── pages/                  # Static dynamic form renderer UI for Cloudflare Pages
-│   └── index.html          # High-aesthetics glassmorphism Web Signing UI & audit tracker
-├── cli/                    # Python CLI tool
-│   ├── legalform.py        # CLI logic (init, deploy, list, export)
-│   ├── setup.py            # Pip installation script
-│   └── requirements.txt
-└── .github/workflows/      # Automated deployment pipelines
-    └── deploy.yml
-```
-
----
-
-## ⚡ Quick Start & Local Testing
-
-### 1. Backend Worker Setup
+### 1. Start Local Backend API (Worker + D1 in SQLite mode)
 ```bash
 cd worker
 npm install
-# Start local development server (runs D1 in local SQLite mode)
+npx wrangler d1 execute legalform-db --local --file=../schema.sql
 npx wrangler dev --local
 ```
 
-### 2. Run D1 Local Migration
+### 2. Start Local Static UI Server
+In a separate terminal window:
 ```bash
-npx wrangler d1 execute legalform-db --local --file=../schema.sql
+python3 cli/legalform.py serve --port 8080
 ```
 
-### 3. Install CLI Tool
+### 3. Deploy & Sign a Pre-Filled Document
 ```bash
-cd ../cli
-pip install -e .
-```
+# Create starter template
+python3 cli/legalform.py init -o custom-nda.yaml
 
-### 4. Deploy a Document locally
-```bash
-legalform init --output my-nda.yaml
-legalform deploy my-nda.yaml
+# Deploy with pre-filled contents via CLI options:
+python3 cli/legalform.py deploy custom-nda.yaml -f counterparty_name="Acme Corp" -f counterparty_email="ceo@acme.com"
 ```
+The CLI will output a signing URL (e.g. `http://localhost:8080/?slug=a1b2c3d4e5f6`) ready to view and sign in any browser or mobile device.
 
 ---
 
-## 🚀 Cloudflare Production Deployment
+## ☁️ Cloudflare Production Deployment
 
 ### Step 1: Initialize Cloudflare Services
 ```bash
-# Login to Cloudflare
 npx wrangler login
-
-# Create D1 Database
 npx wrangler d1 create legalform-db
-# Copy database_id into worker/wrangler.toml
-
-# Create R2 Bucket
 npx wrangler r2 bucket create legalform-docs
 ```
 
-### Step 2: Apply Database Schema to Production
+### Step 2: Apply Database Schema & Deploy Worker
 ```bash
 npx wrangler d1 execute legalform-db --remote --file=schema.sql
+cd worker && npx wrangler deploy
 ```
 
-### Step 3: Deploy Worker & Secrets
+### Step 3: Deploy Pages Frontend
 ```bash
-cd worker
-npx wrangler deploy
-
-# Set secrets
-npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put ADMIN_API_KEY
-```
-
-### Step 4: Deploy Static Pages
-```bash
-cd ../pages
-npx wrangler pages deploy . --project-name=legalform-ui
+cd pages && npx wrangler pages deploy . --project-name=legalform-ui
 ```

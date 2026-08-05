@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-app = typer.Typer(help="LegalForm CLI - Deploy and manage electronic legal documents on Cloudflare Workers/D1.")
+app = typer.Typer(help="LegalForm CLI - Deploy and manage electronic legal documents locally or on Cloudflare.")
 console = Console()
 
 REGISTRY_FILE = Path(".legalform_registry.json")
@@ -22,7 +22,7 @@ def get_config():
 
 @app.command()
 def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Output YAML filename")):
-    """Initialize a starter YAML document specification."""
+    """Initialize a starter YAML document specification with support for pre-filled contents."""
     template = {
         "document": {
             "id": f"nda-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
@@ -43,14 +43,16 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
                 "type": "field",
                 "name": "counterparty_name",
                 "label": "Counterparty Legal Name",
-                "required": True
+                "required": True,
+                "value": "Acme Corporation"  # Pre-filled default
             },
             {
                 "type": "field",
                 "name": "counterparty_email",
                 "label": "Email Address",
                 "field_type": "email",
-                "required": True
+                "required": True,
+                "value": "legal@acme.com"  # Pre-filled default
             },
             {
                 "type": "field",
@@ -69,7 +71,8 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
                 "type": "checkbox",
                 "name": "esign_consent",
                 "label": "I consent to execute this document electronically in accordance with ESIGN / UETA regulations.",
-                "required": True
+                "required": True,
+                "value": True  # Pre-filled default state
             }
         ]
     }
@@ -79,8 +82,11 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
     console.print(f"[bold green]Created document template:[/bold green] {path.resolve()}")
 
 @app.command()
-def deploy(spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec")):
-    """Deploy a document specification to Cloudflare Worker API."""
+def deploy(
+    spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec"),
+    fill: list[str] = typer.Option([], "--fill", "-f", help="Pre-fill field values (e.g. -f counterparty_name='Acme Corp' -f counterparty_email='jane@acme.com')")
+):
+    """Deploy a document specification to Cloudflare Worker or local backend API with optional field pre-filling."""
     if not spec_path.exists():
         console.print(f"[bold red]Error:[/bold red] File {spec_path} does not exist.")
         raise typer.Exit(code=1)
@@ -91,6 +97,22 @@ def deploy(spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to
     if not doc_id:
         console.print("[bold red]Error:[/bold red] YAML spec missing 'document.id'.")
         raise typer.Exit(code=1)
+
+    # Apply pre-fill overrides from CLI --fill arguments
+    prefills = {}
+    for item in fill:
+        if "=" in item:
+            k, v = item.split("=", 1)
+            prefills[k.strip()] = v.strip()
+
+    if prefills:
+        for section in spec.get("sections", []):
+            field_name = section.get("name")
+            if field_name in prefills:
+                val = prefills[field_name]
+                if val.lower() == 'true': val = True
+                elif val.lower() == 'false': val = False
+                section["value"] = val
 
     slug = hashlib.sha256(f"{doc_id}-{datetime.now().isoformat()}".encode()).hexdigest()[:12]
     expires_days = doc_meta.get("expires_in_days", 30)
@@ -111,7 +133,7 @@ def deploy(spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    with console.status("[bold blue]Deploying document to Cloudflare...[/bold blue]"):
+    with console.status("[bold blue]Deploying document...[/bold blue]"):
         try:
             r = requests.post(f"{api_base}/api/documents", json=payload, headers=headers, timeout=15)
             r.raise_for_status()
@@ -125,6 +147,8 @@ def deploy(spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to
     console.print("\n[bold green]🚀 Document Deployed Successfully![/bold green]")
     console.print(f"• Document ID: [cyan]{doc_id}[/cyan]")
     console.print(f"• Signing URL: [bold underline cyan]{signing_url}[/bold underline cyan]")
+    if prefills:
+        console.print(f"• Pre-filled Fields: [yellow]{prefills}[/yellow]")
     console.print(f"• Expiry Date: {datetime.fromtimestamp(expires_at).strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Local registry logging
@@ -140,9 +164,29 @@ def deploy(spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to
         "slug": slug,
         "url": signing_url,
         "spec_file": str(spec_path),
-        "deployed_at": datetime.now().isoformat()
+        "deployed_at": datetime.now().isoformat(),
+        "prefills": prefills
     })
     REGISTRY_FILE.write_text(json.dumps(registry, indent=2))
+
+@app.command("serve")
+def serve(port: int = typer.Option(8080, "--port", "-p", help="Port for local static UI server")):
+    """Serve the legal document web UI locally."""
+    import http.server
+    import socketserver
+    
+    pages_dir = Path(__file__).parent.parent / "pages"
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(pages_dir), **kwargs)
+
+    console.print(f"[bold green]Starting local web UI server on http://localhost:{port}[/bold green]")
+    console.print(f"Serving UI from [cyan]{pages_dir.resolve()}[/cyan]")
+    with socketserver.TCPServer(("", port), Handler) as httpd:
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Local server stopped.[/yellow]")
 
 @app.command("list")
 def list_docs():
