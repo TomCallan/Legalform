@@ -218,8 +218,10 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
   : 'https://legalform-api.tomcallan0.workers.dev';
 
 const params = new URLSearchParams(window.location.search);
-const pathLastSegment = window.location.pathname.split('/').pop();
-const slug = params.get('slug') || (pathLastSegment && !pathLastSegment.includes('.html') ? pathLastSegment : null);
+const pathSegments = window.location.pathname.split('/').filter(Boolean);
+const lastSegment = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : null;
+const slugParam = params.get('slug');
+const slug = slugParam || (lastSegment && !lastSegment.includes('.html') && lastSegment !== 'index' ? lastSegment : null);
 const verificationToken = params.get('token');
 
 if (!slug) {
