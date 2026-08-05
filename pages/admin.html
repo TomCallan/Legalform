@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LegalForm Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --paper: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #1e3a8a;
+      --primary-hover: #1e40af;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .header {
+      background: #ffffff;
+      border-bottom: 2px solid var(--primary);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--card-shadow);
+    }
+    .header h1 {
+      margin: 0;
+      font-family: 'Cinzel', serif;
+      font-size: 1.4rem;
+      color: var(--primary);
+      letter-spacing: 0.02em;
+    }
+    .main {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--card-shadow);
+    }
+    .auth-box {
+      max-width: 420px;
+      margin: 4rem auto;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 1rem;
+      outline: none;
+    }
+    input:focus { border-color: var(--primary); }
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-active { background: #dcfce7; color: #15803d; }
+    .badge-closed { background: #fee2e2; color: #b91c1c; }
+    .url-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .url-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🏛️ LegalForm Admin Portal</h1>
+    <div id="auth-status" style="font-size:0.85rem;color:var(--muted)"></div>
+  </div>
+
+  <div class="main">
+    <div id="login-view" class="card auth-box">
+      <h2 style="font-family:'Cinzel',serif;margin-top:0">Admin Authentication</h2>
+      <p style="color:var(--muted);font-size:0.9rem">Enter your secret ADMIN_API_KEY to access your legal documents.</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="admin-key">Admin Secret Key</label>
+          <input type="password" id="admin-key" placeholder="Enter ADMIN_API_KEY" required>
+        </div>
+        <button type="submit" class="btn" style="width:100%">Authenticate</button>
+      </form>
+    </div>
+
+    <div id="dashboard-view" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div>
+            <h2 style="margin:0;font-family:'Cinzel',serif">Deployed Documents & Slugs</h2>
+            <p style="margin:0.25rem 0 0 0;color:var(--muted);font-size:0.85rem">Live overview of active electronic agreements on Cloudflare D1</p>
+          </div>
+          <button id="refresh-btn" class="btn btn-sm">🔄 Refresh Table</button>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Document ID</th>
+                <th>Slug</th>
+                <th>Status</th>
+                <th>Live Signing URL</th>
+                <th>Expires</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="docs-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:8787'
+  : 'https://legalform-api.tomcallan0.workers.dev';
+
+const PAGES_BASE = window.location.origin;
+
+let apiKey = localStorage.getItem('LEGALFORM_ADMIN_KEY') || '';
+
+if (apiKey) {
+  showDashboard();
+}
+
+document.getElementById('login-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  apiKey = document.getElementById('admin-key').value.trim();
+  localStorage.setItem('LEGALFORM_ADMIN_KEY', apiKey);
+  showDashboard();
+});
+
+document.getElementById('refresh-btn').addEventListener('click', loadDocs);
+
+function showDashboard() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('dashboard-view').style.display = 'block';
+  document.getElementById('auth-status').innerHTML = `
+    Authenticated • <a href="#" onclick="logout()" style="color:var(--danger)">Logout</a>
+  `;
+  loadDocs();
+}
+
+function logout() {
+  localStorage.removeItem('LEGALFORM_ADMIN_KEY');
+  apiKey = '';
+  location.reload();
+}
+
+async function loadDocs() {
+  const tbody = document.getElementById('docs-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading...</td></tr>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/documents/list`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+
+    if (res.status === 401) {
+      alert('Unauthorized: Invalid ADMIN_API_KEY');
+      logout();
+      return;
+    }
+
+    const data = await res.json();
+    const docs = data.documents || [];
+
+    if (docs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No deployed documents found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = docs.map(d => {
+      const isActive = d.status === 'active';
+      const badgeClass = isActive ? 'badge-active' : 'badge-closed';
+      const signingUrl = `${PAGES_BASE}/?slug=${d.slug}`;
+      const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleString() : 'Never';
+
+      return `
+        <tr>
+          <td><strong>${d.id}</strong></td>
+          <td><code>${d.slug}</code></td>
+          <td><span class="badge ${badgeClass}">${d.status}</span></td>
+          <td><a href="${signingUrl}" target="_blank" class="url-link">${signingUrl}</a></td>
+          <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
+          <td>
+            ${isActive ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : '<span style="color:var(--muted);font-size:0.8rem">Closed</span>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+  }
+}
+
+async function closeSlug(slug) {
+  if (!confirm(`Are you sure you want to force-close and revoke access to slug '${slug}'?`)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/doc/${slug}/close`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      alert(result.message || 'Slug revoked.');
+      loadDocs();
+    } else {
+      alert(result.error || 'Failed to revoke slug.');
+    }
+  } catch (err) {
+    alert('Error closing slug: ' + err.message);
+  }
+}
+</script>
+</body>
+</html>

@@ -543,15 +543,36 @@ async function handleSubmit(e) {
     const result = await res.json();
 
     if (res.ok) {
+      const jsonBlob = new Blob([JSON.stringify({
+        submission_id: result.submission_id,
+        document_id: spec.document?.id || 'doc',
+        email: emailValue,
+        submitted_at: Math.floor(Date.now() / 1000),
+        fields,
+        signature: signatureData,
+        audit_hash: result.audit_hash,
+        fingerprint,
+        audit_trail: auditTrail,
+        spec
+      }, null, 2)], { type: 'application/json' });
+      const jsonUrl = URL.createObjectURL(jsonBlob);
+
       document.getElementById('app').innerHTML = `
         <div class="paper" style="text-align:center; padding:3rem 1.5rem">
           <div style="font-size:3rem;margin-bottom:1rem">📜</div>
           <h2 style="font-family:'Cinzel',serif;color:var(--text-heading)">Document Successfully Executed</h2>
           <p style="color:var(--text-muted);max-width:500px;margin:0.5rem auto 1.5rem auto">Your electronic signature and execution telemetry have been recorded to Cloudflare D1 and archived in R2.</p>
+          
+          <div style="margin-bottom:1.5rem;">
+            <a href="${jsonUrl}" download="submission_${result.submission_id}.json" class="btn-submit" style="display:inline-block;text-decoration:none;width:auto;padding:0.75rem 1.5rem;font-size:0.9rem;">
+              📥 Download Execution Record (.json)
+            </a>
+          </div>
+
           <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1.25rem;border-radius:4px;text-align:left;font-family:monospace;font-size:0.8rem;word-break:break-all;max-width:600px;margin:0 auto;">
             <div><strong>Submission ID:</strong> ${result.submission_id}</div>
             <div style="margin-top:0.5rem"><strong>Audit Hash:</strong> ${result.audit_hash}</div>
-            <div style="margin-top:0.5rem;color:var(--primary-navy)"><strong>R2 Archive Key:</strong> ${result.r2_key}</div>
+            <div style="margin-top:0.5rem;color:var(--primary-navy)"><strong>R2 Vault Path:</strong> ${result.r2_key}</div>
           </div>
         </div>
       `;
