@@ -192,14 +192,50 @@ def serve(port: int = typer.Option(8080, "--port", "-p", help="Port for local st
             console.print("\n[yellow]Local server stopped.[/yellow]")
 
 @app.command("list")
-def list_docs():
-    """List deployed documents from the local registry."""
+def list_docs(remote: bool = typer.Option(True, "--remote/--local-registry", help="Fetch active documents from backend API vs local file registry")):
+    """List all deployed documents and active signing slugs."""
+    api_base, api_key, pages_base, _ = get_config()
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    if remote:
+        with console.status("[bold blue]Fetching documents from backend...[/bold blue]"):
+            try:
+                r = requests.get(f"{api_base}/api/documents/list", headers=headers, timeout=15)
+                r.raise_for_status()
+                docs = r.json().get("documents", [])
+                
+                table = Table(title="Deployed Legal Documents (Backend API)")
+                table.add_column("Document ID", style="cyan")
+                table.add_column("Slug", style="magenta")
+                table.add_column("Status", style="yellow")
+                table.add_column("Signing URL", style="green")
+                table.add_column("Expires", style="dim")
+
+                for d in docs:
+                    status_color = "green" if d["status"] == "active" else "red"
+                    url = f"{pages_base}/?slug={d['slug']}"
+                    exp = datetime.fromtimestamp(d["expires_at"]).strftime('%Y-%m-%d %H:%M') if d.get("expires_at") else "Never"
+                    table.add_row(
+                        d["id"],
+                        d["slug"],
+                        f"[{status_color}]{d['status']}[/{status_color}]",
+                        url,
+                        exp
+                    )
+
+                console.print(table)
+                return
+            except requests.RequestException as e:
+                console.print(f"[bold yellow]Could not fetch from remote API ({e}). Falling back to local registry.[/bold yellow]")
+
     if not REGISTRY_FILE.exists():
         console.print("[yellow]No deployed documents recorded in local registry.[/yellow]")
         return
 
     registry = json.loads(REGISTRY_FILE.read_text())
-    table = Table(title="Deployed Legal Documents")
+    table = Table(title="Deployed Legal Documents (Local Registry)")
     table.add_column("Document ID", style="cyan")
     table.add_column("Slug", style="magenta")
     table.add_column("Signing URL", style="green")
@@ -210,11 +246,29 @@ def list_docs():
 
     console.print(table)
 
+@app.command("close")
+def close_doc(slug: str = typer.Argument(..., help="Slug or Document ID to force close")):
+    """Force close an active document slug so it can no longer be viewed or signed."""
+    api_base, api_key, _, _ = get_config()
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    with console.status(f"[bold red]Closing document slug '{slug}'...[/bold red]"):
+        try:
+            r = requests.post(f"{api_base}/api/doc/{slug}/close", headers=headers, timeout=15)
+            r.raise_for_status()
+            res = r.json()
+            console.print(f"[bold green]Success:[/bold green] {res.get('message')}")
+        except requests.RequestException as e:
+            console.print(f"[bold red]Failed to close document slug:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
 @app.command()
 def export(doc_id: str = typer.Argument(..., help="Document ID to export submissions for"),
            output: Path = typer.Option(Path("export.json"), "--output", "-o")):
     """Export all submissions and audit trails for a document."""
-    api_base, api_key, _ = get_config()
+    api_base, api_key, _, _ = get_config()
     headers = {}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"

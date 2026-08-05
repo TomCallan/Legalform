@@ -75,6 +75,23 @@ async function logAudit(
   ).run();
 }
 
+// ── Admin: List All Documents / Slugs ───────────────────────
+app.get('/api/documents/list', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
+  const adminKey = c.env.ADMIN_API_KEY;
+
+  if (adminKey && apiKey !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const docs = await c.env.DB.prepare(
+    'SELECT id, slug, status, expires_at, created_at FROM documents ORDER BY created_at DESC'
+  ).all();
+
+  return c.json({ documents: docs.results });
+});
+
 // ── Admin: Deploy Document (from CLI) ──────────────────────
 app.post('/api/documents', async (c) => {
   const authHeader = c.req.header('Authorization');
@@ -399,6 +416,28 @@ app.get('/api/export/:doc_id', async (c) => {
     submissions: submissions.results,
     audit_logs: auditLogs.results
   });
+});
+
+// ── Admin: Force Close Document / Slug ───────────────────────
+app.post('/api/doc/:slug/close', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
+  const adminKey = c.env.ADMIN_API_KEY;
+
+  if (adminKey && apiKey !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const slug = c.req.param('slug');
+  const result = await c.env.DB.prepare(
+    'UPDATE documents SET status = ? WHERE slug = ? OR id = ?'
+  ).bind('closed', slug, slug).run();
+
+  if (result.meta.changes === 0) {
+    return c.json({ error: 'Document or slug not found' }, 404);
+  }
+
+  return c.json({ success: true, message: `Document slug '${slug}' has been force closed.` });
 });
 
 // ── Public: Single Submission Audit Verification ───────────
