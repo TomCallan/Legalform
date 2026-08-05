@@ -6,7 +6,10 @@
   <title>LegalForm Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -74,15 +77,28 @@
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
-    input[type="password"], input[type="text"] {
+    input[type="password"], input[type="text"], input[type="email"], select {
       width: 100%;
       padding: 0.75rem 1rem;
       border: 1px solid var(--border);
       border-radius: 4px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       outline: none;
     }
-    input:focus { border-color: var(--primary); }
+    textarea {
+      width: 100%;
+      height: 320px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: #0f172a;
+      color: #f8fafc;
+      outline: none;
+      line-height: 1.5;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
     .btn {
       background: var(--primary);
       color: white;
@@ -96,6 +112,8 @@
     .btn:hover { background: var(--primary-hover); }
     .btn-secondary { background: #475569; }
     .btn-secondary:hover { background: #334155; }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #15803d; }
     .btn-danger { background: var(--danger); }
     .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
@@ -135,6 +153,19 @@
       font-size: 0.85rem;
     }
     .url-link:hover { text-decoration: underline; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); }
+    .tab {
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+    }
+    .tab.active {
+      border-bottom-color: var(--primary);
+      color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -158,7 +189,13 @@
     </div>
 
     <div id="dashboard-view" style="display:none">
-      <div class="card">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('ledger')">Documents & Ledger</div>
+        <div class="tab" onclick="switchTab('deploy')">Deploy New Document</div>
+      </div>
+
+      <!-- TAB 1: LEDGER -->
+      <div id="tab-ledger" class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
           <div>
             <h2 style="margin:0;font-family:'Cinzel',serif">Deployed Documents & Slugs</h2>
@@ -185,6 +222,40 @@
           </table>
         </div>
       </div>
+
+      <!-- TAB 2: DEPLOY NEW SPEC -->
+      <div id="tab-deploy" class="card" style="display:none">
+        <h2 style="margin-top:0;font-family:'Cinzel',serif">Deploy New Legal Document</h2>
+        <p style="color:var(--muted);font-size:0.85rem">Paste a YAML spec or load a starter template to publish a signable agreement link.</p>
+
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Load Mutual NDA Spec</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Load Liability Waiver Spec</button>
+          <input type="file" id="yaml-file-input" accept=".yaml,.yml" style="display:none" onchange="uploadYamlFile(event)">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('yaml-file-input').click()">Upload YAML File</button>
+        </div>
+
+        <form id="deploy-form">
+          <div class="form-group">
+            <label for="yaml-spec">YAML Document Specification</label>
+            <textarea id="yaml-spec" required></textarea>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="form-group">
+              <label for="admin-email-input">Admin Copy Email (Optional)</label>
+              <input type="email" id="admin-email-input" placeholder="admin@yourcompany.com">
+            </div>
+            <div class="form-group">
+              <label for="prefill-input">Pre-fill Receiving Party (Optional)</label>
+              <input type="text" id="prefill-input" placeholder="e.g. Acme Corp">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success" style="width:100%;margin-top:1rem">Publish Document & Generate Signing Link</button>
+        </form>
+      </div>
+
     </div>
   </div>
 
@@ -196,6 +267,94 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 const PAGES_BASE = window.location.origin;
 
 let apiKey = localStorage.getItem('LEGALFORM_ADMIN_KEY') || '';
+
+const STARTER_NDA_YAML = `document:
+  id: "nda-sample-${Date.now()}"
+  title: "MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT"
+  jurisdiction: "International, European Union (eIDAS Regulation EU No 910/2014) & State of Delaware, USA"
+  expires_in_days: 30
+  max_submissions_per_email: 1
+  max_submissions_per_ip: 3
+  require_email_verification: false
+  admin_notification_email: "tomcallan0@outlook.com"
+  legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement electronically as of the timestamp recorded below."
+
+sections:
+  - type: "static"
+    content: |
+      ## PREAMBLE & PARTIES
+      This Mutual Non-Disclosure Agreement ("Agreement") is entered into by and between the Disclosing Party and the Receiving Party identified herein.
+
+  - type: "form"
+    fields:
+      - name: "disclosing_party"
+        label: "Disclosing Party Legal Entity"
+        type: "text"
+        required: true
+        value: "Acme Corporation"
+
+      - name: "receiving_party"
+        label: "Receiving Party Legal Entity / Signer Name"
+        type: "text"
+        required: true
+        placeholder: "Enter Full Legal Entity or Individual Name"
+
+      - name: "signer_email"
+        label: "Signer Official Email Address"
+        type: "email"
+        required: true
+        placeholder: "name@company.com"
+
+  - type: "static"
+    content: |
+      ## 1. OBLIGATIONS OF RECEIVING PARTY
+      Receiving Party shall hold and maintain the Confidential Information in strictest confidence for a period of five (5) years from the execution timestamp.
+
+  - type: "signature"
+    signer_label: "EXECUTION & SIGNATURE OF RECORD"
+    fields:
+      - name: "signer_title"
+        label: "Signer Title / Corporate Capacity"
+        type: "text"
+        required: true
+        placeholder: "e.g., Chief Executive Officer, Managing Director"
+
+      - name: "signature_timestamp"
+        label: "Date & Timestamp of Execution"
+        type: "datetime-auto"
+        required: true`;
+
+const STARTER_WAIVER_YAML = `document:
+  id: "waiver-${Date.now()}"
+  title: "GENERAL RELEASE AND LIABILITY WAIVER AGREEMENT"
+  jurisdiction: "State of Delaware, USA"
+  expires_in_days: 14
+  legal_footer: "By signing below, you voluntarily agree to all terms and conditions outlined in this Release and Liability Waiver."
+
+sections:
+  - type: "static"
+    content: |
+      ## ASSUMPTION OF RISK & WAIVER OF LIABILITY
+      The undersigned acknowledges and agrees that participation in company activities involves inherent risks. I voluntarily assume full responsibility for any risks of loss, property damage, or personal injury.
+
+  - type: "form"
+    fields:
+      - name: "participant_name"
+        label: "Participant Full Name"
+        type: "text"
+        required: true
+      - name: "participant_email"
+        label: "Participant Email"
+        type: "email"
+        required: true
+
+  - type: "signature"
+    signer_label: "PARTICIPANT SIGNATURE"
+    fields:
+      - name: "signature_timestamp"
+        label: "Execution Date"
+        type: "datetime-auto"
+        required: true`;
 
 if (apiKey) {
   showDashboard();
@@ -209,6 +368,104 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
 });
 
 document.getElementById('refresh-btn').addEventListener('click', loadDocs);
+
+document.getElementById('deploy-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const rawYaml = document.getElementById('yaml-spec').value;
+  const adminEmail = document.getElementById('admin-email-input').value.trim();
+  const prefillReceiving = document.getElementById('prefill-input').value.trim();
+
+  try {
+    const parsedSpec = jsyaml.load(rawYaml);
+    if (!parsedSpec || !parsedSpec.document || !parsedSpec.document.id) {
+      alert('Invalid YAML: missing top-level document.id');
+      return;
+    }
+
+    if (adminEmail) {
+      parsedSpec.document.admin_notification_email = adminEmail;
+    }
+
+    if (prefillReceiving) {
+      (parsedSpec.sections || []).forEach(s => {
+        if (s.fields) {
+          s.fields.forEach(f => {
+            if (f.name === 'receiving_party' || f.name === 'counterparty_name') {
+              f.value = prefillReceiving;
+            }
+          });
+        }
+      });
+    }
+
+    const docId = parsedSpec.document.id;
+    const slug = Math.random().toString(36).substring(2, 14);
+    const expiresDays = parsedSpec.document.expires_in_days || 30;
+    const expiresAt = Math.floor(Date.now() / 1000) + (expiresDays * 86400);
+
+    const payload = {
+      id: docId,
+      slug: slug,
+      spec: JSON.stringify(parsedSpec),
+      expires_at: expiresAt,
+      max_per_email: parsedSpec.document.max_submissions_per_email || 1,
+      max_per_ip: parsedSpec.document.max_submissions_per_ip || 3,
+      require_verification: parsedSpec.document.require_email_verification ? 1 : 0
+    };
+
+    const res = await fetch(`${API_BASE}/api/documents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      const shareUrl = `${PAGES_BASE}/?slug=${slug}`;
+      alert(`Document Successfully Deployed!\n\nDocument ID: ${docId}\nSigning URL: ${shareUrl}`);
+      switchTab('ledger');
+      loadDocs();
+    } else {
+      alert('Deployment failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Error parsing or deploying YAML: ' + err.message);
+  }
+});
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-ledger').style.display = 'none';
+  document.getElementById('tab-deploy').style.display = 'none';
+
+  if (tabName === 'ledger') {
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('tab-ledger').style.display = 'block';
+  } else {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('tab-deploy').style.display = 'block';
+    if (!document.getElementById('yaml-spec').value) {
+      loadTemplate('nda');
+    }
+  }
+}
+
+function loadTemplate(type) {
+  document.getElementById('yaml-spec').value = type === 'nda' ? STARTER_NDA_YAML : STARTER_WAIVER_YAML;
+}
+
+function uploadYamlFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('yaml-spec').value = e.target.result;
+  };
+  reader.readAsText(file);
+}
 
 function showDashboard() {
   document.getElementById('login-view').style.display = 'none';
@@ -263,6 +520,7 @@ async function loadDocs() {
           <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
           <td>
             <div class="action-group">
+              <button class="btn btn-success btn-sm" onclick="exportDocPdf('${d.id}')">Export PDF</button>
               <button class="btn btn-secondary btn-sm" onclick="exportDocJson('${d.id}')">Export JSON</button>
               ${isActive ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : '<span style="color:var(--muted);font-size:0.8rem">Closed</span>'}
             </div>
@@ -272,6 +530,122 @@ async function loadDocs() {
     }).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+  }
+}
+
+async function exportDocPdf(docId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/export/${docId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+
+    if (!res.ok) {
+      alert('Failed to fetch document submissions.');
+      return;
+    }
+
+    const data = await res.json();
+    const submissions = data.submissions || [];
+
+    if (submissions.length === 0) {
+      alert(`No submissions recorded yet for document '${docId}'.`);
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+
+    submissions.forEach((sub, idx) => {
+      const doc = new jsPDF();
+      
+      const email = sub.email || 'N/A';
+      const subId = sub.id || 'N/A';
+      const submittedAt = sub.submitted_at ? new Date(sub.submitted_at * 1000).toUTCString() : 'N/A';
+      const auditHash = sub.audit_hash || 'N/A';
+      
+      let fields = {};
+      try { fields = typeof sub.data_json === 'string' ? JSON.parse(sub.data_json) : (sub.data_json || {}); }
+      catch(e) {}
+
+      // Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text("OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION", 105, 20, { align: "center" });
+
+      // Subtitle
+      doc.setFont("helvetica", "oblique");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Legally Enforceable Instrument under EU eIDAS (Art. 25 AdES) & US ESIGN Act (15 U.S.C. § 7001)", 105, 26, { align: "center" });
+
+      doc.setLineWidth(0.8);
+      doc.setDrawColor(15, 23, 42);
+      doc.line(14, 30, 196, 30);
+
+      // Metadata Table
+      const tableRows = [
+        ["Document ID", docId],
+        ["Submission ID", subId],
+        ["Execution UTC Timestamp", submittedAt],
+        ["Signer Email", email]
+      ];
+
+      Object.entries(fields).forEach(([k, v]) => {
+        tableRows.push([k, String(v)]);
+      });
+
+      doc.autoTable({
+        startY: 35,
+        head: [['Field Name', 'Value / Execution Data']],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 }
+      });
+
+      let finalY = doc.lastAutoTable.finalY + 10;
+
+      // Audit Hash Box
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text("CRYPTOGRAPHIC AUDIT SHA-256 DIGEST:", 14, finalY);
+
+      doc.setFont("courier", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(30, 58, 138);
+      doc.text(auditHash, 14, finalY + 6);
+
+      finalY += 16;
+
+      // Signature Image
+      const sigData = sub.signature_svg || '';
+      if (sigData && sigData.startsWith('data:image')) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text("SIGNATURE OF RECORD:", 14, finalY);
+        try {
+          doc.addImage(sigData, 'PNG', 14, finalY + 4, 70, 25);
+          finalY += 34;
+        } catch(imgErr) {
+          finalY += 10;
+        }
+      }
+
+      doc.setLineWidth(0.4);
+      doc.setDrawColor(203, 213, 225);
+      doc.line(14, finalY, 196, finalY);
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Recorded to Cloudflare D1 Ledger & Archived in R2 Storage Vault", 105, finalY + 6, { align: "center" });
+
+      doc.save(`executed_contract_${docId}_${idx + 1}.pdf`);
+    });
+  } catch (err) {
+    alert('Error exporting PDF: ' + err.message);
   }
 }
 
