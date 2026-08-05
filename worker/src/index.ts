@@ -307,32 +307,62 @@ app.post('/api/submit/:slug', async (c) => {
     console.error('R2 storage error:', r2Err);
   }
 
-  // Send completion confirmation via Resend if API key is configured
-  if (c.env.RESEND_API_KEY && email) {
-    try {
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'LegalForm <noreply@resend.dev>',
-          to: email,
-          subject: `Signed Document Certificate: ${doc.id}`,
-          html: `<div style="font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:8px;">
-            <h2 style="color:#0f172a;">Document Execution Certificate</h2>
-            <p>Your electronic signature has been recorded and verified.</p>
-            <hr style="border:0;border-top:1px solid #e2e8f0;margin:20px 0;"/>
-            <p><strong>Document ID:</strong> ${doc.id}</p>
-            <p><strong>Submission ID:</strong> ${submissionId}</p>
-            <p><strong>Cryptographic Audit Hash (SHA-256):</strong></p>
-            <code style="background:#f1f5f9;padding:6px 10px;border-radius:4px;word-break:break-all;display:block;">${auditHash}</code>
-          </div>`
-        })
-      });
-    } catch (emailErr) {
-      console.error('Resend email error:', emailErr);
+  // Send completion confirmation via Resend to both Signer and Admin
+  if (c.env.RESEND_API_KEY) {
+    const parsedSpec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
+    const adminEmail = parsedSpec.document?.admin_notification_email || c.env.ADMIN_EMAIL || 'tomcallan0@outlook.com';
+    const recipients = Array.from(new Set([email, adminEmail].filter(Boolean)));
+
+    const fieldsSummaryHtml = Object.entries(body.fields || {})
+      .map(([k, v]) => `<tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">${k}</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${v}</td></tr>`)
+      .join('');
+
+    const certHtml = `
+      <div style="font-family:serif;padding:30px;max-width:680px;margin:0 auto;border:2px solid #0f172a;background:#ffffff;color:#0f172a;">
+        <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:15px;margin-bottom:20px;">
+          <h2 style="margin:0;font-family:'Cinzel',Georgia,serif;letter-spacing:1px;">OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION</h2>
+          <p style="margin:5px 0 0 0;font-style:italic;color:#475569;font-size:14px;">Legally Enforceable Instrument under ESIGN Act (15 U.S.C. § 7001) & UETA</p>
+        </div>
+        <p>This document execution certificate confirms that the agreement below has been electronically signed and cryptographically recorded.</p>
+        
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;font-family:sans-serif;font-size:14px;">
+          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Document ID</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${doc.id}</td></tr>
+          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Execution Timestamp</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${new Date(now() * 1000).toUTCString()}</td></tr>
+          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Signer Email</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${email || 'N/A'}</td></tr>
+          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Submission ID</td><td style="padding:6px 12px;border:1px solid #e2e8f0;font-family:monospace;">${submissionId}</td></tr>
+          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">IP Address Hash</td><td style="padding:6px 12px;border:1px solid #e2e8f0;font-family:monospace;">${ipHash}</td></tr>
+          ${fieldsSummaryHtml}
+        </table>
+
+        <div style="margin-top:20px;padding:15px;background:#f8fafc;border:1px solid #cbd5e1;">
+          <strong style="display:block;margin-bottom:5px;font-family:sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Cryptographic Audit SHA-256 Digest:</strong>
+          <code style="word-break:break-all;font-family:monospace;font-size:12px;color:#1e3a8a;">${auditHash}</code>
+        </div>
+        
+        <div style="margin-top:20px;text-align:center;font-size:12px;color:#64748b;font-style:italic;">
+          Archived in Cloudflare R2 Vault: <code>${r2Key}</code>
+        </div>
+      </div>
+    `;
+
+    for (const recipient of recipients) {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'LegalForm Executions <noreply@resend.dev>',
+            to: recipient,
+            subject: `[EXECUTED AGREEMENT] Certificate & Record: ${doc.id}`,
+            html: certHtml
+          })
+        });
+      } catch (emailErr) {
+        console.error(`Resend email error sending to ${recipient}:`, emailErr);
+      }
     }
   }
 

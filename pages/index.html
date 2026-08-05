@@ -313,6 +313,17 @@ function renderSingleField(field) {
       audit('value_change', { field: field.name, hash: btoa(e.target.value).slice(0, 12) });
     });
     group.appendChild(select);
+  } else if (fieldType === 'datetime-auto') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.name = field.name;
+    input.readOnly = true;
+    const currentTimestamp = new Date().toUTCString();
+    input.value = currentTimestamp;
+    input.style.backgroundColor = '#f1f5f9';
+    input.style.fontWeight = '600';
+    input.style.color = '#1e3a8a';
+    group.appendChild(input);
   } else {
     const input = document.createElement(fieldType === 'textarea' ? 'textarea' : 'input');
     input.name = field.name;
