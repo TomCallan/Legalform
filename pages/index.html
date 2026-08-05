@@ -223,8 +223,40 @@ const slug = params.get('slug') || (pathLastSegment && !pathLastSegment.includes
 const verificationToken = params.get('token');
 
 if (!slug) {
-  // If accessing main site without a slug (or accessing admin.html), stop execution
-  console.log('No document slug provided.');
+  // Render project home landing page when no document slug is specified
+  document.getElementById('app').innerHTML = `
+    <div class="paper" style="text-align:center; padding:3rem 2rem">
+      <div style="font-size:3rem;margin-bottom:1rem">📜</div>
+      <h1 style="font-family:'Cinzel',serif;color:var(--text-heading);margin-bottom:0.5rem">LegalForm</h1>
+      <p style="font-family:'Newsreader',serif;font-size:1.25rem;color:var(--text-muted);max-width:580px;margin:0 auto 2rem auto;line-height:1.6">
+        The open-source, serverless alternative to DocuSign. Deploy court-enforceable legal agreements in under 30 seconds via CLI or Web Admin.
+      </p>
+      
+      <div style="display:flex;gap:1rem;justify-content:center;margin-bottom:2.5rem;flex-wrap:wrap">
+        <a href="/admin.html" class="btn-submit" style="display:inline-block;text-decoration:none;width:auto;padding:0.85rem 1.75rem">
+          Go to Web Admin Portal
+        </a>
+        <a href="https://github.com/TomCallan/Sig" target="_blank" class="btn-submit" style="display:inline-block;text-decoration:none;width:auto;padding:0.85rem 1.75rem;background:#475569">
+          GitHub Repository
+        </a>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:left;margin-top:2rem">
+        <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1rem;border-radius:4px">
+          <div style="font-weight:600;color:var(--primary-navy);margin-bottom:0.25rem">EU & US Legal Standing</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">Native compliance with EU eIDAS (Art. 25 AdES) and US ESIGN Act.</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1rem;border-radius:4px">
+          <div style="font-weight:600;color:var(--primary-navy);margin-bottom:0.25rem">Instant PDF Generation</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">Convert executed JSON audit logs directly into PDF legal certificates.</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1rem;border-radius:4px">
+          <div style="font-weight:600;color:var(--primary-navy);margin-bottom:0.25rem">Serverless & Self-Hostable</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">Built on Cloudflare Workers, D1 SQL, R2 Vault, and Pages.</div>
+        </div>
+      </div>
+    </div>
+  `;
 } else {
 
 let auditTrail = [];
