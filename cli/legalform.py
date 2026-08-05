@@ -264,6 +264,24 @@ def close_doc(slug: str = typer.Argument(..., help="Slug or Document ID to force
             console.print(f"[bold red]Failed to close document slug:[/bold red] {e}")
             raise typer.Exit(code=1)
 
+@app.command("delete")
+def delete_doc(doc_id: str = typer.Argument(..., help="Document ID to permanently delete and purge from R2")):
+    """Permanently delete a document record from D1 and purge all associated JSON objects from R2 vault."""
+    api_base, api_key, _, _ = get_config()
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    with console.status(f"[bold red]Purging document '{doc_id}' from database and R2 vault...[/bold red]"):
+        try:
+            r = requests.delete(f"{api_base}/api/doc/{doc_id}", headers=headers, timeout=15)
+            r.raise_for_status()
+            res = r.json()
+            console.print(f"[bold green]Success:[/bold green] {res.get('message')}")
+        except requests.RequestException as e:
+            console.print(f"[bold red]Failed to delete document:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
 @app.command()
 def pdf(
     json_path: Path = typer.Argument(..., help="Path to submission JSON file (downloaded from R2 or export)"),

@@ -6,7 +6,7 @@
   <title>LegalForm Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -130,63 +130,62 @@
     .btn-danger { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
     .btn-danger:hover { background: var(--danger); color: white; }
     .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
-    
-    /* Apple Minimal Dropdown Menu */
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      background-color: #ffffff;
-      min-width: 180px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      z-index: 50;
-      padding: 0.4rem;
-    }
-    .dropdown-content a, .dropdown-content button {
-      color: #1d1d1f;
-      padding: 0.5rem 0.75rem;
-      text-decoration: none;
-      display: block;
-      font-size: 0.82rem;
-      width: 100%;
-      text-align: left;
-      border: none;
-      background: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .dropdown-content a:hover, .dropdown-content button:hover {
-      background-color: #f2f2f7;
-    }
-    .dropdown-content button.danger:hover {
-      background-color: rgba(255, 59, 48, 0.1);
-      color: var(--danger);
-    }
-    .dropdown:hover .dropdown-content { display: block; }
 
-    table {
+    /* Hierarchical Accordion Ledger Table */
+    table.ledger-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 0.5rem;
     }
-    th, td {
+    table.ledger-table th, table.ledger-table td {
       padding: 0.85rem 1rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
       font-size: 0.85rem;
     }
-    th {
+    table.ledger-table th {
       font-weight: 500;
       color: var(--muted);
       font-size: 0.75rem;
-      letter-spacing: -0.01em;
     }
+    .doc-row {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .doc-row:hover {
+      background: #fafafa;
+    }
+    .expand-toggle {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: inline-block;
+      width: 20px;
+      transition: transform 0.2s ease;
+    }
+    .expand-toggle.open {
+      transform: rotate(90deg);
+      color: var(--primary);
+    }
+    
+    .submissions-container {
+      background: #fbfbfd;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+    .submission-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.65rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
     .badge {
       display: inline-block;
       padding: 0.2rem 0.5rem;
@@ -218,7 +217,7 @@
       color: var(--text);
     }
 
-    /* Pre-Sign Modal Styling */
+    /* Modal Backdrop */
     .modal-backdrop {
       display: none;
       position: fixed;
@@ -269,26 +268,27 @@
       <div id="tab-ledger" class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
           <div>
-            <h2 style="margin:0;font-size:1.1rem;font-weight:600">Documents</h2>
-            <p style="margin:0.2rem 0 0 0;color:var(--muted);font-size:0.8rem">Overview of active agreements and execution records</p>
+            <h2 style="margin:0;font-size:1.1rem;font-weight:600">Document Ledger</h2>
+            <p style="margin:0.2rem 0 0 0;color:var(--muted);font-size:0.8rem">Click any document row to expand and view signed executions, audit hashes, and export actions</p>
           </div>
           <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
         </div>
 
         <div style="overflow-x:auto">
-          <table>
+          <table class="ledger-table">
             <thead>
               <tr>
+                <th style="width:30px"></th>
                 <th>Document ID</th>
                 <th>Slug</th>
                 <th>Status</th>
                 <th>Signing URL</th>
                 <th>Expires</th>
-                <th style="text-align:right">Actions</th>
+                <th style="text-align:right">Management</th>
               </tr>
             </thead>
             <tbody id="docs-tbody">
-              <tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>
+              <tr><td colspan="7" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>
             </tbody>
           </table>
         </div>
@@ -333,13 +333,13 @@
   <!-- PRE-SIGN MODAL -->
   <div id="presign-modal" class="modal-backdrop">
     <div class="modal-paper">
-      <h3 style="margin-top:0;font-size:1.1rem;font-weight:600">Pre-Sign Document</h3>
-      <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1rem">Affix your owner pre-signature to this document before sharing the link.</p>
+      <h3 style="margin-top:0;font-size:1.1rem;font-weight:600">Owner Pre-Sign</h3>
+      <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1rem">Affix your owner signature to this agreement before sharing the link.</p>
       
       <div class="form-group">
         <label>Owner Signature Canvas</label>
         <canvas id="presign-canvas" style="width:100%;height:150px;border:1px solid var(--border);border-radius:8px;background:#fafafa;touch-action:none;"></canvas>
-        <button type="button" id="clear-presign-btn" class="btn btn-secondary btn-sm" style="margin-top:0.4rem">Clear Signature</button>
+        <button type="button" id="clear-presign-btn" class="btn btn-secondary btn-sm" style="margin-top:0.4rem">Clear Canvas</button>
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1.5rem">
@@ -358,9 +358,9 @@ const PAGES_BASE = window.location.origin;
 
 let apiKey = localStorage.getItem('LEGALFORM_ADMIN_KEY') || '';
 let currentPresignDocId = null;
-let currentPresignSpec = null;
 let presignCanvasCtx = null;
 let presignDataUrl = null;
+let fetchedDocDetails = {};
 
 const STARTER_NDA_YAML = `document:
   id: "nda-sample-${Date.now()}"
@@ -578,7 +578,7 @@ function logout() {
 
 async function loadDocs() {
   const tbody = document.getElementById('docs-tbody');
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/api/documents/list`, {
@@ -595,40 +595,108 @@ async function loadDocs() {
     const docs = data.documents || [];
 
     if (docs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No deployed documents found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No deployed documents found.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = docs.map(d => {
+    let rowsHtml = '';
+    for (const d of docs) {
       const isActive = d.status === 'active';
       const badgeClass = isActive ? 'badge-active' : 'badge-closed';
       const signingUrl = `${PAGES_BASE}/?slug=${d.slug}`;
       const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleDateString() : 'Never';
 
-      return `
-        <tr>
+      rowsHtml += `
+        <tr class="doc-row" onclick="toggleDocSubmissions('${d.id}', event)">
+          <td><span id="toggle-icon-${d.id}" class="expand-toggle">▶</span></td>
           <td><strong>${d.id}</strong></td>
           <td><code>${d.slug}</code></td>
           <td><span class="badge ${badgeClass}">${d.status}</span></td>
-          <td><a href="${signingUrl}" target="_blank" class="url-link">${signingUrl}</a></td>
+          <td><a href="${signingUrl}" target="_blank" class="url-link" onclick="event.stopPropagation()">${signingUrl}</a></td>
           <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
-          <td style="text-align:right">
-            <div class="dropdown">
-              <button class="btn btn-secondary btn-sm">Options ▾</button>
-              <div class="dropdown-content">
-                <button onclick="exportDocPdf('${d.id}')">Export PDF</button>
-                <button onclick="exportDocJson('${d.id}')">Export JSON</button>
-                <button onclick="openPreSignModal('${d.id}')">Pre-Sign Document</button>
-                ${isActive ? `<button onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : ''}
-                <button class="danger" onclick="deleteDocPurgeR2('${d.id}')">Delete & Purge R2</button>
-              </div>
+          <td style="text-align:right" onclick="event.stopPropagation()">
+            <div style="display:flex;gap:0.4rem;justify-content:flex-end">
+              <button class="btn btn-secondary btn-sm" onclick="openPreSignModal('${d.id}')">Pre-Sign</button>
+              ${isActive ? `<button class="btn btn-secondary btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : ''}
+              <button class="btn btn-danger btn-sm" onclick="deleteDocPurgeR2('${d.id}')">Delete & Purge</button>
+            </div>
+          </td>
+        </tr>
+        <tr id="sub-row-${d.id}" style="display:none">
+          <td colspan="7" style="padding:0">
+            <div id="sub-content-${d.id}" class="submissions-container">
+              <div style="color:var(--muted)">Loading execution records & audit trail...</div>
             </div>
           </td>
         </tr>
       `;
-    }).join('');
+    }
+
+    tbody.innerHTML = rowsHtml;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+  }
+}
+
+async function toggleDocSubmissions(docId, event) {
+  const subRow = document.getElementById(`sub-row-${docId}`);
+  const toggleIcon = document.getElementById(`toggle-icon-${docId}`);
+
+  if (subRow.style.display === 'table-row') {
+    subRow.style.display = 'none';
+    toggleIcon.classList.remove('open');
+    return;
+  }
+
+  subRow.style.display = 'table-row';
+  toggleIcon.classList.add('open');
+
+  const container = document.getElementById(`sub-content-${docId}`);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/export/${docId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const data = await res.json();
+    fetchedDocDetails[docId] = data;
+
+    const subs = data.submissions || [];
+    if (subs.length === 0) {
+      container.innerHTML = `
+        <div style="color:var(--muted);padding:0.5rem 0">
+          No signed execution records found for <strong>${docId}</strong> yet. Share the signing URL to collect executed agreements.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="font-weight:600;margin-bottom:0.75rem;color:var(--text);display:flex;justify-content:space-between;align-items:center">
+        <span>Recorded Executions & Court Audit Trail (${subs.length} Signed)</span>
+        <button class="btn btn-secondary btn-sm" onclick="exportDocJson('${docId}')">Export JSON Bundle</button>
+      </div>
+      ${subs.map((s, idx) => {
+        const subDate = s.submitted_at ? new Date(s.submitted_at * 1000).toUTCString() : 'N/A';
+        return `
+          <div class="submission-card">
+            <div>
+              <div style="font-weight:600;color:var(--text)">Signer: ${s.email || 'Anonymous'}</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem">
+                Execution UTC: ${subDate} • Submission ID: <code>${s.id}</code>
+              </div>
+              <div style="font-size:0.75rem;color:var(--primary);font-family:monospace;margin-top:0.25rem">
+                SHA-256 Digest: ${s.audit_hash}
+              </div>
+            </div>
+            <div style="display:flex;gap:0.4rem">
+              <button class="btn btn-sm" onclick="exportSinglePdf('${docId}', ${idx})">Export Signed PDF</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="color:var(--danger)">Error fetching submission details: ${err.message}</div>`;
   }
 }
 
@@ -681,7 +749,7 @@ function closePreSignModal() {
 
 async function savePreSignature() {
   if (!presignDataUrl) {
-    alert('Please draw your pre-signature on the canvas first.');
+    alert('Please draw your owner pre-signature on the canvas first.');
     return;
   }
 
@@ -751,205 +819,188 @@ async function deleteDocPurgeR2(docId) {
   }
 }
 
-async function exportDocPdf(docId) {
-  try {
-    const res = await fetch(`${API_BASE}/api/export/${docId}`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
+function exportSinglePdf(docId, subIdx) {
+  const data = fetchedDocDetails[docId];
+  if (!data || !data.submissions || !data.submissions[subIdx]) {
+    alert('Submission data not found.');
+    return;
+  }
 
-    if (!res.ok) {
-      alert('Failed to fetch document submissions.');
-      return;
-    }
+  const sub = data.submissions[subIdx];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-    const data = await res.json();
-    const submissions = data.submissions || [];
+  const email = sub.email || 'N/A';
+  const subId = sub.id || 'N/A';
+  const submittedAt = sub.submitted_at ? new Date(sub.submitted_at * 1000).toUTCString() : 'N/A';
+  const auditHash = sub.audit_hash || 'N/A';
 
-    if (submissions.length === 0) {
-      alert(`No submissions recorded yet for document '${docId}'.`);
-      return;
-    }
+  let fields = {};
+  try { fields = typeof sub.data_json === 'string' ? JSON.parse(sub.data_json) : (sub.data_json || {}); }
+  catch(e) {}
 
-    const { jsPDF } = window.jspdf;
+  let specObj = null;
+  if (sub.spec) {
+    specObj = typeof sub.spec === 'string' ? JSON.parse(sub.spec) : sub.spec;
+  } else if (data.doc && data.doc.spec) {
+    specObj = typeof data.doc.spec === 'string' ? JSON.parse(data.doc.spec) : data.doc.spec;
+  }
 
-    submissions.forEach((sub, idx) => {
-      const doc = new jsPDF();
-      
-      const email = sub.email || 'N/A';
-      const subId = sub.id || 'N/A';
-      const submittedAt = sub.submitted_at ? new Date(sub.submitted_at * 1000).toUTCString() : 'N/A';
-      const auditHash = sub.audit_hash || 'N/A';
-      
-      let fields = {};
-      try { fields = typeof sub.data_json === 'string' ? JSON.parse(sub.data_json) : (sub.data_json || {}); }
-      catch(e) {}
+  const docTitle = (specObj?.document?.title || "OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION").toUpperCase();
+  const jurisdiction = specObj?.document?.jurisdiction || "";
+  const legalFooter = specObj?.document?.legal_footer || "";
+  const sections = specObj?.sections || [];
 
-      let specObj = null;
-      if (sub.spec) {
-        specObj = typeof sub.spec === 'string' ? JSON.parse(sub.spec) : sub.spec;
-      } else if (data.doc && data.doc.spec) {
-        specObj = typeof data.doc.spec === 'string' ? JSON.parse(data.doc.spec) : data.doc.spec;
-      }
+  // Header Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(15, 23, 42);
+  doc.text(docTitle, 105, 18, { align: "center", maxWidth: 180 });
 
-      const docTitle = (specObj?.document?.title || "OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION").toUpperCase();
-      const jurisdiction = specObj?.document?.jurisdiction || "";
-      const legalFooter = specObj?.document?.legal_footer || "";
-      const sections = specObj?.sections || [];
+  // Subtitle / Jurisdiction
+  let currentY = 25;
+  if (jurisdiction) {
+    doc.setFont("helvetica", "oblique");
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Jurisdiction: ${jurisdiction}`, 105, currentY, { align: "center", maxWidth: 180 });
+    currentY += 6;
+  }
 
-      // Header Title
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(15, 23, 42);
-      doc.text(docTitle, 105, 18, { align: "center", maxWidth: 180 });
+  doc.setLineWidth(0.8);
+  doc.setDrawColor(15, 23, 42);
+  doc.line(14, currentY, 196, currentY);
+  currentY += 6;
 
-      // Subtitle / Jurisdiction
-      let currentY = 25;
-      if (jurisdiction) {
-        doc.setFont("helvetica", "oblique");
-        doc.setFontSize(8.5);
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Jurisdiction: ${jurisdiction}`, 105, currentY, { align: "center", maxWidth: 180 });
-        currentY += 6;
-      }
-
-      doc.setLineWidth(0.8);
-      doc.setDrawColor(15, 23, 42);
-      doc.line(14, currentY, 196, currentY);
-      currentY += 6;
-
-      // Render Contract Clauses if spec sections present
-      if (sections.length > 0) {
-        sections.forEach(sec => {
-          if (sec.type === 'static' && sec.content) {
-            const lines = sec.content.split('\n');
-            lines.forEach(l => {
-              const trimmed = l.trim();
-              if (!trimmed) return;
-              if (currentY > 270) { doc.addPage(); currentY = 20; }
-              
-              if (trimmed.startsWith('## ')) {
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(10.5);
-                doc.setTextColor(15, 23, 42);
-                doc.text(trimmed.replace('## ', ''), 14, currentY);
-                currentY += 6;
-              } else if (trimmed.startsWith('# ')) {
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(12);
-                doc.setTextColor(15, 23, 42);
-                doc.text(trimmed.replace('# ', ''), 14, currentY);
-                currentY += 7;
-              } else {
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(8.5);
-                doc.setTextColor(30, 41, 59);
-                const splitText = doc.splitTextToSize(trimmed, 180);
-                doc.text(splitText, 14, currentY);
-                currentY += (splitText.length * 4) + 2;
-              }
-            });
-            currentY += 4;
-          } else if (sec.type === 'form' && sec.fields) {
-            const formRows = [];
-            sec.fields.forEach(f => {
-              const val = fields[f.name] !== undefined ? fields[f.name] : (f.value || '');
-              formRows.push([f.label || f.name, String(val)]);
-            });
-            if (formRows.length > 0) {
-              if (currentY > 250) { doc.addPage(); currentY = 20; }
-              doc.autoTable({
-                startY: currentY,
-                body: formRows,
-                theme: 'grid',
-                styles: { fontSize: 8.5, cellPadding: 3 }
-              });
-              currentY = doc.lastAutoTable.finalY + 6;
-            }
+  // Render Contract Clauses if spec sections present
+  if (sections.length > 0) {
+    sections.forEach(sec => {
+      if (sec.type === 'static' && sec.content) {
+        const lines = sec.content.split('\n');
+        lines.forEach(l => {
+          const trimmed = l.trim();
+          if (!trimmed) return;
+          if (currentY > 270) { doc.addPage(); currentY = 20; }
+          
+          if (trimmed.startsWith('## ')) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10.5);
+            doc.setTextColor(15, 23, 42);
+            doc.text(trimmed.replace('## ', ''), 14, currentY);
+            currentY += 6;
+          } else if (trimmed.startsWith('# ')) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.setTextColor(15, 23, 42);
+            doc.text(trimmed.replace('# ', ''), 14, currentY);
+            currentY += 7;
+          } else {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8.5);
+            doc.setTextColor(30, 41, 59);
+            const splitText = doc.splitTextToSize(trimmed, 180);
+            doc.text(splitText, 14, currentY);
+            currentY += (splitText.length * 4) + 2;
           }
         });
-      } else {
-        // Fallback metadata table
-        const tableRows = [
-          ["Document ID", docId],
-          ["Submission ID", subId],
-          ["Execution UTC Timestamp", submittedAt],
-          ["Signer Email", email]
-        ];
-
-        Object.entries(fields).forEach(([k, v]) => {
-          tableRows.push([k, String(v)]);
+        currentY += 4;
+      } else if (sec.type === 'form' && sec.fields) {
+        const formRows = [];
+        sec.fields.forEach(f => {
+          const val = fields[f.name] !== undefined ? fields[f.name] : (f.value || '');
+          formRows.push([f.label || f.name, String(val)]);
         });
-
-        doc.autoTable({
-          startY: currentY,
-          head: [['Field Name', 'Value / Execution Data']],
-          body: tableRows,
-          theme: 'grid',
-          headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-          styles: { fontSize: 8.5, cellPadding: 3.5 }
-        });
-        currentY = doc.lastAutoTable.finalY + 8;
-      }
-
-      if (currentY > 240) { doc.addPage(); currentY = 20; }
-
-      // Legal Footer
-      if (legalFooter) {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(7.5);
-        doc.setTextColor(71, 85, 105);
-        const splitFooter = doc.splitTextToSize(legalFooter, 180);
-        doc.text(splitFooter, 14, currentY);
-        currentY += (splitFooter.length * 3.5) + 6;
-      }
-
-      // Metadata Summary Table
-      const sigMeta = [
-        ["Execution UTC Timestamp", submittedAt],
-        ["Signer Email", email],
-        ["Submission ID", subId],
-        ["Cryptographic Audit SHA-256 Digest", auditHash]
-      ];
-
-      doc.autoTable({
-        startY: currentY,
-        body: sigMeta,
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3 }
-      });
-
-      currentY = doc.lastAutoTable.finalY + 8;
-      if (currentY > 250) { doc.addPage(); currentY = 20; }
-
-      // Signature Image
-      const sigData = sub.signature_svg || '';
-      if (sigData && sigData.startsWith('data:image')) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(15, 23, 42);
-        doc.text("SIGNATURE OF RECORD:", 14, currentY);
-        try {
-          doc.addImage(sigData, 'PNG', 14, currentY + 3, 65, 22);
-          currentY += 28;
-        } catch(imgErr) {
-          currentY += 8;
+        if (formRows.length > 0) {
+          if (currentY > 250) { doc.addPage(); currentY = 20; }
+          doc.autoTable({
+            startY: currentY,
+            body: formRows,
+            theme: 'grid',
+            styles: { fontSize: 8.5, cellPadding: 3 }
+          });
+          currentY = doc.lastAutoTable.finalY + 6;
         }
       }
-
-      doc.setLineWidth(0.4);
-      doc.setDrawColor(203, 213, 225);
-      doc.line(14, currentY, 196, currentY);
-
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(7.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text("Legally Binding Advanced Electronic Signature (eIDAS Regulation EU No 910/2014 & US ESIGN Act)", 105, currentY + 5, { align: "center" });
-
-      doc.save(`executed_contract_${docId}_${idx + 1}.pdf`);
     });
-  } catch (err) {
-    alert('Error exporting PDF: ' + err.message);
+  } else {
+    // Fallback metadata table
+    const tableRows = [
+      ["Document ID", docId],
+      ["Submission ID", subId],
+      ["Execution UTC Timestamp", submittedAt],
+      ["Signer Email", email]
+    ];
+
+    Object.entries(fields).forEach(([k, v]) => {
+      tableRows.push([k, String(v)]);
+    });
+
+    doc.autoTable({
+      startY: currentY,
+      head: [['Field Name', 'Value / Execution Data']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 8.5, cellPadding: 3.5 }
+    });
+    currentY = doc.lastAutoTable.finalY + 8;
   }
+
+  if (currentY > 240) { doc.addPage(); currentY = 20; }
+
+  // Legal Footer
+  if (legalFooter) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    const splitFooter = doc.splitTextToSize(legalFooter, 180);
+    doc.text(splitFooter, 14, currentY);
+    currentY += (splitFooter.length * 3.5) + 6;
+  }
+
+  // Metadata Summary Table
+  const sigMeta = [
+    ["Execution UTC Timestamp", submittedAt],
+    ["Signer Email", email],
+    ["Submission ID", subId],
+    ["Cryptographic Audit SHA-256 Digest", auditHash]
+  ];
+
+  doc.autoTable({
+    startY: currentY,
+    body: sigMeta,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 3 }
+  });
+
+  currentY = doc.lastAutoTable.finalY + 8;
+  if (currentY > 250) { doc.addPage(); currentY = 20; }
+
+  // Signature Image
+  const sigData = sub.signature_svg || '';
+  if (sigData && sigData.startsWith('data:image')) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text("SIGNATURE OF RECORD:", 14, currentY);
+    try {
+      doc.addImage(sigData, 'PNG', 14, currentY + 3, 65, 22);
+      currentY += 28;
+    } catch(imgErr) {
+      currentY += 8;
+    }
+  }
+
+  doc.setLineWidth(0.4);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, currentY, 196, currentY);
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text("Legally Binding Advanced Electronic Signature (eIDAS Regulation EU No 910/2014 & US ESIGN Act)", 105, currentY + 5, { align: "center" });
+
+  doc.save(`executed_contract_${docId}_${subId.slice(0, 8)}.pdf`);
 }
 
 async function exportDocJson(docId) {
