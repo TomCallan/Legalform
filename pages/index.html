@@ -218,8 +218,14 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
   : 'https://legalform-api.tomcallan0.workers.dev';
 
 const params = new URLSearchParams(window.location.search);
-const slug = params.get('slug') || window.location.pathname.split('/').pop();
+const pathLastSegment = window.location.pathname.split('/').pop();
+const slug = params.get('slug') || (pathLastSegment && !pathLastSegment.includes('.html') ? pathLastSegment : null);
 const verificationToken = params.get('token');
+
+if (!slug) {
+  // If accessing main site without a slug (or accessing admin.html), stop execution
+  console.log('No document slug provided.');
+} else {
 
 let auditTrail = [];
 let signatureData = null;
@@ -586,6 +592,7 @@ async function handleSubmit(e) {
     btn.disabled = false;
     btn.textContent = 'Execute & Sign Legal Instrument';
   }
+}
 }
 </script>
 </body>
