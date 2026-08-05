@@ -247,6 +247,92 @@ fetch(`${API_BASE}/api/doc/${slug}`)
     `;
   });
 
+function renderSingleField(field) {
+  const group = document.createElement('div');
+  group.className = 'form-group';
+
+  const label = document.createElement('label');
+  label.className = field.required ? 'required' : '';
+  label.textContent = field.label || field.signer_label || 'Field';
+  group.appendChild(label);
+
+  const fieldType = field.field_type || field.type;
+
+  if (fieldType === 'signature') {
+    const sigContainer = document.createElement('div');
+    sigContainer.className = 'signature-container';
+    
+    const canvas = document.createElement('canvas');
+    canvas.className = 'signature-pad';
+    sigContainer.appendChild(canvas);
+
+    const actions = document.createElement('div');
+    actions.className = 'signature-actions';
+    actions.innerHTML = '<span class="signature-hint">✍️ Draw inside box</span>';
+    
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'btn-clear';
+    clearBtn.textContent = 'Clear Signature';
+    actions.appendChild(clearBtn);
+    sigContainer.appendChild(actions);
+
+    group.appendChild(sigContainer);
+    setupSignaturePad(canvas, clearBtn);
+  } else if (fieldType === 'select') {
+    const select = document.createElement('select');
+    select.name = field.name;
+    select.required = !!field.required;
+    (field.options || []).forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt;
+      o.textContent = opt;
+      select.appendChild(o);
+    });
+    const urlPrefill = params.get(`field_${field.name}`) || params.get(field.name);
+    if (urlPrefill !== null) select.value = urlPrefill;
+    else if (field.value !== undefined) select.value = field.value;
+
+    select.addEventListener('focus', () => audit('field_focus', { field: field.name }));
+    select.addEventListener('blur', () => audit('field_blur', { field: field.name }));
+    select.addEventListener('change', (e) => {
+      audit('value_change', { field: field.name, hash: btoa(e.target.value).slice(0, 12) });
+    });
+    group.appendChild(select);
+  } else {
+    const input = document.createElement(fieldType === 'textarea' ? 'textarea' : 'input');
+    input.name = field.name;
+    input.required = !!field.required;
+    if (field.validation) input.pattern = field.validation;
+    if (fieldType) input.type = fieldType;
+    if (field.placeholder) input.placeholder = field.placeholder;
+
+    const urlPrefill = params.get(`field_${field.name}`) || params.get(field.name);
+    if (urlPrefill !== null) {
+      input.value = urlPrefill;
+    } else if (field.value !== undefined) {
+      input.value = field.value;
+    } else if (field.default === 'today' && fieldType === 'date') {
+      input.valueAsDate = new Date();
+    }
+
+    input.addEventListener('focus', () => audit('field_focus', { field: field.name }));
+    input.addEventListener('blur', () => audit('field_blur', { field: field.name }));
+    input.addEventListener('change', (e) => {
+      audit('value_change', { field: field.name, hash: btoa(e.target.value).slice(0, 12) });
+    });
+
+    group.appendChild(input);
+  }
+
+  const error = document.createElement('div');
+  error.className = 'error-msg';
+  error.id = `error-${field.name}`;
+  group.appendChild(error);
+
+  return group;
+}
+
 function renderForm(sections, requireVerification) {
   const form = document.getElementById('legal-form');
 
@@ -269,67 +355,28 @@ function renderForm(sections, requireVerification) {
     if (section.type === 'static') {
       div.innerHTML = `<div class="prose">${formatMarkdown(section.content)}</div>`;
     } 
-    else if (section.type === 'field' || section.type === 'signature') {
-      const group = document.createElement('div');
-      group.className = 'form-group';
-
-      const label = document.createElement('label');
-      label.className = section.required ? 'required' : '';
-      label.textContent = section.label;
-      group.appendChild(label);
-
-      if (section.field_type === 'signature' || section.type === 'signature') {
-        const sigContainer = document.createElement('div');
-        sigContainer.className = 'signature-container';
-        
-        const canvas = document.createElement('canvas');
-        canvas.className = 'signature-pad';
-        sigContainer.appendChild(canvas);
-
-        const actions = document.createElement('div');
-        actions.className = 'signature-actions';
-        actions.innerHTML = '<span class="signature-hint">✍️ Draw inside box</span>';
-        
-        const clearBtn = document.createElement('button');
-        clearBtn.type = 'button';
-        clearBtn.className = 'btn-clear';
-        clearBtn.textContent = 'Clear Signature';
-        actions.appendChild(clearBtn);
-        sigContainer.appendChild(actions);
-
-        group.appendChild(sigContainer);
-        setupSignaturePad(canvas, clearBtn);
-      } else {
-        const input = document.createElement(section.field_type === 'textarea' ? 'textarea' : 'input');
-        input.name = section.name;
-        input.required = !!section.required;
-        if (section.validation) input.pattern = section.validation;
-        if (section.field_type) input.type = section.field_type;
-
-        // Apply pre-filled content if provided in YAML spec or URL query string
-        const urlPrefill = params.get(`field_${section.name}`) || params.get(section.name);
-        if (urlPrefill !== null) {
-          input.value = urlPrefill;
-        } else if (section.value !== undefined) {
-          input.value = section.value;
-        } else if (section.default === 'today' && section.field_type === 'date') {
-          input.valueAsDate = new Date();
-        }
-
-        input.addEventListener('focus', () => audit('field_focus', { field: section.name }));
-        input.addEventListener('blur', () => audit('field_blur', { field: section.name }));
-        input.addEventListener('change', (e) => {
-          audit('value_change', { field: section.name, hash: btoa(e.target.value).slice(0, 12) });
-        });
-
-        group.appendChild(input);
+    else if (section.type === 'form') {
+      (section.fields || []).forEach(f => {
+        const group = renderSingleField(f);
+        div.appendChild(group);
+      });
+    }
+    else if (section.type === 'signature') {
+      if (section.signer_label) {
+        const h3 = document.createElement('h3');
+        h3.style.margin = '0 0 1rem 0';
+        h3.textContent = section.signer_label;
+        div.appendChild(h3);
       }
-
-      const error = document.createElement('div');
-      error.className = 'error-msg';
-      error.id = `error-${section.name}`;
-      group.appendChild(error);
-
+      (section.fields || []).forEach(f => {
+        const group = renderSingleField(f);
+        div.appendChild(group);
+      });
+      const sigGroup = renderSingleField({ type: 'signature', label: 'Digital Signature Canvas', name: 'signature' });
+      div.appendChild(sigGroup);
+    }
+    else if (section.type === 'field') {
+      const group = renderSingleField(section);
       div.appendChild(group);
     }
     else if (section.type === 'checkbox') {
@@ -441,17 +488,23 @@ async function handleSubmit(e) {
   const fields = {};
   let emailValue = '';
 
-  spec.sections.forEach(s => {
-    if (s.name && s.type !== 'signature') {
-      const el = document.querySelector(`[name="${s.name}"]`);
-      if (el) {
-        fields[s.name] = el.type === 'checkbox' ? el.checked : el.value;
-        if (s.field_type === 'email' || s.name.includes('email')) {
-          emailValue = el.value;
+  const processFields = (items) => {
+    items.forEach(s => {
+      if (s.fields) {
+        processFields(s.fields);
+      } else if (s.name && s.type !== 'signature') {
+        const el = document.querySelector(`[name="${s.name}"]`);
+        if (el) {
+          fields[s.name] = el.type === 'checkbox' ? el.checked : el.value;
+          if (s.field_type === 'email' || s.type === 'email' || s.name.includes('email')) {
+            emailValue = el.value;
+          }
         }
       }
-    }
-  });
+    });
+  };
+
+  processFields(spec.sections);
 
   if (!signatureData) {
     alert('Please draw your signature before submitting.');
