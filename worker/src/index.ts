@@ -281,9 +281,65 @@ app.post('/api/submit/:slug', async (c) => {
     ip, ua, session
   });
 
+  // Store completed submission record in R2 storage
+  const r2Key = `submissions/${doc.id}/${submissionId}.json`;
+  const r2Record = {
+    submission_id: submissionId,
+    document_id: doc.id,
+    email,
+    submitted_at: now(),
+    fields: body.fields,
+    signature: body.signature_svg,
+    audit_hash: auditHash,
+    fingerprint: body.fingerprint,
+    audit_trail: body.auditTrail || []
+  };
+
+  try {
+    await c.env.R2.put(r2Key, JSON.stringify(r2Record, null, 2), {
+      customMetadata: {
+        document_id: doc.id as string,
+        email,
+        audit_hash: auditHash
+      }
+    });
+  } catch (r2Err) {
+    console.error('R2 storage error:', r2Err);
+  }
+
+  // Send completion confirmation via Resend if API key is configured
+  if (c.env.RESEND_API_KEY && email) {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'LegalForm <noreply@resend.dev>',
+          to: email,
+          subject: `Signed Document Certificate: ${doc.id}`,
+          html: `<div style="font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:8px;">
+            <h2 style="color:#0f172a;">Document Execution Certificate</h2>
+            <p>Your electronic signature has been recorded and verified.</p>
+            <hr style="border:0;border-top:1px solid #e2e8f0;margin:20px 0;"/>
+            <p><strong>Document ID:</strong> ${doc.id}</p>
+            <p><strong>Submission ID:</strong> ${submissionId}</p>
+            <p><strong>Cryptographic Audit Hash (SHA-256):</strong></p>
+            <code style="background:#f1f5f9;padding:6px 10px;border-radius:4px;word-break:break-all;display:block;">${auditHash}</code>
+          </div>`
+        })
+      });
+    } catch (emailErr) {
+      console.error('Resend email error:', emailErr);
+    }
+  }
+
   return c.json({
     submission_id: submissionId,
     audit_hash: auditHash,
+    r2_key: r2Key,
     message: 'Document successfully signed'
   });
 });

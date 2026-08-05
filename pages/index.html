@@ -3,119 +3,144 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Sign Legal Document</title>
+  <title>Legal Document Signature</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      --card-bg: rgba(30, 41, 59, 0.7);
-      --card-border: rgba(255, 255, 255, 0.1);
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --danger: #ef4444;
-      --success: #10b981;
+      --bg: #f8fafc;
+      --paper-bg: #ffffff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --text-heading: #0f172a;
+      --text-body: #334155;
+      --text-muted: #64748b;
+      --primary-navy: #1e3a8a;
+      --primary-hover: #1e40af;
+      --accent-gold: #b45309;
+      --danger: #dc2626;
+      --shadow-paper: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
     }
     * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
     body {
       min-height: 100vh;
       margin: 0;
-      padding: 1rem 0.75rem;
-      background: var(--bg-gradient);
-      color: var(--text-main);
+      padding: 1.5rem 1rem;
+      background-color: var(--bg);
+      color: var(--text-body);
       display: flex;
       justify-content: center;
       align-items: flex-start;
     }
-    @media (min-width: 640px) {
-      body { padding: 2rem 1rem; }
+    @media (min-width: 768px) {
+      body { padding: 3rem 1.5rem; }
     }
     .container {
       width: 100%;
-      max-width: 760px;
+      max-width: 820px;
     }
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 1.25rem;
-      margin-bottom: 1.25rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    .paper {
+      background: var(--paper-bg);
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--primary-navy);
+      border-radius: 4px;
+      padding: 2rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-paper);
     }
-    @media (min-width: 640px) {
-      .card { padding: 2rem; margin-bottom: 1.5rem; }
+    @media (min-width: 768px) {
+      .paper { padding: 3.5rem 3rem; margin-bottom: 2rem; }
     }
     .doc-header {
       text-align: center;
+      border-bottom: 2px solid var(--text-heading);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
     }
     .doc-header h1 {
       margin: 0 0 0.5rem 0;
-      font-size: 1.5rem;
+      font-family: 'Cinzel', serif;
+      font-size: 1.6rem;
       font-weight: 700;
-      background: linear-gradient(90deg, #818cf8, #c084fc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      letter-spacing: 0.03em;
+      color: var(--text-heading);
+      text-transform: uppercase;
     }
-    @media (min-width: 640px) {
-      .doc-header h1 { font-size: 1.875rem; }
+    @media (min-width: 768px) {
+      .doc-header h1 { font-size: 2.1rem; }
     }
-    .doc-header p {
-      margin: 0;
+    .doc-header .jurisdiction {
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+      font-size: 0.95rem;
       color: var(--text-muted);
-      font-size: 0.85rem;
+      margin-top: 0.25rem;
     }
     .prose {
-      color: #cbd5e1;
-      line-height: 1.6;
-      font-size: 0.95rem;
-      overflow-wrap: break-word;
+      font-family: 'Newsreader', serif;
+      color: #1e293b;
+      line-height: 1.8;
+      font-size: 1.05rem;
     }
     .prose h1, .prose h2, .prose h3 {
-      color: var(--text-main);
-      margin-top: 1rem;
+      font-family: 'Cinzel', serif;
+      color: var(--text-heading);
+      margin-top: 1.75rem;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
     }
+    .prose h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
     .form-group {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
     }
     label {
       display: block;
       font-weight: 600;
       margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-      color: var(--text-main);
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text-heading);
     }
     .required::after { content: " *"; color: var(--danger); }
     input[type="text"], input[type="email"], input[type="date"], textarea, select {
       width: 100%;
       padding: 0.75rem 1rem;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      color: var(--text-main);
-      font-size: 16px; /* Prevents iOS auto-zoom on input focus */
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      color: var(--text-heading);
+      font-size: 16px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     input:focus, textarea:focus, select:focus {
-      border-color: var(--primary);
+      border-color: var(--primary-navy);
+      box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+    }
+    .signature-section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      border-bottom: 1px solid var(--text-heading);
+      padding-bottom: 0.5rem;
+      margin: 2rem 0 1.5rem 0;
     }
     .signature-container {
       position: relative;
       width: 100%;
     }
     .signature-pad {
-      border: 2px dashed var(--card-border);
-      border-radius: 8px;
-      background: #0f172a;
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      background: #fafafa;
       cursor: crosshair;
       touch-action: none;
       width: 100%;
-      height: 180px;
+      height: 190px;
       display: block;
     }
     .signature-actions {
@@ -127,6 +152,7 @@
     .signature-hint {
       font-size: 0.75rem;
       color: var(--text-muted);
+      font-style: italic;
     }
     .btn-clear {
       background: transparent;
@@ -137,70 +163,56 @@
       text-decoration: underline;
       padding: 0.25rem 0.5rem;
     }
-    .checkbox-group {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-    .checkbox-group input[type="checkbox"] {
-      width: 1.25rem;
-      height: 1.25rem;
-      margin-top: 0.1rem;
-      accent-color: var(--primary);
-      flex-shrink: 0;
-    }
+    .btn-clear:hover { color: var(--danger); }
     .btn-submit {
-      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      background: var(--primary-navy);
       color: white;
-      padding: 1rem 1.5rem;
+      padding: 1.1rem 2rem;
       border: none;
-      border-radius: 8px;
+      border-radius: 4px;
       font-size: 1rem;
       font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
       cursor: pointer;
       width: 100%;
-      transition: opacity 0.2s, transform 0.1s;
-      min-height: 48px; /* Mobile touch friendly target */
+      transition: background-color 0.2s, transform 0.1s;
+      min-height: 52px;
     }
-    .btn-submit:hover { opacity: 0.95; }
+    .btn-submit:hover { background-color: var(--primary-hover); }
     .btn-submit:active { transform: scale(0.99); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-    .verify-banner {
-      background: rgba(99, 102, 241, 0.15);
-      border: 1px solid rgba(99, 102, 241, 0.4);
-      padding: 1rem;
-      border-radius: 8px;
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .legal-footer {
+      font-family: 'Newsreader', serif;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.5;
       margin-bottom: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    @media (min-width: 640px) {
-      .verify-banner { flex-direction: row; justify-content: space-between; align-items: center; }
+      padding: 1rem;
+      background: #f8fafc;
+      border: 1px dashed var(--border-dark);
+      border-radius: 4px;
     }
     .audit-notice {
       font-size: 0.75rem;
       color: var(--text-muted);
       margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--card-border);
       text-align: center;
-      line-height: 1.4;
     }
-    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; display: none; }
   </style>
 </head>
 <body>
   <div class="container" id="app">
-    <div class="card doc-header">
-      <h1 id="doc-title">Loading Document...</h1>
-      <p id="doc-expiry"></p>
+    <div class="paper doc-header">
+      <h1 id="doc-title">Loading Legal Document...</h1>
+      <div class="jurisdiction" id="doc-jurisdiction"></div>
+      <p id="doc-expiry" style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted)"></p>
     </div>
     <form id="legal-form"></form>
   </div>
 
 <script>
-// API Config: auto-detect local vs production worker
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8787'
   : 'https://legalform-api.tomcallan0.workers.dev';
@@ -222,7 +234,6 @@ function audit(type, data = {}) {
   });
 }
 
-// Fetch Document Spec
 fetch(`${API_BASE}/api/doc/${slug}`)
   .then(r => {
     if (!r.ok) throw new Error('Document not found or expired');
@@ -231,18 +242,21 @@ fetch(`${API_BASE}/api/doc/${slug}`)
   .then(doc => {
     spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
     document.getElementById('doc-title').textContent = spec.document?.title || 'Legal Document';
+    if (spec.document?.jurisdiction) {
+      document.getElementById('doc-jurisdiction').textContent = `Jurisdiction: ${spec.document.jurisdiction}`;
+    }
     if (doc.expires_at) {
       const d = new Date(doc.expires_at * 1000);
-      document.getElementById('doc-expiry').textContent = `Expires on ${d.toLocaleDateString()}`;
+      document.getElementById('doc-expiry').textContent = `Execution Period Expires: ${d.toLocaleDateString()}`;
     }
     renderForm(spec.sections, doc.require_verification);
     audit('page_open', { slug });
   })
   .catch(err => {
     document.getElementById('app').innerHTML = `
-      <div class="card" style="text-align:center">
-        <h2 style="color:var(--danger)">Document Error</h2>
-        <p>${err.message}</p>
+      <div class="paper" style="text-align:center">
+        <h2 style="color:var(--danger);font-family:'Cinzel',serif">Document Error</h2>
+        <p style="color:var(--text-body)">${err.message}</p>
       </div>
     `;
   });
@@ -268,7 +282,7 @@ function renderSingleField(field) {
 
     const actions = document.createElement('div');
     actions.className = 'signature-actions';
-    actions.innerHTML = '<span class="signature-hint">✍️ Draw inside box</span>';
+    actions.innerHTML = '<span class="signature-hint">Draw digital signature in box above</span>';
     
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
@@ -325,32 +339,15 @@ function renderSingleField(field) {
     group.appendChild(input);
   }
 
-  const error = document.createElement('div');
-  error.className = 'error-msg';
-  error.id = `error-${field.name}`;
-  group.appendChild(error);
-
   return group;
 }
 
 function renderForm(sections, requireVerification) {
   const form = document.getElementById('legal-form');
 
-  if (requireVerification && !verificationToken) {
-    const banner = document.createElement('div');
-    banner.className = 'card verify-banner';
-    banner.innerHTML = `
-      <div>
-        <strong>Email Verification Required</strong>
-        <p style="margin:0;font-size:0.85rem;color:var(--text-muted)">Enter your email to receive a magic signing link.</p>
-      </div>
-    `;
-    form.appendChild(banner);
-  }
-
   sections.forEach((section) => {
     const div = document.createElement('div');
-    div.className = 'card';
+    div.className = 'paper';
 
     if (section.type === 'static') {
       div.innerHTML = `<div class="prose">${formatMarkdown(section.content)}</div>`;
@@ -363,8 +360,8 @@ function renderForm(sections, requireVerification) {
     }
     else if (section.type === 'signature') {
       if (section.signer_label) {
-        const h3 = document.createElement('h3');
-        h3.style.margin = '0 0 1rem 0';
+        const h3 = document.createElement('div');
+        h3.className = 'signature-section-title';
         h3.textContent = section.signer_label;
         div.appendChild(h3);
       }
@@ -372,38 +369,34 @@ function renderForm(sections, requireVerification) {
         const group = renderSingleField(f);
         div.appendChild(group);
       });
-      const sigGroup = renderSingleField({ type: 'signature', label: 'Digital Signature Canvas', name: 'signature' });
+      const sigGroup = renderSingleField({ type: 'signature', label: 'Signature of Record', name: 'signature' });
       div.appendChild(sigGroup);
     }
     else if (section.type === 'field') {
       const group = renderSingleField(section);
       div.appendChild(group);
     }
-    else if (section.type === 'checkbox') {
-      const urlPrefill = params.get(`field_${section.name}`) || params.get(section.name);
-      const isChecked = urlPrefill !== null ? (urlPrefill === 'true' || urlPrefill === '1') : !!section.value;
-
-      div.innerHTML = `
-        <div class="checkbox-group">
-          <input type="checkbox" id="${section.name}" name="${section.name}" ${section.required ? 'required' : ''} ${isChecked ? 'checked' : ''}>
-          <label for="${section.name}" class="${section.required ? 'required' : ''}">${section.label}</label>
-        </div>
-        <div class="error-msg" id="error-${section.name}"></div>
-      `;
-    }
 
     form.appendChild(div);
   });
 
-  const submitCard = document.createElement('div');
-  submitCard.className = 'card';
-  submitCard.innerHTML = `
-    <button type="submit" class="btn-submit">Sign & Complete Agreement</button>
+  const submitPaper = document.createElement('div');
+  submitPaper.className = 'paper';
+  
+  if (spec.document?.legal_footer) {
+    const footerText = document.createElement('div');
+    footerText.className = 'legal-footer';
+    footerText.textContent = spec.document.legal_footer;
+    submitPaper.appendChild(footerText);
+  }
+
+  submitPaper.innerHTML += `
+    <button type="submit" class="btn-submit">Execute & Sign Legal Instrument</button>
     <div class="audit-notice">
-      🛡️ Encrypted & Legally Audited: IP, precise timestamp, and interaction history are logged to Cloudflare D1.
+      🔒 Cryptographic Audit Chain Active • Timestamped to Cloudflare D1 & Archived to R2
     </div>
   `;
-  form.appendChild(submitCard);
+  form.appendChild(submitPaper);
 
   form.addEventListener('submit', handleSubmit);
 }
@@ -420,10 +413,10 @@ function setupSignaturePad(canvas, clearBtn) {
   let ctx;
   const initCanvas = () => {
     canvas.width = canvas.offsetWidth;
-    canvas.height = 180;
+    canvas.height = 190;
     ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#818cf8';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2.2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
   };
@@ -450,7 +443,7 @@ function setupSignaturePad(canvas, clearBtn) {
 
   const move = (e) => {
     if (!drawing || !ctx) return;
-    if (e.cancelable) e.preventDefault(); // Prevent page touch scrolling while drawing signature
+    if (e.cancelable) e.preventDefault();
     const pos = getPos(e);
     points.push(pos);
     ctx.beginPath();
@@ -483,7 +476,7 @@ async function handleSubmit(e) {
   e.preventDefault();
   const btn = e.target.querySelector('.btn-submit');
   btn.disabled = true;
-  btn.textContent = 'Encrypting & Submitting...';
+  btn.textContent = 'Processing Digital Execution...';
 
   const fields = {};
   let emailValue = '';
@@ -507,9 +500,9 @@ async function handleSubmit(e) {
   processFields(spec.sections);
 
   if (!signatureData) {
-    alert('Please draw your signature before submitting.');
+    alert('Please complete your handwritten digital signature before submitting.');
     btn.disabled = false;
-    btn.textContent = 'Sign & Complete Agreement';
+    btn.textContent = 'Execute & Sign Legal Instrument';
     return;
   }
 
@@ -540,25 +533,26 @@ async function handleSubmit(e) {
 
     if (res.ok) {
       document.getElementById('app').innerHTML = `
-        <div class="card" style="text-align:center; padding:2.5rem 1rem">
-          <div style="font-size:3rem;margin-bottom:1rem">✍️</div>
-          <h2>Document Successfully Signed</h2>
-          <p style="color:var(--text-muted)">Your non-repudiable electronic signature has been cryptographically recorded.</p>
-          <div style="background:rgba(15,23,42,0.8);padding:1rem;border-radius:8px;text-align:left;font-family:monospace;font-size:0.8rem;margin:1.5rem 0;word-break:break-all;">
+        <div class="paper" style="text-align:center; padding:3rem 1.5rem">
+          <div style="font-size:3rem;margin-bottom:1rem">📜</div>
+          <h2 style="font-family:'Cinzel',serif;color:var(--text-heading)">Document Successfully Executed</h2>
+          <p style="color:var(--text-muted);max-width:500px;margin:0.5rem auto 1.5rem auto">Your electronic signature and execution telemetry have been recorded to Cloudflare D1 and archived in R2.</p>
+          <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1.25rem;border-radius:4px;text-align:left;font-family:monospace;font-size:0.8rem;word-break:break-all;max-width:600px;margin:0 auto;">
             <div><strong>Submission ID:</strong> ${result.submission_id}</div>
             <div style="margin-top:0.5rem"><strong>Audit Hash:</strong> ${result.audit_hash}</div>
+            <div style="margin-top:0.5rem;color:var(--primary-navy)"><strong>R2 Archive Key:</strong> ${result.r2_key}</div>
           </div>
         </div>
       `;
     } else {
       alert(result.error || 'Submission failed.');
       btn.disabled = false;
-      btn.textContent = 'Sign & Complete Agreement';
+      btn.textContent = 'Execute & Sign Legal Instrument';
     }
   } catch (err) {
     alert('Network error submitting document: ' + err.message);
     btn.disabled = false;
-    btn.textContent = 'Sign & Complete Agreement';
+    btn.textContent = 'Execute & Sign Legal Instrument';
   }
 }
 </script>
