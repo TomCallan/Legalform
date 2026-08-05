@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Legal Document</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem 1rem;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .container {
+      width: 100%;
+      max-width: 760px;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .doc-header {
+      text-align: center;
+    }
+    .doc-header h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.875rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .doc-header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    .prose {
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+    .prose h1, .prose h2, .prose h3 {
+      color: var(--text-main);
+      margin-top: 1rem;
+    }
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-main);
+    }
+    .required::after { content: " *"; color: var(--danger); }
+    input[type="text"], input[type="email"], input[type="date"], textarea, select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+    }
+    .signature-container {
+      position: relative;
+    }
+    .signature-pad {
+      border: 2px dashed var(--card-border);
+      border-radius: 8px;
+      background: #0f172a;
+      cursor: crosshair;
+      touch-action: none;
+      width: 100%;
+      height: 160px;
+    }
+    .signature-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+    .btn-clear {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 1.1rem;
+      height: 1.1rem;
+      margin-top: 0.15rem;
+      accent-color: var(--primary);
+    }
+    .btn-submit {
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      color: white;
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-submit:hover { opacity: 0.95; }
+    .btn-submit:active { transform: scale(0.99); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .verify-banner {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .audit-notice {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--card-border);
+      text-align: center;
+    }
+    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; display: none; }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <div class="card doc-header">
+      <h1 id="doc-title">Loading Document...</h1>
+      <p id="doc-expiry"></p>
+    </div>
+    <form id="legal-form"></form>
+  </div>
+
+<script>
+// API Config: auto-detect local vs production worker
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:8787'
+  : 'https://legalform-api.your-subdomain.workers.dev';
+
+const params = new URLSearchParams(window.location.search);
+const slug = params.get('slug') || window.location.pathname.split('/').pop();
+const verificationToken = params.get('token');
+
+let auditTrail = [];
+let signatureData = null;
+let spec = null;
+
+function audit(type, data = {}) {
+  auditTrail.push({
+    type,
+    data,
+    client_timestamp: Date.now(),
+    url: window.location.href
+  });
+}
+
+// Fetch Document Spec
+fetch(`${API_BASE}/api/doc/${slug}`)
+  .then(r => {
+    if (!r.ok) throw new Error('Document not found or expired');
+    return r.json();
+  })
+  .then(doc => {
+    spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
+    document.getElementById('doc-title').textContent = spec.document?.title || 'Legal Document';
+    if (doc.expires_at) {
+      const d = new Date(doc.expires_at * 1000);
+      document.getElementById('doc-expiry').textContent = `Expires on ${d.toLocaleDateString()}`;
+    }
+    renderForm(spec.sections, doc.require_verification);
+    audit('page_open', { slug });
+  })
+  .catch(err => {
+    document.getElementById('app').innerHTML = `
+      <div class="card" style="text-align:center">
+        <h2 style="color:var(--danger)">Document Error</h2>
+        <p>${err.message}</p>
+      </div>
+    `;
+  });
+
+function renderForm(sections, requireVerification) {
+  const form = document.getElementById('legal-form');
+
+  if (requireVerification && !verificationToken) {
+    const banner = document.createElement('div');
+    banner.className = 'card verify-banner';
+    banner.innerHTML = `
+      <div>
+        <strong>Email Verification Required</strong>
+        <p style="margin:0;font-size:0.85rem;color:var(--text-muted)">Enter your email to receive a magic signing link.</p>
+      </div>
+    `;
+    form.appendChild(banner);
+  }
+
+  sections.forEach((section) => {
+    const div = document.createElement('div');
+    div.className = 'card';
+
+    if (section.type === 'static') {
+      div.innerHTML = `<div class="prose">${formatMarkdown(section.content)}</div>`;
+    } 
+    else if (section.type === 'field' || section.type === 'signature') {
+      const group = document.createElement('div');
+      group.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.className = section.required ? 'required' : '';
+      label.textContent = section.label;
+      group.appendChild(label);
+
+      if (section.field_type === 'signature' || section.type === 'signature') {
+        const sigContainer = document.createElement('div');
+        sigContainer.className = 'signature-container';
+        
+        const canvas = document.createElement('canvas');
+        canvas.className = 'signature-pad';
+        sigContainer.appendChild(canvas);
+
+        const actions = document.createElement('div');
+        actions.className = 'signature-actions';
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn-clear';
+        clearBtn.textContent = 'Clear Signature';
+        actions.appendChild(clearBtn);
+        sigContainer.appendChild(actions);
+
+        group.appendChild(sigContainer);
+        setupSignaturePad(canvas, clearBtn);
+      } else {
+        const input = document.createElement(section.field_type === 'textarea' ? 'textarea' : 'input');
+        input.name = section.name;
+        input.required = !!section.required;
+        if (section.validation) input.pattern = section.validation;
+        if (section.field_type) input.type = section.field_type;
+        if (section.default === 'today' && section.field_type === 'date') {
+          input.valueAsDate = new Date();
+        }
+
+        input.addEventListener('focus', () => audit('field_focus', { field: section.name }));
+        input.addEventListener('blur', () => audit('field_blur', { field: section.name }));
+        input.addEventListener('change', (e) => {
+          audit('value_change', { field: section.name, hash: btoa(e.target.value).slice(0, 12) });
+        });
+
+        group.appendChild(input);
+      }
+
+      const error = document.createElement('div');
+      error.className = 'error-msg';
+      error.id = `error-${section.name}`;
+      group.appendChild(error);
+
+      div.appendChild(group);
+    }
+    else if (section.type === 'checkbox') {
+      div.innerHTML = `
+        <div class="checkbox-group">
+          <input type="checkbox" id="${section.name}" name="${section.name}" ${section.required ? 'required' : ''}>
+          <label for="${section.name}" class="${section.required ? 'required' : ''}">${section.label}</label>
+        </div>
+        <div class="error-msg" id="error-${section.name}"></div>
+      `;
+    }
+
+    form.appendChild(div);
+  });
+
+  const submitCard = document.createElement('div');
+  submitCard.className = 'card';
+  submitCard.innerHTML = `
+    <button type="submit" class="btn-submit">Sign & Complete Agreement</button>
+    <div class="audit-notice">
+      🛡️ Encrypted & Legally Audited: IP, precise timestamp, and interaction history are logged to Cloudflare D1.
+    </div>
+  `;
+  form.appendChild(submitCard);
+
+  form.addEventListener('submit', handleSubmit);
+}
+
+function formatMarkdown(text) {
+  return text
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function setupSignaturePad(canvas, clearBtn) {
+  let ctx;
+  // Adjust inner dimensions to match parent container width
+  setTimeout(() => {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 160;
+    ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#818cf8';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+  }, 100);
+
+  let drawing = false;
+  let points = [];
+
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  };
+
+  const start = (e) => { drawing = true; points = [getPos(e)]; };
+  const move = (e) => {
+    if (!drawing || !ctx) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    points.push(pos);
+    ctx.beginPath();
+    ctx.moveTo(points[points.length - 2].x, points[points.length - 2].y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  };
+  const end = () => {
+    if (!drawing) return;
+    drawing = false;
+    signatureData = canvas.toDataURL();
+    audit('signature_drawn', { stroke_points: points.length });
+  };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start);
+  canvas.addEventListener('touchmove', move);
+  canvas.addEventListener('touchend', end);
+
+  clearBtn.addEventListener('click', () => {
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    signatureData = null;
+  });
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('.btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Encrypting & Submitting...';
+
+  const fields = {};
+  let emailValue = '';
+
+  spec.sections.forEach(s => {
+    if (s.name && s.type !== 'signature') {
+      const el = document.querySelector(`[name="${s.name}"]`);
+      if (el) {
+        fields[s.name] = el.type === 'checkbox' ? el.checked : el.value;
+        if (s.field_type === 'email' || s.name.includes('email')) {
+          emailValue = el.value;
+        }
+      }
+    }
+  });
+
+  if (!signatureData) {
+    alert('Please draw your signature before submitting.');
+    btn.disabled = false;
+    btn.textContent = 'Sign & Complete Agreement';
+    return;
+  }
+
+  const fingerprint = btoa([
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset()
+  ].join('|'));
+
+  audit('submit_start', { field_count: Object.keys(fields).length });
+
+  try {
+    const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: emailValue,
+        fields,
+        signature_svg: signatureData,
+        fingerprint,
+        auditTrail,
+        verification_token: verificationToken
+      })
+    });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      document.getElementById('app').innerHTML = `
+        <div class="card" style="text-align:center; padding:3rem 1.5rem">
+          <div style="font-size:3rem;margin-bottom:1rem">✍️</div>
+          <h2>Document Successfully Signed</h2>
+          <p style="color:var(--text-muted)">Your non-repudiable electronic signature has been cryptographically recorded.</p>
+          <div style="background:rgba(15,23,42,0.8);padding:1rem;border-radius:8px;text-align:left;font-family:monospace;font-size:0.85rem;margin:1.5rem 0;">
+            <div><strong>Submission ID:</strong> ${result.submission_id}</div>
+            <div style="word-break:break-all;margin-top:0.5rem"><strong>Audit Hash (SHA-256):</strong> ${result.audit_hash}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      alert(result.error || 'Submission failed.');
+      btn.disabled = false;
+      btn.textContent = 'Sign & Complete Agreement';
+    }
+  } catch (err) {
+    alert('Network error submitting document: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Sign & Complete Agreement';
+  }
+}
+</script>
+</body>
+</html>

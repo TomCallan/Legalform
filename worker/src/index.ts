@@ -1,0 +1,342 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+
+type Bindings = {
+  DB: D1Database;
+  R2: R2Bucket;
+  RESEND_API_KEY?: string;
+  ADMIN_API_KEY?: string;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+// Enable CORS for all routes (for Pages dynamic form interactions)
+app.use('*', cors());
+
+// Helper utilities
+async function sha256(message: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+const now = () => Math.floor(Date.now() / 1000);
+
+async function checkRateLimit(
+  db: D1Database,
+  type: 'ip' | 'email',
+  value: string,
+  docId: string,
+  max: number
+): Promise<boolean> {
+  const hour = Math.floor(now() / 3600);
+  await db.prepare(
+    `INSERT INTO rate_limits (resource_type, resource_value, document_id, window_hour, count)
+     VALUES (?, ?, ?, ?, 1)
+     ON CONFLICT(resource_type, resource_value, document_id, window_hour) 
+     DO UPDATE SET count = count + 1`
+  ).bind(type, value, docId, hour).run();
+
+  const row = await db.prepare(
+    `SELECT count FROM rate_limits 
+     WHERE resource_type=? AND resource_value=? AND document_id=? AND window_hour=?`
+  ).bind(type, value, docId, hour).first<{ count: number }>();
+
+  return (row?.count ?? 0) <= max;
+}
+
+async function logAudit(
+  db: D1Database,
+  event: {
+    submissionId?: string;
+    documentId: string;
+    type: string;
+    data?: object;
+    ip: string;
+    ua: string;
+    session: string;
+  }
+) {
+  const ipHash = await sha256(event.ip);
+  await db.prepare(
+    `INSERT INTO audit_logs 
+     (submission_id, document_id, event_type, event_data, ip_hash, user_agent, session_id, server_timestamp)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    event.submissionId ?? null,
+    event.documentId,
+    event.type,
+    JSON.stringify(event.data ?? {}),
+    ipHash,
+    event.ua,
+    event.session,
+    now()
+  ).run();
+}
+
+// ── Admin: Deploy Document (from CLI) ──────────────────────
+app.post('/api/documents', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
+  const body = await c.req.json();
+  const effectiveKey = apiKey || body.api_key;
+
+  const adminKey = c.env.ADMIN_API_KEY;
+  if (adminKey && effectiveKey !== adminKey) {
+    return c.json({ error: 'Unauthorized: Invalid API Key' }, 401);
+  }
+
+  const { id, slug, spec, expires_at, max_per_email, max_per_ip, require_verification } = body;
+  if (!id || !slug || !spec) {
+    return c.json({ error: 'Missing required fields: id, slug, spec' }, 400);
+  }
+
+  const apiKeyHash = effectiveKey ? await sha256(effectiveKey) : 'unauthenticated';
+
+  await c.env.DB.prepare(
+    `INSERT INTO documents (id, slug, spec, expires_at, max_per_email, max_per_ip, require_verification, owner_api_key_hash)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET spec=excluded.spec, expires_at=excluded.expires_at`
+  ).bind(
+    id, slug, spec, expires_at ?? null,
+    max_per_email ?? 1, max_per_ip ?? 3,
+    require_verification ? 1 : 0, apiKeyHash
+  ).run();
+
+  return c.json({ success: true, id, slug });
+});
+
+// ── Public: Get Document Spec ──────────────────────────────
+app.get('/api/doc/:slug', async (c) => {
+  const slug = c.req.param('slug');
+  const doc = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE slug = ? AND status = ?'
+  ).bind(slug, 'active').first();
+
+  if (!doc) return c.json({ error: 'Document not found or inactive' }, 404);
+
+  const expiresAt = doc.expires_at as number | null;
+  if (expiresAt && expiresAt < now()) {
+    await c.env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind('expired', doc.id).run();
+    return c.json({ error: 'Document expired' }, 410);
+  }
+
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
+  const session = c.req.header('CF-Ray') ?? crypto.randomUUID();
+
+  await logAudit(c.env.DB, {
+    documentId: doc.id as string,
+    type: 'page_open',
+    ip,
+    ua: c.req.header('User-Agent') ?? '',
+    session
+  });
+
+  return c.json({
+    id: doc.id,
+    slug: doc.slug,
+    spec: doc.spec,
+    require_verification: doc.require_verification === 1,
+    expires_at: doc.expires_at
+  });
+});
+
+// ── Public: Send Verification Email ────────────────────────
+app.post('/api/verify-email', async (c) => {
+  const { slug, email, redirect_url } = await c.req.json();
+  const doc = await c.env.DB.prepare('SELECT * FROM documents WHERE slug = ?').bind(slug).first();
+  if (!doc) return c.json({ error: 'Document not found' }, 404);
+
+  const token = crypto.randomUUID();
+  const expires = now() + 3600; // 1 hour
+
+  await c.env.DB.prepare(
+    'INSERT INTO email_tokens (token, email, document_id, expires_at) VALUES (?, ?, ?, ?)'
+  ).bind(token, email, doc.id, expires).run();
+
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
+
+  // Send via Resend API if API key configured
+  if (c.env.RESEND_API_KEY) {
+    const verifyLink = `${redirect_url}?token=${token}&email=${encodeURIComponent(email)}`;
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'LegalForms <noreply@resend.dev>',
+        to: email,
+        subject: 'Verify your email to sign document',
+        html: `<p>Click to verify: <a href="${verifyLink}">Verify Email & Sign</a></p>
+               <p>Expires in 1 hour. Request IP: ${ip}</p>`
+      })
+    });
+  }
+
+  await logAudit(c.env.DB, {
+    documentId: doc.id as string,
+    type: 'email_sent',
+    data: { email },
+    ip,
+    ua: c.req.header('User-Agent') ?? '',
+    session: c.req.header('CF-Ray') ?? crypto.randomUUID()
+  });
+
+  return c.json({ sent: true, token });
+});
+
+// ── Public: Submit Document ────────────────────────────────
+app.post('/api/submit/:slug', async (c) => {
+  const slug = c.req.param('slug');
+  const body = await c.req.json();
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
+  const ua = c.req.header('User-Agent') ?? '';
+  const session = c.req.header('CF-Ray') ?? crypto.randomUUID();
+
+  const doc = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE slug = ? AND status = ?'
+  ).bind(slug, 'active').first();
+
+  if (!doc) return c.json({ error: 'Document not found' }, 404);
+  const expiresAt = doc.expires_at as number | null;
+  if (expiresAt && expiresAt < now()) {
+    await c.env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind('expired', doc.id).run();
+    return c.json({ error: 'Document expired' }, 410);
+  }
+
+  const email = (body.email || '').toLowerCase().trim();
+  const ipHash = await sha256(ip);
+
+  // Rate Limiting checks
+  if (!await checkRateLimit(c.env.DB, 'email', email, doc.id as string, doc.max_per_email as number)) {
+    return c.json({ error: 'Submission limit reached for this email address' }, 429);
+  }
+  if (!await checkRateLimit(c.env.DB, 'ip', ipHash, doc.id as string, doc.max_per_ip as number)) {
+    return c.json({ error: 'Submission limit reached for this IP address' }, 429);
+  }
+
+  // Verify token if required
+  let isEmailVerified = 0;
+  if (doc.require_verification === 1) {
+    if (body.verification_token) {
+      const tokenRow = await c.env.DB.prepare(
+        'SELECT * FROM email_tokens WHERE token = ? AND email = ? AND document_id = ? AND used = 0 AND expires_at > ?'
+      ).bind(body.verification_token, email, doc.id, now()).first();
+
+      if (tokenRow) {
+        isEmailVerified = 1;
+        await c.env.DB.prepare('UPDATE email_tokens SET used = 1 WHERE token = ?').bind(body.verification_token).run();
+      } else {
+        return c.json({ error: 'Invalid or expired email verification token' }, 403);
+      }
+    } else {
+      return c.json({ error: 'Email verification required' }, 403);
+    }
+  }
+
+  // Cryptographic audit chain calculation
+  const submissionId = crypto.randomUUID();
+  const auditData = {
+    submission_id: submissionId,
+    document_id: doc.id,
+    email,
+    ip_hash: ipHash,
+    fingerprint: body.fingerprint,
+    fields: body.fields,
+    timestamp: now()
+  };
+
+  const auditHash = await sha256(JSON.stringify(auditData));
+
+  await c.env.DB.prepare(
+    `INSERT INTO submissions 
+     (id, document_id, email, email_verified, ip_hash, user_agent, fingerprint, 
+      submitted_at, data_json, signature_svg, audit_hash, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    submissionId, doc.id, email, isEmailVerified,
+    ipHash, ua, body.fingerprint, now(),
+    JSON.stringify(body.fields), body.signature_svg || '', auditHash, 'complete'
+  ).run();
+
+  // Log client interaction audit trail
+  for (const event of (body.auditTrail || [])) {
+    await logAudit(c.env.DB, {
+      submissionId,
+      documentId: doc.id as string,
+      type: event.type,
+      data: event.data,
+      ip, ua, session
+    });
+  }
+
+  await logAudit(c.env.DB, {
+    submissionId,
+    documentId: doc.id as string,
+    type: 'submit_complete',
+    data: { audit_hash: auditHash },
+    ip, ua, session
+  });
+
+  return c.json({
+    submission_id: submissionId,
+    audit_hash: auditHash,
+    message: 'Document successfully signed'
+  });
+});
+
+// ── Admin: Export Submissions & Audit Trail ────────────────
+app.get('/api/export/:doc_id', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
+  const adminKey = c.env.ADMIN_API_KEY;
+
+  if (adminKey && apiKey !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const docId = c.req.param('doc_id');
+
+  const submissions = await c.env.DB.prepare(
+    'SELECT * FROM submissions WHERE document_id = ? ORDER BY submitted_at DESC'
+  ).bind(docId).all();
+
+  const auditLogs = await c.env.DB.prepare(
+    'SELECT * FROM audit_logs WHERE document_id = ? ORDER BY server_timestamp ASC'
+  ).bind(docId).all();
+
+  return c.json({
+    document_id: docId,
+    submissions: submissions.results,
+    audit_logs: auditLogs.results
+  });
+});
+
+// ── Public: Single Submission Audit Verification ───────────
+app.get('/api/audit/:submission_id', async (c) => {
+  const subId = c.req.param('submission_id');
+  const sub = await c.env.DB.prepare(
+    'SELECT * FROM submissions WHERE id = ?'
+  ).bind(subId).first();
+
+  if (!sub) return c.json({ error: 'Submission not found' }, 404);
+
+  const logs = await c.env.DB.prepare(
+    `SELECT event_type, event_data, server_timestamp, ip_hash, user_agent 
+     FROM audit_logs WHERE submission_id = ? ORDER BY server_timestamp ASC`
+  ).bind(subId).all();
+
+  return c.json({
+    submission: sub,
+    audit_trail: logs.results,
+    integrity: {
+      algorithm: 'SHA-256',
+      audit_hash: sub.audit_hash
+    }
+  });
+});
+
+export default app;

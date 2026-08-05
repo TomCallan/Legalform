@@ -1,0 +1,186 @@
+import os
+import json
+import yaml
+import requests
+import hashlib
+from datetime import datetime, timedelta
+from pathlib import Path
+import typer
+from rich.console import Console
+from rich.table import Table
+
+app = typer.Typer(help="LegalForm CLI - Deploy and manage electronic legal documents on Cloudflare Workers/D1.")
+console = Console()
+
+REGISTRY_FILE = Path(".legalform_registry.json")
+
+def get_config():
+    api_base = os.getenv("LEGALFORM_API", "http://127.0.0.1:8787").rstrip("/")
+    api_key = os.getenv("LEGALFORM_KEY", "")
+    pages_base = os.getenv("LEGALFORM_PAGES", "http://localhost:8080").rstrip("/")
+    return api_base, api_key, pages_base
+
+@app.command()
+def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Output YAML filename")):
+    """Initialize a starter YAML document specification."""
+    template = {
+        "document": {
+            "id": f"nda-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+            "title": "Mutual Non-Disclosure Agreement",
+            "jurisdiction": "Delaware, USA",
+            "expires_in_days": 30,
+            "max_submissions_per_email": 1,
+            "max_submissions_per_ip": 3,
+            "require_email_verification": False,
+            "legal_footer": "By signing, you agree that this electronic signature constitutes your intent to be bound under the ESIGN Act."
+        },
+        "sections": [
+            {
+                "type": "static",
+                "content": "## 1. Confidential Information\n'Confidential Information' refers to non-public technical, financial, or business details disclosed by either party."
+            },
+            {
+                "type": "field",
+                "name": "counterparty_name",
+                "label": "Counterparty Legal Name",
+                "required": True
+            },
+            {
+                "type": "field",
+                "name": "counterparty_email",
+                "label": "Email Address",
+                "field_type": "email",
+                "required": True
+            },
+            {
+                "type": "field",
+                "name": "effective_date",
+                "label": "Effective Date",
+                "field_type": "date",
+                "default": "today"
+            },
+            {
+                "type": "signature",
+                "name": "signature",
+                "label": "Draw Your Signature",
+                "required": True
+            },
+            {
+                "type": "checkbox",
+                "name": "esign_consent",
+                "label": "I consent to execute this document electronically in accordance with ESIGN / UETA regulations.",
+                "required": True
+            }
+        ]
+    }
+    
+    path = Path(name)
+    path.write_text(yaml.dump(template, sort_keys=False, allow_unicode=True))
+    console.print(f"[bold green]Created document template:[/bold green] {path.resolve()}")
+
+@app.command()
+def deploy(spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec")):
+    """Deploy a document specification to Cloudflare Worker API."""
+    if not spec_path.exists():
+        console.print(f"[bold red]Error:[/bold red] File {spec_path} does not exist.")
+        raise typer.Exit(code=1)
+
+    spec = yaml.safe_load(spec_path.read_text())
+    doc_meta = spec.get("document", {})
+    doc_id = doc_meta.get("id")
+    if not doc_id:
+        console.print("[bold red]Error:[/bold red] YAML spec missing 'document.id'.")
+        raise typer.Exit(code=1)
+
+    slug = hashlib.sha256(f"{doc_id}-{datetime.now().isoformat()}".encode()).hexdigest()[:12]
+    expires_days = doc_meta.get("expires_in_days", 30)
+    expires_at = int((datetime.now() + timedelta(days=expires_days)).timestamp())
+
+    payload = {
+        "id": doc_id,
+        "slug": slug,
+        "spec": json.dumps(spec),
+        "expires_at": expires_at,
+        "max_per_email": doc_meta.get("max_submissions_per_email", 1),
+        "max_per_ip": doc_meta.get("max_submissions_per_ip", 3),
+        "require_verification": doc_meta.get("require_email_verification", False)
+    }
+
+    api_base, api_key, pages_base = get_config()
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    with console.status("[bold blue]Deploying document to Cloudflare...[/bold blue]"):
+        try:
+            r = requests.post(f"{api_base}/api/documents", json=payload, headers=headers, timeout=15)
+            r.raise_for_status()
+        except requests.RequestException as e:
+            console.print(f"[bold red]Deployment failed:[/bold red] {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                console.print(f"Server response: {e.response.text}")
+            raise typer.Exit(code=1)
+
+    signing_url = f"{pages_base}/?slug={slug}"
+    console.print("\n[bold green]🚀 Document Deployed Successfully![/bold green]")
+    console.print(f"• Document ID: [cyan]{doc_id}[/cyan]")
+    console.print(f"• Signing URL: [bold underline cyan]{signing_url}[/bold underline cyan]")
+    console.print(f"• Expiry Date: {datetime.fromtimestamp(expires_at).strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Local registry logging
+    registry = []
+    if REGISTRY_FILE.exists():
+        try:
+            registry = json.loads(REGISTRY_FILE.read_text())
+        except Exception:
+            registry = []
+
+    registry.append({
+        "id": doc_id,
+        "slug": slug,
+        "url": signing_url,
+        "spec_file": str(spec_path),
+        "deployed_at": datetime.now().isoformat()
+    })
+    REGISTRY_FILE.write_text(json.dumps(registry, indent=2))
+
+@app.command("list")
+def list_docs():
+    """List deployed documents from the local registry."""
+    if not REGISTRY_FILE.exists():
+        console.print("[yellow]No deployed documents recorded in local registry.[/yellow]")
+        return
+
+    registry = json.loads(REGISTRY_FILE.read_text())
+    table = Table(title="Deployed Legal Documents")
+    table.add_column("Document ID", style="cyan")
+    table.add_column("Slug", style="magenta")
+    table.add_column("Signing URL", style="green")
+    table.add_column("Deployed At", style="gray")
+
+    for d in registry:
+        table.add_row(d["id"], d["slug"], d["url"], d.get("deployed_at", "N/A"))
+
+    console.print(table)
+
+@app.command()
+def export(doc_id: str = typer.Argument(..., help="Document ID to export submissions for"),
+           output: Path = typer.Option(Path("export.json"), "--output", "-o")):
+    """Export all submissions and audit trails for a document."""
+    api_base, api_key, _ = get_config()
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        r = requests.get(f"{api_base}/api/export/{doc_id}", headers=headers, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        output.write_text(json.dumps(data, indent=2))
+        console.print(f"[bold green]Successfully exported audit dataset to {output.resolve()}[/bold green]")
+    except requests.RequestException as e:
+        console.print(f"[bold red]Export failed:[/bold red] {e}")
+        raise typer.Exit(code=1)
+
+if __name__ == "__main__":
+    app()

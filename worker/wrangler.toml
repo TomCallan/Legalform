@@ -1,0 +1,15 @@
+name = "legalform-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-05"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "legalform-db"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "legalform-docs"
+
+[vars]
+# RESEND_API_KEY and ADMIN_API_KEY are configured via `wrangler secret put`
