@@ -1,21 +1,22 @@
-# LegalForm: Production Architecture for CLI-Driven Legal Document Platform
+# LegalForm: Production Architecture for CLI & Web Legal Document Platform
 
 LegalForm is an end-to-end legal electronic document platform built on Cloudflare Workers, Cloudflare D1, Cloudflare R2, Cloudflare Pages, and Python. It features complete support for **both cloud deployment and 100% local hosting**, engineered for compliance under **US ESIGN Act (15 U.S.C. § 7001)** and **EU eIDAS Regulation (No 910/2014, Art. 25)**.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-* 💻 **Local & Cloud Hosting Support:** Run locally via Wrangler dev & Python static HTTP server, or publish to Cloudflare Workers + Pages.
-* ✍️ **Pre-Filled Document Specs:** Supply pre-filled values inside the YAML spec or pass `--fill field_name="Value"` dynamically via the CLI.
-* 🇪🇺 **EU & US Court-Enforceable Legal Framework:** Native legal clauses and cryptographic audit chain compliant with EU eIDAS (Advanced Electronic Signature - AdES), UETA, and ESIGN.
-* 📧 **Dual Resend Execution Certificates:** Automatically emails both the signer and the document owner / admin with official execution certificates.
-* 📄 **R2 JSON & PDF Certificate Generation:** Exports JSON records from Cloudflare R2 and converts them into court-grade PDF certificates with embedded signature images.
-* 🛡️ **Cryptographic Audit Trail:** Telemetry records field focus, value hashing, IP hashes, UTC NTP server timestamps, and archives JSON records to Cloudflare R2 storage.
+* **Local & Cloud Hosting Support:** Run locally via Wrangler dev & Python static HTTP server, or publish to Cloudflare Workers + Pages.
+* **Pre-Filled Document Specs:** Supply pre-filled values inside the YAML spec or pass `--fill field_name="Value"` dynamically via the CLI or URL query string.
+* **EU & US Court-Enforceable Legal Framework:** Native legal clauses and cryptographic audit chain compliant with EU eIDAS (Advanced Electronic Signature - AdES), UETA, and ESIGN.
+* **Dual Resend Execution Certificates:** Automatically emails both the signer and the document owner / admin with official execution certificates.
+* **R2 JSON & PDF Certificate Generation:** Exports JSON records from Cloudflare R2 or Web Admin Portal and converts them into court-grade PDF certificates with embedded signature images.
+* **Web Admin Portal (`/admin.html`):** Integrated management portal on Cloudflare Pages to view deployed documents, export submission JSONs, and revoke active signing slugs in 1 click.
+* **Cryptographic Audit Trail:** Telemetry records field focus, value hashing, IP hashes, UTC NTP server timestamps, and archives JSON records to Cloudflare R2 storage.
 
 ---
 
-## 📄 YAML Specification Format Guide
+## YAML Specification Format Guide
 
 LegalForm documents are declared using simple, expressive YAML specifications (see [`my-nda.yaml`](file:///C:/Users/TomCa/Desktop/Sig/my-nda.yaml) for a complete working example).
 
@@ -78,7 +79,7 @@ Displays the digital canvas signature pad along with automatic date/timestamp fi
 
 ---
 
-## 🛠 Command-Line Interface (CLI) Guide
+## Command-Line Interface (CLI) Guide
 
 LegalForm includes a full Python CLI (`cli/legalform.py`) for deploying documents, inspecting active links, closing slugs, exporting audit logs, and generating PDFs.
 
@@ -107,14 +108,24 @@ python3 cli/legalform.py export nda-sample-2026 -o submission.json
 ```
 
 ### 5. Convert Submission JSON to Court-Grade PDF (`pdf`)
-Convert an R2 submission JSON record or exported JSON into an official PDF certificate with embedded signature images:
+Convert an R2 submission JSON record or exported JSON into an official PDF certificate with embedded signature images and full contract clauses:
 ```bash
-python3 cli/legalform.py pdf submission.json -o executed-agreement.pdf
+python3 cli/legalform.py pdf submission.json -s my-nda.yaml -o executed-agreement.pdf
 ```
 
 ---
 
-## 📧 Setting Admin Notification Email
+## Web Admin Portal (`/admin.html`)
+
+Access the web admin portal at **`https://your-app.pages.dev/admin.html`**:
+1. Authenticate using your secret `ADMIN_API_KEY`.
+2. View all active and closed document slugs.
+3. Click **Export JSON** next to any document to download its submission records.
+4. Click **Revoke Slug** to immediately block access to an active signing link.
+
+---
+
+## Setting Admin Notification Email
 
 You can configure the admin email to receive copies of signed execution certificates via **3 flexible methods** (evaluated in order of priority):
 
@@ -141,7 +152,7 @@ You can configure the admin email to receive copies of signed execution certific
 
 ---
 
-## 🛠 Local Hosting Quick Start
+## Local Hosting Quick Start
 
 ### 1. Install Dependencies & Start Local Backend API
 ```bash
@@ -170,7 +181,7 @@ The CLI will output a local signing URL (e.g. `http://localhost:8080/?slug=a1b2c
 
 ---
 
-## ☁️ Cloudflare Production Deployment & Publishing Signable Links
+## Cloudflare Production Deployment & Publishing Signable Links
 
 ### Step 1: Initialize Cloudflare Infrastructure
 ```bash
@@ -218,7 +229,7 @@ python3 cli/legalform.py deploy my-nda.yaml -a "owner@yourcompany.com" -f receiv
 
 **Output Signable Link Example:**
 ```text
-🚀 Document Deployed Successfully!
+Document Deployed Successfully!
 • Document ID: nda-sample-2026
 • Signing URL: https://legalform-ui.pages.dev/?slug=9f8e7d6c5b4a
 • Expiry Date: 2026-09-04 17:00:00

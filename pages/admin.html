@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LegalForm Admin Dashboard</title>
+  <title>LegalForm Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -94,9 +94,12 @@
       transition: background 0.2s;
     }
     .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #475569; }
+    .btn-secondary:hover { background: #334155; }
     .btn-danger { background: var(--danger); }
     .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+    .action-group { display: flex; gap: 0.5rem; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -137,7 +140,7 @@
 <body>
 
   <div class="header">
-    <h1>🏛️ LegalForm Admin Portal</h1>
+    <h1>LegalForm Admin Portal</h1>
     <div id="auth-status" style="font-size:0.85rem;color:var(--muted)"></div>
   </div>
 
@@ -161,7 +164,7 @@
             <h2 style="margin:0;font-family:'Cinzel',serif">Deployed Documents & Slugs</h2>
             <p style="margin:0.25rem 0 0 0;color:var(--muted);font-size:0.85rem">Live overview of active electronic agreements on Cloudflare D1</p>
           </div>
-          <button id="refresh-btn" class="btn btn-sm">🔄 Refresh Table</button>
+          <button id="refresh-btn" class="btn btn-sm">Refresh Table</button>
         </div>
 
         <div style="overflow-x:auto">
@@ -259,13 +262,40 @@ async function loadDocs() {
           <td><a href="${signingUrl}" target="_blank" class="url-link">${signingUrl}</a></td>
           <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
           <td>
-            ${isActive ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : '<span style="color:var(--muted);font-size:0.8rem">Closed</span>'}
+            <div class="action-group">
+              <button class="btn btn-secondary btn-sm" onclick="exportDocJson('${d.id}')">Export JSON</button>
+              ${isActive ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : '<span style="color:var(--muted);font-size:0.8rem">Closed</span>'}
+            </div>
           </td>
         </tr>
       `;
     }).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+  }
+}
+
+async function exportDocJson(docId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/export/${docId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+
+    if (!res.ok) {
+      alert('Failed to export document data.');
+      return;
+    }
+
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `export_${docId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Error exporting JSON: ' + err.message);
   }
 }
 

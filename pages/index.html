@@ -565,13 +565,12 @@ async function handleSubmit(e) {
 
       document.getElementById('app').innerHTML = `
         <div class="paper" style="text-align:center; padding:3rem 1.5rem">
-          <div style="font-size:3rem;margin-bottom:1rem">📜</div>
-          <h2 style="font-family:'Cinzel',serif;color:var(--text-heading)">Document Successfully Executed</h2>
+          <h2 style="font-family:'Cinzel',serif;color:var(--text-heading);margin-top:0">Document Successfully Executed</h2>
           <p style="color:var(--text-muted);max-width:500px;margin:0.5rem auto 1.5rem auto">Your electronic signature and execution telemetry have been recorded to Cloudflare D1 and archived in R2.</p>
           
           <div style="margin-bottom:1.5rem;">
             <a href="${jsonUrl}" download="submission_${result.submission_id}.json" class="btn-submit" style="display:inline-block;text-decoration:none;width:auto;padding:0.75rem 1.5rem;font-size:0.9rem;">
-              📥 Download Execution Record (.json)
+              Download Execution Record (.json)
             </a>
           </div>
 
