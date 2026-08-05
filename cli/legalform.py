@@ -209,6 +209,7 @@ def list_docs(remote: bool = typer.Option(True, "--remote/--local-registry", hel
                 table = Table(title="Deployed Legal Documents (Backend API)")
                 table.add_column("Document ID", style="cyan")
                 table.add_column("Slug", style="magenta")
+                table.add_column("Signatures", style="bold blue")
                 table.add_column("Status", style="yellow")
                 table.add_column("Signing URL", style="green")
                 table.add_column("Expires", style="dim")
@@ -217,9 +218,11 @@ def list_docs(remote: bool = typer.Option(True, "--remote/--local-registry", hel
                     status_color = "green" if d["status"] == "active" else "red"
                     url = f"{pages_base}/?slug={d['slug']}"
                     exp = datetime.fromtimestamp(d["expires_at"]).strftime('%Y-%m-%d %H:%M') if d.get("expires_at") else "Never"
+                    sig_count = str(d.get("submission_count", 0))
                     table.add_row(
                         d["id"],
                         d["slug"],
+                        sig_count,
                         f"[{status_color}]{d['status']}[/{status_color}]",
                         url,
                         exp
@@ -262,6 +265,27 @@ def close_doc(slug: str = typer.Argument(..., help="Slug or Document ID to force
             console.print(f"[bold green]Success:[/bold green] {res.get('message')}")
         except requests.RequestException as e:
             console.print(f"[bold red]Failed to close document slug:[/bold red] {e}")
+            raise typer.Exit(code=1)
+
+@app.command("reopen")
+def reopen_doc(
+    slug: str = typer.Argument(..., help="Slug or Document ID to reopen/reup"),
+    days: int = typer.Option(30, "--days", "-d", help="Number of days to extend validity")
+):
+    """Reopen / re-up a closed or expired document slug and extend its validity period."""
+    api_base, api_key, _, _ = get_config()
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    with console.status(f"[bold green]Reopening and extending document slug '{slug}' for {days} days...[/bold green]"):
+        try:
+            r = requests.post(f"{api_base}/api/doc/{slug}/reopen", json={"extend_days": days}, headers=headers, timeout=15)
+            r.raise_for_status()
+            res = r.json()
+            console.print(f"[bold green]Success:[/bold green] {res.get('message')}")
+        except requests.RequestException as e:
+            console.print(f"[bold red]Failed to reopen document slug:[/bold red] {e}")
             raise typer.Exit(code=1)
 
 @app.command("delete")

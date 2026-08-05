@@ -101,13 +101,25 @@ Revoke access to an active document slug so it can no longer be viewed or signed
 python3 cli/legalform.py close d988f9599f0d
 ```
 
-### 4. Export Submission Audit Dataset (`export`)
+### 4. Reopen / Re-Up a Document Slug (`reopen`)
+Re-activate a closed or expired document slug and extend its validity period:
+```bash
+python3 cli/legalform.py reopen d988f9599f0d --days 30
+```
+
+### 5. Delete Document & Purge Vault (`delete`)
+Permanently delete a document record from D1 and purge all archived JSON objects from R2 vault storage:
+```bash
+python3 cli/legalform.py delete nda-sample-2026
+```
+
+### 6. Export Submission Audit Dataset (`export`)
 Download full submission JSON records and client audit logs from the database:
 ```bash
 python3 cli/legalform.py export nda-sample-2026 -o submission.json
 ```
 
-### 5. Convert Submission JSON to Court-Grade PDF (`pdf`)
+### 7. Convert Submission JSON to Court-Grade PDF (`pdf`)
 Convert an R2 submission JSON record or exported JSON into an official PDF certificate with embedded signature images and full contract clauses:
 ```bash
 python3 cli/legalform.py pdf submission.json -s my-nda.yaml -o executed-agreement.pdf

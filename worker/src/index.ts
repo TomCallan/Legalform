@@ -75,7 +75,7 @@ async function logAudit(
   ).run();
 }
 
-// ── Admin: List All Documents / Slugs ───────────────────────
+// ── Admin: List All Documents ──────────────────────────────
 app.get('/api/documents/list', async (c) => {
   const authHeader = c.req.header('Authorization');
   const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
@@ -86,10 +86,63 @@ app.get('/api/documents/list', async (c) => {
   }
 
   const docs = await c.env.DB.prepare(
-    'SELECT id, slug, status, expires_at, created_at FROM documents ORDER BY created_at DESC'
+    `SELECT d.id, d.slug, d.status, d.expires_at, d.created_at, 
+            COUNT(s.id) AS submission_count 
+     FROM documents d 
+     LEFT JOIN submissions s ON d.id = s.document_id 
+     GROUP BY d.id, d.slug, d.status, d.expires_at, d.created_at 
+     ORDER BY d.created_at DESC`
   ).all();
 
   return c.json({ documents: docs.results });
+});
+
+// ── Admin: Force Close Document / Slug ───────────────────────
+app.post('/api/doc/:slug/close', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
+  const adminKey = c.env.ADMIN_API_KEY;
+
+  if (adminKey && apiKey !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const slug = c.req.param('slug');
+  const result = await c.env.DB.prepare(
+    'UPDATE documents SET status = ? WHERE slug = ? OR id = ?'
+  ).bind('closed', slug, slug).run();
+
+  if (result.meta.changes === 0) {
+    return c.json({ error: 'Document or slug not found' }, 404);
+  }
+
+  return c.json({ success: true, message: `Document slug '${slug}' has been force closed.` });
+});
+
+// ── Admin: Reopen / Re-up Document Slug ─────────────────────
+app.post('/api/doc/:slug/reopen', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
+  const adminKey = c.env.ADMIN_API_KEY;
+
+  if (adminKey && apiKey !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const slug = c.req.param('slug');
+  const body = await c.req.json().catch(() => ({}));
+  const extendDays = body.extend_days || 30;
+  const newExpiresAt = Math.floor(Date.now() / 1000) + (extendDays * 86400);
+
+  const result = await c.env.DB.prepare(
+    'UPDATE documents SET status = ?, expires_at = ? WHERE slug = ? OR id = ?'
+  ).bind('active', newExpiresAt, slug, slug).run();
+
+  if (result.meta.changes === 0) {
+    return c.json({ error: 'Document or slug not found' }, 404);
+  }
+
+  return c.json({ success: true, message: `Document slug '${slug}' has been reopened and re-upped for ${extendDays} days.`, expires_at: newExpiresAt });
 });
 
 // ── Admin: Deploy Document (from CLI) ──────────────────────

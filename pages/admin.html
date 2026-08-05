@@ -127,6 +127,8 @@
     .btn:hover { background: var(--primary-hover); }
     .btn-secondary { background: #e5e5ea; color: #1d1d1f; }
     .btn-secondary:hover { background: #d1d1d6; }
+    .btn-success { background: #34c759; color: white; }
+    .btn-success:hover { background: #28a745; }
     .btn-danger { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
     .btn-danger:hover { background: var(--danger); color: white; }
     .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
@@ -188,13 +190,22 @@
 
     .badge {
       display: inline-block;
-      padding: 0.2rem 0.5rem;
+      padding: 0.2rem 0.55rem;
       border-radius: 6px;
       font-size: 0.72rem;
       font-weight: 500;
     }
     .badge-active { background: #e4f9ec; color: #1b8a43; }
     .badge-closed { background: #ffebeb; color: #d70015; }
+    .sig-pill {
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 0.2rem 0.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
     .url-link {
       color: var(--primary);
       text-decoration: none;
@@ -215,6 +226,14 @@
     .tab.active {
       border-bottom-color: var(--primary);
       color: var(--text);
+    }
+
+    /* Filter Controls Header */
+    .filter-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      align-items: center;
     }
 
     /* Modal Backdrop */
@@ -269,9 +288,18 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
           <div>
             <h2 style="margin:0;font-size:1.1rem;font-weight:600">Document Ledger</h2>
-            <p style="margin:0.2rem 0 0 0;color:var(--muted);font-size:0.8rem">Click any document row to expand and view signed executions, audit hashes, and export actions</p>
+            <p style="margin:0.2rem 0 0 0;color:var(--muted);font-size:0.8rem">Click any document row to expand signed execution records and audit logs</p>
           </div>
           <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="search-input" placeholder="Search by Document ID or Slug..." oninput="renderDocsTable()" style="max-width:260px;">
+          <select id="status-filter" onchange="renderDocsTable()" style="max-width:140px;">
+            <option value="all">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="closed">Closed Only</option>
+          </select>
         </div>
 
         <div style="overflow-x:auto">
@@ -281,6 +309,7 @@
                 <th style="width:30px"></th>
                 <th>Document ID</th>
                 <th>Slug</th>
+                <th>Signatures</th>
                 <th>Status</th>
                 <th>Signing URL</th>
                 <th>Expires</th>
@@ -288,7 +317,7 @@
               </tr>
             </thead>
             <tbody id="docs-tbody">
-              <tr><td colspan="7" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>
+              <tr><td colspan="8" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>
             </tbody>
           </table>
         </div>
@@ -297,13 +326,18 @@
       <!-- TAB 2: DEPLOY NEW SPEC -->
       <div id="tab-deploy" class="card" style="display:none">
         <h2 style="margin-top:0;font-size:1.1rem;font-weight:600">Deploy New Document</h2>
-        <p style="color:var(--muted);font-size:0.8rem">Paste a YAML spec or load a starter template to publish a signable agreement link.</p>
+        <p style="color:var(--muted);font-size:0.8rem">Declaratively configure and publish court-grade legal agreements to Cloudflare D1 & R2.</p>
 
-        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;">
-          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Mutual NDA Spec</button>
-          <button class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Liability Waiver Spec</button>
-          <input type="file" id="yaml-file-input" accept=".yaml,.yml" style="display:none" onchange="uploadYamlFile(event)">
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('yaml-file-input').click()">Upload YAML</button>
+        <!-- Template & Import Toolbar -->
+        <div style="background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.25rem;">
+          <div style="font-weight:600;font-size:0.82rem;margin-bottom:0.5rem;color:var(--text)">Quick Template Loader</div>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Mutual NDA Spec</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Liability Waiver Spec</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadTemplate('presigned_nda')">Pre-Signed Owner NDA</button>
+            <input type="file" id="yaml-file-input" accept=".yaml,.yml" style="display:none" onchange="uploadYamlFile(event)">
+            <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="document.getElementById('yaml-file-input').click()">Upload YAML File</button>
+          </div>
         </div>
 
         <form id="deploy-form">
@@ -314,16 +348,16 @@
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
             <div class="form-group">
-              <label for="admin-email-input">Admin Copy Email (Optional)</label>
+              <label for="admin-email-input">Admin Notification Copy Email</label>
               <input type="email" id="admin-email-input" placeholder="admin@yourcompany.com">
             </div>
             <div class="form-group">
-              <label for="prefill-input">Pre-fill Receiving Party (Optional)</label>
+              <label for="prefill-input">Pre-fill Receiving Party Entity</label>
               <input type="text" id="prefill-input" placeholder="e.g. Acme Corp">
             </div>
           </div>
 
-          <button type="submit" class="btn" style="width:100%;margin-top:0.5rem">Publish & Generate Link</button>
+          <button type="submit" class="btn" style="width:100%;margin-top:0.5rem;padding:0.75rem">Publish Document & Generate Signing Link</button>
         </form>
       </div>
 
@@ -361,6 +395,7 @@ let currentPresignDocId = null;
 let presignCanvasCtx = null;
 let presignDataUrl = null;
 let fetchedDocDetails = {};
+let allDocs = [];
 
 const STARTER_NDA_YAML = `document:
   id: "nda-sample-${Date.now()}"
@@ -447,6 +482,39 @@ sections:
     fields:
       - name: "signature_timestamp"
         label: "Execution Date"
+        type: "datetime-auto"
+        required: true`;
+
+const STARTER_PRESIGNED_NDA_YAML = `document:
+  id: "presigned-nda-${Date.now()}"
+  title: "MUTUAL NON-DISCLOSURE AGREEMENT (PRE-EXECUTED BY OWNER)"
+  jurisdiction: "State of Delaware, USA & EU eIDAS"
+  expires_in_days: 30
+  legal_footer: "Executed electronically under US ESIGN & EU eIDAS Regulations."
+
+sections:
+  - type: "static"
+    content: |
+      ## PRE-EXECUTED MUTUAL NON-DISCLOSURE AGREEMENT
+      This Agreement has been pre-signed by the Disclosing Party and is ready for counterparty execution.
+
+  - type: "form"
+    fields:
+      - name: "disclosing_party"
+        label: "Disclosing Party Legal Entity"
+        type: "text"
+        value: "Acme Corporation"
+      - name: "receiving_party"
+        label: "Receiving Party Entity Name"
+        type: "text"
+        required: true
+
+  - type: "signature"
+    signer_label: "EXECUTION BLOCK"
+    pre_signed: true
+    fields:
+      - name: "signature_timestamp"
+        label: "Date & Time of Execution"
         type: "datetime-auto"
         required: true`;
 
@@ -548,7 +616,9 @@ function switchTab(tabName) {
 }
 
 function loadTemplate(type) {
-  document.getElementById('yaml-spec').value = type === 'nda' ? STARTER_NDA_YAML : STARTER_WAIVER_YAML;
+  if (type === 'nda') document.getElementById('yaml-spec').value = STARTER_NDA_YAML;
+  else if (type === 'waiver') document.getElementById('yaml-spec').value = STARTER_WAIVER_YAML;
+  else if (type === 'presigned_nda') document.getElementById('yaml-spec').value = STARTER_PRESIGNED_NDA_YAML;
 }
 
 function uploadYamlFile(event) {
@@ -578,7 +648,7 @@ function logout() {
 
 async function loadDocs() {
   const tbody = document.getElementById('docs-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/api/documents/list`, {
@@ -592,50 +662,67 @@ async function loadDocs() {
     }
 
     const data = await res.json();
-    const docs = data.documents || [];
-
-    if (docs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No deployed documents found.</td></tr>';
-      return;
-    }
-
-    let rowsHtml = '';
-    for (const d of docs) {
-      const isActive = d.status === 'active';
-      const badgeClass = isActive ? 'badge-active' : 'badge-closed';
-      const signingUrl = `${PAGES_BASE}/?slug=${d.slug}`;
-      const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleDateString() : 'Never';
-
-      rowsHtml += `
-        <tr class="doc-row" onclick="toggleDocSubmissions('${d.id}', event)">
-          <td><span id="toggle-icon-${d.id}" class="expand-toggle">▶</span></td>
-          <td><strong>${d.id}</strong></td>
-          <td><code>${d.slug}</code></td>
-          <td><span class="badge ${badgeClass}">${d.status}</span></td>
-          <td><a href="${signingUrl}" target="_blank" class="url-link" onclick="event.stopPropagation()">${signingUrl}</a></td>
-          <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
-          <td style="text-align:right" onclick="event.stopPropagation()">
-            <div style="display:flex;gap:0.4rem;justify-content:flex-end">
-              <button class="btn btn-secondary btn-sm" onclick="openPreSignModal('${d.id}')">Pre-Sign</button>
-              ${isActive ? `<button class="btn btn-secondary btn-sm" onclick="closeSlug('${d.slug}')">Revoke Slug</button>` : ''}
-              <button class="btn btn-danger btn-sm" onclick="deleteDocPurgeR2('${d.id}')">Delete & Purge</button>
-            </div>
-          </td>
-        </tr>
-        <tr id="sub-row-${d.id}" style="display:none">
-          <td colspan="7" style="padding:0">
-            <div id="sub-content-${d.id}" class="submissions-container">
-              <div style="color:var(--muted)">Loading execution records & audit trail...</div>
-            </div>
-          </td>
-        </tr>
-      `;
-    }
-
-    tbody.innerHTML = rowsHtml;
+    allDocs = data.documents || [];
+    renderDocsTable();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
   }
+}
+
+function renderDocsTable() {
+  const tbody = document.getElementById('docs-tbody');
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('status-filter')?.value || 'all';
+
+  const filtered = allDocs.filter(d => {
+    const matchesSearch = d.id.toLowerCase().includes(query) || d.slug.toLowerCase().includes(query);
+    const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No matching documents found.</td></tr>';
+    return;
+  }
+
+  let rowsHtml = '';
+  for (const d of filtered) {
+    const isActive = d.status === 'active';
+    const badgeClass = isActive ? 'badge-active' : 'badge-closed';
+    const signingUrl = `${PAGES_BASE}/?slug=${d.slug}`;
+    const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleDateString() : 'Never';
+    const sigCount = d.submission_count || 0;
+
+    rowsHtml += `
+      <tr class="doc-row" onclick="toggleDocSubmissions('${d.id}', event)">
+        <td><span id="toggle-icon-${d.id}" class="expand-toggle">▶</span></td>
+        <td><strong>${d.id}</strong></td>
+        <td><code>${d.slug}</code></td>
+        <td><span class="sig-pill">${sigCount} ${sigCount === 1 ? 'sign' : 'signs'}</span></td>
+        <td><span class="badge ${badgeClass}">${d.status}</span></td>
+        <td><a href="${signingUrl}" target="_blank" class="url-link" onclick="event.stopPropagation()">${signingUrl}</a></td>
+        <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
+        <td style="text-align:right" onclick="event.stopPropagation()">
+          <div style="display:flex;gap:0.35rem;justify-content:flex-end">
+            <button class="btn btn-secondary btn-sm" onclick="openPreSignModal('${d.id}')">Pre-Sign</button>
+            ${isActive 
+              ? `<button class="btn btn-secondary btn-sm" onclick="closeSlug('${d.slug}')">Revoke</button>` 
+              : `<button class="btn btn-success btn-sm" onclick="reopenSlug('${d.slug}')">Re-up Slug</button>`}
+            <button class="btn btn-danger btn-sm" onclick="deleteDocPurgeR2('${d.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+      <tr id="sub-row-${d.id}" style="display:none">
+        <td colspan="8" style="padding:0">
+          <div id="sub-content-${d.id}" class="submissions-container">
+            <div style="color:var(--muted)">Loading execution records & audit trail...</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  tbody.innerHTML = rowsHtml;
 }
 
 async function toggleDocSubmissions(docId, event) {
@@ -1045,6 +1132,33 @@ async function closeSlug(slug) {
     }
   } catch (err) {
     alert('Error closing slug: ' + err.message);
+  }
+}
+
+async function reopenSlug(slug) {
+  const daysStr = prompt("How many days to re-up and extend this signing slug?", "30");
+  if (!daysStr) return;
+  const days = parseInt(daysStr, 10) || 30;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/doc/${slug}/reopen`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ extend_days: days })
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      alert(result.message || 'Slug reopened.');
+      loadDocs();
+    } else {
+      alert(result.error || 'Failed to reopen slug.');
+    }
+  } catch (err) {
+    alert('Error reopening slug: ' + err.message);
   }
 }
 </script>
