@@ -1,0 +1,61 @@
+document:
+  id: "affidavit-uscis-i130"
+  title: "USCIS SWORN AFFIDAVIT OF BONA FIDE MARRIAGE & RELATIONSHIP"
+  jurisdiction: "United States Citizenship and Immigration Services (USCIS) & State of Delaware, USA"
+  expires_in_days: 60
+  signing_order: "sequential"
+  legal_footer: "I DECLARE UNDER PENALTY OF PERJURY UNDER THE LAWS OF THE UNITED STATES OF AMERICA THAT THE FOREGOING IS TRUE AND CORRECT."
+
+parties:
+  - id: "affiant"
+    role: "Affiant (Third-Party Witness/Relative/Friend)"
+    sequence: 1
+  - id: "notary_witness"
+    role: "Attesting Witness / Notary Public"
+    sequence: 2
+
+sections:
+  - type: "static"
+    content: |
+      ## SWORN STATEMENT IN SUPPORT OF FORM I-130 PETITION FOR ALIEN RELATIVE
+      This affidavit is submitted to United States Citizenship and Immigration Services (USCIS) as evidence of a personal knowledge of the bona fide marriage between the Petitioner and Beneficiary.
+
+  - type: "form"
+    fields:
+      - name: "petitioner_name"
+        label: "USCIS Petitioner Full Legal Name"
+        type: "text"
+        required: true
+
+      - name: "beneficiary_name"
+        label: "USCIS Beneficiary Full Legal Name"
+        type: "text"
+        required: true
+
+      - name: "affiant_name"
+        label: "Affiant (Your) Full Legal Name"
+        type: "text"
+        required: true
+
+      - name: "affiant_address"
+        label: "Affiant Residential Address"
+        type: "textarea"
+        required: true
+
+      - name: "affiant_relationship"
+        label: "Relationship to Couple & Duration Known"
+        type: "textarea"
+        required: true
+        placeholder: "Describe how and when you met the couple, social events attended together, and personal knowledge of their marital relationship."
+
+  - type: "signature"
+    signer_label: "AFFIANT SWORN SIGNATURE"
+    fields:
+      - name: "execution_date"
+        label: "Date of Sworn Execution"
+        type: "datetime-auto"
+        required: true
+
+  - type: "witness"
+    witness_label: "ATTESTING WITNESS / NOTARY ACKNOWLEDGMENT"
+    content: "I attest that the affiant personally appeared before me, presented satisfactory identification, and signed this affidavit in my presence."

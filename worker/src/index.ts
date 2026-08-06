@@ -174,15 +174,56 @@ app.post('/api/documents', async (c) => {
     require_verification ? 1 : 0, apiKeyHash
   ).run();
 
-  return c.json({ success: true, id, slug });
+  // Process multi-party configuration if present in spec
+  const parsedSpec = typeof spec === 'string' ? JSON.parse(spec) : spec;
+  const partyLinks: Record<string, string> = {};
+
+  if (Array.isArray(parsedSpec.parties) && parsedSpec.parties.length > 0) {
+    const isSequential = parsedSpec.document?.signing_order === 'sequential';
+
+    for (let i = 0; i < parsedSpec.parties.length; i++) {
+      const p = parsedSpec.parties[i];
+      const pId = p.id || `party_${i+1}`;
+      const pRole = p.role || p.name || `Party ${i+1}`;
+      const pEmail = p.email || null;
+      const pSeq = p.sequence ?? (i + 1);
+      const pToken = `${slug}_${pId}_${crypto.randomUUID().slice(0, 8)}`;
+      const pInitialStatus = (isSequential && i > 0) ? 'pending' : 'unlocked';
+
+      await c.env.DB.prepare(
+        `INSERT INTO document_parties (id, document_id, party_id, role, email, sequence, party_token, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(document_id, party_token) DO UPDATE SET status=excluded.status`
+      ).bind(
+        crypto.randomUUID(), id, pId, pRole, pEmail, pSeq, pToken, pInitialStatus
+      ).run();
+
+      partyLinks[pId] = pToken;
+    }
+  }
+
+  return c.json({ success: true, id, slug, party_tokens: partyLinks });
 });
 
 // ── Public: Get Document Spec ──────────────────────────────
 app.get('/api/doc/:slug', async (c) => {
-  const slug = c.req.param('slug');
-  const doc = await c.env.DB.prepare(
-    'SELECT * FROM documents WHERE slug = ? AND status = ?'
-  ).bind(slug, 'active').first();
+  const slugOrToken = c.req.param('slug');
+  
+  // Try looking up by party token first, then primary document slug
+  let partyRow = await c.env.DB.prepare(
+    'SELECT * FROM document_parties WHERE party_token = ?'
+  ).bind(slugOrToken).first();
+
+  let doc = null;
+  if (partyRow) {
+    doc = await c.env.DB.prepare(
+      'SELECT * FROM documents WHERE id = ? AND status = ?'
+    ).bind(partyRow.document_id, 'active').first();
+  } else {
+    doc = await c.env.DB.prepare(
+      'SELECT * FROM documents WHERE slug = ? AND status = ?'
+    ).bind(slugOrToken, 'active').first();
+  }
 
   if (!doc) return c.json({ error: 'Document not found or inactive' }, 404);
 
@@ -192,12 +233,43 @@ app.get('/api/doc/:slug', async (c) => {
     return c.json({ error: 'Document expired' }, 410);
   }
 
+  // Enforce sequential signing locking if party lookup
+  let activePartyInfo = null;
+  if (partyRow) {
+    const parsedSpec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
+    const isSequential = parsedSpec.document?.signing_order === 'sequential';
+
+    if (isSequential && partyRow.sequence > 1) {
+      // Check if any prior sequence party is incomplete
+      const priorIncomplete = await c.env.DB.prepare(
+        'SELECT * FROM document_parties WHERE document_id = ? AND sequence < ? AND status != ?'
+      ).bind(doc.id, partyRow.sequence, 'completed').first();
+
+      if (priorIncomplete) {
+        return c.json({
+          error: 'Document Locked: Waiting for prior party to complete execution.',
+          locked: true,
+          required_prior_role: priorIncomplete.role
+        }, 403);
+      }
+    }
+
+    activePartyInfo = {
+      party_id: partyRow.party_id,
+      role: partyRow.role,
+      email: partyRow.email,
+      sequence: partyRow.sequence,
+      status: partyRow.status
+    };
+  }
+
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
   const session = c.req.header('CF-Ray') ?? crypto.randomUUID();
 
   await logAudit(c.env.DB, {
     documentId: doc.id as string,
     type: 'page_open',
+    data: activePartyInfo ? { active_party: activePartyInfo.party_id } : {},
     ip,
     ua: c.req.header('User-Agent') ?? '',
     session
@@ -208,7 +280,8 @@ app.get('/api/doc/:slug', async (c) => {
     slug: doc.slug,
     spec: doc.spec,
     require_verification: doc.require_verification === 1,
-    expires_at: doc.expires_at
+    expires_at: doc.expires_at,
+    active_party: activePartyInfo
   });
 });
 
@@ -260,24 +333,35 @@ app.post('/api/verify-email', async (c) => {
 
 // ── Public: Submit Document ────────────────────────────────
 app.post('/api/submit/:slug', async (c) => {
-  const slug = c.req.param('slug');
+  const slugOrToken = c.req.param('slug');
   const body = await c.req.json();
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
   const ua = c.req.header('User-Agent') ?? '';
   const session = c.req.header('CF-Ray') ?? crypto.randomUUID();
 
-  const doc = await c.env.DB.prepare(
-    'SELECT * FROM documents WHERE slug = ? AND status = ?'
-  ).bind(slug, 'active').first();
+  let partyRow = await c.env.DB.prepare(
+    'SELECT * FROM document_parties WHERE party_token = ?'
+  ).bind(slugOrToken).first();
 
-  if (!doc) return c.json({ error: 'Document not found' }, 404);
+  let doc = null;
+  if (partyRow) {
+    doc = await c.env.DB.prepare(
+      'SELECT * FROM documents WHERE id = ? AND status = ?'
+    ).bind(partyRow.document_id, 'active').first();
+  } else {
+    doc = await c.env.DB.prepare(
+      'SELECT * FROM documents WHERE slug = ? AND status = ?'
+    ).bind(slugOrToken, 'active').first();
+  }
+
+  if (!doc) return c.json({ error: 'Document not found or inactive' }, 404);
   const expiresAt = doc.expires_at as number | null;
   if (expiresAt && expiresAt < now()) {
     await c.env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind('expired', doc.id).run();
     return c.json({ error: 'Document expired' }, 410);
   }
 
-  const email = (body.email || '').toLowerCase().trim();
+  const email = (body.email || partyRow?.email || '').toLowerCase().trim();
   const ipHash = await sha256(ip);
 
   // Rate Limiting checks
@@ -332,22 +416,48 @@ app.post('/api/submit/:slug', async (c) => {
     JSON.stringify(body.fields), body.signature_svg || '', auditHash, 'complete'
   ).run();
 
-  // Log client interaction audit trail
-  for (const event of (body.auditTrail || [])) {
-    await logAudit(c.env.DB, {
-      submissionId,
-      documentId: doc.id as string,
-      type: event.type,
-      data: event.data,
-      ip, ua, session
-    });
+  // Update party status if executing under per-party token
+  if (partyRow) {
+    await c.env.DB.prepare(
+      'UPDATE document_parties SET status = ?, completed_at = ?, submission_id = ? WHERE id = ?'
+    ).bind('completed', now(), submissionId, partyRow.id).run();
+
+    // Check if next sequence party exists and unlock them
+    const nextParty = await c.env.DB.prepare(
+      'SELECT * FROM document_parties WHERE document_id = ? AND sequence = ? AND status = ?'
+    ).bind(doc.id, (partyRow.sequence as number) + 1, 'pending').first();
+
+    if (nextParty) {
+      await c.env.DB.prepare(
+        'UPDATE document_parties SET status = ? WHERE id = ?'
+      ).bind('unlocked', nextParty.id).run();
+
+      // Dispatch notification email to next party if email configured
+      if (c.env.RESEND_API_KEY && nextParty.email) {
+        const nextSignUrl = `https://legalform-ui.pages.dev/?slug=${nextParty.party_token}`;
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'LegalForm Executions <noreply@resend.dev>',
+            to: nextParty.email,
+            subject: `[ACTION REQUIRED] Signature requested for ${doc.id}`,
+            html: `<p>Prior party (${partyRow.role}) has completed their portion of document execution.</p>
+                   <p>Please click here to execute your section: <a href="${nextSignUrl}">${nextSignUrl}</a></p>`
+          })
+        }).catch(err => console.error('Failed to notify next party:', err));
+      }
+    }
   }
 
   await logAudit(c.env.DB, {
     submissionId,
     documentId: doc.id as string,
     type: 'submit_complete',
-    data: { audit_hash: auditHash },
+    data: { audit_hash: auditHash, party_id: partyRow?.party_id },
     ip, ua, session
   });
 

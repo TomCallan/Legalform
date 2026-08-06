@@ -1,0 +1,52 @@
+document:
+  id: "contractor-sow"
+  title: "INDEPENDENT CONTRACTOR SERVICES AGREEMENT & STATEMENT OF WORK"
+  jurisdiction: "State of Delaware, USA"
+  expires_in_days: 14
+  signing_order: "sequential"
+  legal_footer: "Executed electronically under US ESIGN Act and EU eIDAS Regulations."
+
+parties:
+  - id: "company"
+    role: "Company Authorized Officer"
+    sequence: 1
+  - id: "contractor"
+    role: "Independent Contractor"
+    sequence: 2
+
+sections:
+  - type: "static"
+    content: |
+      ## 1. SERVICES AND COMPENSATION
+      Contractor agrees to perform software development services as specified in the Scope of Work below. All deliverables shall be Work Made for Hire.
+
+  - type: "form"
+    fields:
+      - name: "company_name"
+        label: "Company Entity Name"
+        type: "text"
+        required: true
+        value: "Acme Holdings LLC"
+
+      - name: "contractor_name"
+        label: "Contractor Legal Name / Individual"
+        type: "text"
+        required: true
+
+      - name: "project_scope"
+        label: "Scope of Work & Deliverables"
+        type: "textarea"
+        required: true
+
+      - name: "hourly_rate"
+        label: "Agreed Rate / Total Fee ($ USD)"
+        type: "text"
+        required: true
+
+  - type: "signature"
+    signer_label: "EXECUTION OF CONTRACT"
+    fields:
+      - name: "execution_timestamp"
+        label: "Execution Date"
+        type: "datetime-auto"
+        required: true

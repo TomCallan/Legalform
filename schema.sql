@@ -64,7 +64,39 @@ CREATE TABLE IF NOT EXISTS email_tokens (
     used INTEGER DEFAULT 0
 );
 
+-- Multi-party & Sequential Signing
+CREATE TABLE IF NOT EXISTS document_parties (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    party_id TEXT NOT NULL,           -- e.g. 'discloser', 'contractor', 'witness'
+    role TEXT NOT NULL,               -- e.g. 'Disclosing Party', 'Witness'
+    email TEXT,
+    sequence INTEGER DEFAULT 1,
+    party_token TEXT UNIQUE NOT NULL, -- unique URL token for this party
+    status TEXT DEFAULT 'pending',    -- 'pending' | 'unlocked' | 'completed' | 'declined'
+    completed_at INTEGER,
+    submission_id TEXT REFERENCES submissions(id)
+);
+
+-- Optional Team / Organization tables (Feature-flagged)
+CREATE TABLE IF NOT EXISTS organizations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+);
+
+CREATE TABLE IF NOT EXISTS org_members (
+    id TEXT PRIMARY KEY,
+    org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'sender', -- 'admin' | 'sender' | 'viewer'
+    created_at INTEGER DEFAULT (unixepoch())
+);
+
 -- Indexes for legal discovery queries
 CREATE INDEX IF NOT EXISTS idx_audit_submission ON audit_logs(submission_id, server_timestamp);
 CREATE INDEX IF NOT EXISTS idx_audit_document ON audit_logs(document_id, server_timestamp);
 CREATE INDEX IF NOT EXISTS idx_submissions_doc ON submissions(document_id, submitted_at);
+CREATE INDEX IF NOT EXISTS idx_doc_parties ON document_parties(document_id, party_token);
+CREATE INDEX IF NOT EXISTS idx_doc_parties_seq ON document_parties(document_id, sequence, status);
+

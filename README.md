@@ -83,14 +83,14 @@ Displays the digital canvas signature pad along with automatic date/timestamp fi
 
 LegalForm includes a full Python CLI (`cli/legalform.py`) for deploying documents, inspecting active links, closing slugs, exporting audit logs, and generating PDFs.
 
-### 1. Deploy Document (`deploy`)
-Deploy a YAML spec to production or local backend API:
+### 1. Deploy Document Spec or Reusable Template (`deploy`)
+Deploy a YAML spec or named template (`nda-mutual`, `affidavit-uscis-i130`, `contractor-sow`) to production or local backend API:
 ```bash
-python3 cli/legalform.py deploy my-nda.yaml --admin-email "admin@yourcompany.com" -f receiving_party="Global Tech Ltd" -f signer_email="signer@globaltech.com"
+python3 cli/legalform.py deploy templates/affidavit-uscis-i130.yaml --admin-email "admin@yourcompany.com" -f petitioner_name="John Doe" -f beneficiary_name="Jane Smith"
 ```
 
-### 2. List Deployed Slugs & Status (`list`)
-View all deployed document slugs, their active/closed status, and direct signing URLs:
+### 2. List Deployed Slugs & Execution Counts (`list`)
+View all deployed document slugs, party tokens, active/closed status, and direct signing URLs:
 ```bash
 python3 cli/legalform.py list
 ```
@@ -122,8 +122,38 @@ python3 cli/legalform.py export nda-sample-2026 -o submission.json
 ### 7. Convert Submission JSON to Court-Grade PDF (`pdf`)
 Convert an R2 submission JSON record or exported JSON into an official PDF certificate with embedded signature images and full contract clauses:
 ```bash
-python3 cli/legalform.py pdf submission.json -s my-nda.yaml -o executed-agreement.pdf
+python3 cli/legalform.py pdf submission.json -s templates/affidavit-uscis-i130.yaml -o executed-agreement.pdf
 ```
+
+---
+
+## 🤖 Model Context Protocol (MCP) Server Integration
+
+LegalForm ships a native MCP server (`mcp/server.py`) for AI agents (Claude Code, Antigravity CLI `agy`, OpenCode, Cursor):
+
+Add the MCP server to your agent configuration (`mcp_servers` or `.claude.json`):
+```json
+{
+  "mcpServers": {
+    "legalform": {
+      "command": "python3",
+      "args": ["/path/to/Sig/mcp/server.py"],
+      "env": {
+        "LEGALFORM_API": "https://legalform-api.tomcallan0.workers.dev",
+        "LEGALFORM_KEY": "YOUR_ADMIN_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Exposed MCP Tools
+- `legalform_deploy_document` — Deploy raw YAML document specs directly from LLM chat.
+- `legalform_list_documents` — Inspect active documents, signing URLs, and signature counts.
+- `legalform_reopen_slug` — Reopen or extend document validity periods.
+- `legalform_close_slug` — Force close / revoke active signing links.
+- `legalform_delete_document` — Permanently purge documents from D1 and R2 vault.
+- `legalform_export_submission` — Export complete execution records and SHA-256 audit logs.
 
 ---
 

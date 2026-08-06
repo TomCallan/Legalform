@@ -1,0 +1,44 @@
+document:
+  id: "nda-mutual"
+  title: "MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT"
+  jurisdiction: "International, EU eIDAS & State of Delaware, USA"
+  expires_in_days: 30
+  signing_order: "sequential"
+  legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement electronically as of the timestamp recorded below."
+
+parties:
+  - id: "discloser"
+    role: "Disclosing Party Signer"
+    email: "discloser@company.com"
+    sequence: 1
+  - id: "recipient"
+    role: "Receiving Party Signer"
+    email: "recipient@partner.com"
+    sequence: 2
+
+sections:
+  - type: "static"
+    content: |
+      ## PREAMBLE & CONFIDENTIALITY OBLIGATIONS
+      This Mutual Non-Disclosure Agreement ("Agreement") governs the exchange of confidential technical and business information between the Disclosing Party and Receiving Party.
+
+  - type: "form"
+    fields:
+      - name: "disclosing_party"
+        label: "Disclosing Party Corporate Name"
+        type: "text"
+        required: true
+        value: "Acme Corporation"
+
+      - name: "receiving_party"
+        label: "Receiving Party Corporate Name"
+        type: "text"
+        required: true
+
+  - type: "signature"
+    signer_label: "EXECUTION BLOCK"
+    fields:
+      - name: "signature_timestamp"
+        label: "Execution Timestamp"
+        type: "datetime-auto"
+        required: true

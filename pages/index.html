@@ -437,6 +437,31 @@ function renderForm(sections, requireVerification) {
       const sigGroup = renderSingleField({ type: 'signature', label: 'Counterparty Signature of Record', name: 'signature' });
       div.appendChild(sigGroup);
     }
+    else if (section.type === 'witness') {
+      const h3 = document.createElement('div');
+      h3.className = 'signature-section-title';
+      h3.textContent = section.witness_label || 'NOTARY / WITNESS ATTESTATION OF EXECUTION';
+      div.appendChild(h3);
+
+      const witnessNotice = document.createElement('p');
+      witnessNotice.style.fontSize = '0.85rem';
+      witnessNotice.style.color = 'var(--text-muted)';
+      witnessNotice.textContent = section.content || 'I hereby attest under penalty of perjury that I witnessed the execution of this document by the primary party.';
+      div.appendChild(witnessNotice);
+
+      const nameGroup = renderSingleField({ name: 'witness_name', label: 'Witness Full Name', type: 'text', required: true });
+      const emailGroup = renderSingleField({ name: 'witness_email', label: 'Witness Email Address', type: 'email', required: true });
+      div.appendChild(nameGroup);
+      div.appendChild(emailGroup);
+
+      (section.fields || []).forEach(f => {
+        const group = renderSingleField(f);
+        div.appendChild(group);
+      });
+
+      const sigGroup = renderSingleField({ type: 'signature', label: 'Witness Attestation Signature', name: 'witness_signature' });
+      div.appendChild(sigGroup);
+    }
     else if (section.type === 'field') {
       const group = renderSingleField(section);
       div.appendChild(group);

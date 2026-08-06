@@ -77,17 +77,22 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
 
 @app.command()
 def deploy(
-    spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec"),
+    spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec or template name (e.g. templates/nda-mutual.yaml)"),
     fill: list[str] = typer.Option([], "--fill", "-f", help="Pre-fill field values (e.g. -f counterparty_name='Acme Corp')"),
     admin_email: str = typer.Option("", "--admin-email", "-a", help="Recipient email for admin notification copy of signed document")
 ):
     """Deploy a document specification to Cloudflare Worker or local backend API with optional field pre-filling."""
-    if not spec_path.exists():
-        console.print(f"[bold red]Error:[/bold red] File {spec_path} does not exist.")
-        raise typer.Exit(code=1)
+    actual_path = spec_path
+    if not actual_path.exists():
+        template_candidate = Path("templates") / f"{spec_path.name}.yaml"
+        if template_candidate.exists():
+            actual_path = template_candidate
+        else:
+            console.print(f"[bold red]Error:[/bold red] File or template {spec_path} does not exist.")
+            raise typer.Exit(code=1)
 
     api_base, api_key, pages_base, env_admin_email = get_config()
-    spec = yaml.safe_load(spec_path.read_text())
+    spec = yaml.safe_load(actual_path.read_text())
     doc_meta = spec.get("document", {})
 
     # Set admin notification email priority: CLI option > ENV var > YAML spec
@@ -147,11 +152,21 @@ def deploy(
             raise typer.Exit(code=1)
 
     signing_url = f"{pages_base}/?slug={slug}"
+    res_data = r.json() if r else {}
+    party_tokens = res_data.get("party_tokens", {})
+
     console.print("\n[bold green]🚀 Document Deployed Successfully![/bold green]")
     console.print(f"• Document ID: [cyan]{doc_id}[/cyan]")
-    console.print(f"• Signing URL: [bold underline cyan]{signing_url}[/bold underline cyan]")
+    console.print(f"• Main Signing Link: [bold underline cyan]{signing_url}[/bold underline cyan]")
+    
+    if party_tokens:
+        console.print("\n[bold blue]👥 Per-Party Signing Links:[/bold blue]")
+        for party_id, token in party_tokens.items():
+            party_url = f"{pages_base}/?slug={token}"
+            console.print(f"  • {party_id}: [bold underline green]{party_url}[/bold underline green]")
+
     if prefills:
-        console.print(f"• Pre-filled Fields: [yellow]{prefills}[/yellow]")
+        console.print(f"\n• Pre-filled Fields: [yellow]{prefills}[/yellow]")
     console.print(f"• Expiry Date: {datetime.fromtimestamp(expires_at).strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Local registry logging
