@@ -33,10 +33,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy Pages to Cloudflare
-        uses: cloudflare/wrangler-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy pages --project-name=legalform-ui
+          node-version: '20'
+
+      - name: Install Wrangler CLI
+        run: npm install --global wrangler
+
+      - name: Deploy Pages to Cloudflare
+        run: wrangler pages deploy pages --project-name=legalform-ui
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
