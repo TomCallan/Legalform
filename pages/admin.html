@@ -3,969 +3,366 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LegalForm Admin Portal</title>
+  <title>Workspace | Sig</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
-      --bg-app:        #090d16;
-      --bg-card:       #111726;
-      --bg-input:      #1a2234;
-      --border-subtle: #1e293b;
-      --border-active: #334155;
-      --text-primary:  #f8fafc;
-      --text-muted:    #64748b;
-      --text-subtle:   #94a3b8;
-      --accent-brand:  #3b82f6;
-      --accent-hover:  #2563eb;
+      --bg-base: #06080c;
+      --bg-surface: #0f131a;
+      --bg-sidebar: #0a0d14;
+      --border-subtle: #1e2532;
+      --border-active: #2c3647;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-brand: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --error: #ef4444;
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
     }
-    * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; -webkit-font-smoothing: antialiased; }
-    body {
-      margin: 0;
-      background: var(--bg-app);
-      color: var(--text-primary);
-      min-height: 100vh;
-    }
-    a { color: var(--accent-brand); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .header {
-      background: rgba(17, 23, 38, 0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      letter-spacing: -0.02em;
-    }
-
-    .main {
-      max-width: 1100px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-    }
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
+    body { background: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
+    
+    /* Login Screen */
+    .auth-wrapper {
+      position: fixed; inset: 0; background: var(--bg-base); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
     }
     .auth-box {
-      max-width: 380px;
-      margin: 5rem auto;
-      text-align: center;
+      background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 16px;
+      padding: 3rem; width: 100%; max-width: 420px; box-shadow: var(--shadow-lg); text-align: center;
     }
-    .form-group {
-      margin-bottom: 1.2rem;
-      text-align: left;
+    
+    /* App Layout */
+    .sidebar {
+      width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle);
+      display: flex; flex-direction: column; padding: 1.5rem;
     }
-    label {
-      display: block;
-      font-weight: 600;
-      font-size: 0.78rem;
-      margin-bottom: 0.4rem;
-      color: var(--text-subtle);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.25rem; margin-bottom: 3rem; }
+    .brand-mark { width: 32px; height: 32px; background: var(--text-main); color: var(--bg-base); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; border-radius: 6px; }
+    
+    .nav-item {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: var(--text-muted);
+      border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; margin-bottom: 0.5rem;
     }
-    input[type="password"], input[type="text"], input[type="email"], input[type="number"], select {
-      width: 100%;
-      padding: 0.65rem 0.85rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      font-size: 0.88rem;
-      outline: none;
-      background: var(--bg-input);
-      color: var(--text-primary);
-      transition: all 0.15s ease;
+    .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-main); }
+    .nav-item.active { background: rgba(59, 130, 246, 0.1); color: var(--accent-brand); }
+    
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar {
+      height: 72px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; background: var(--bg-base);
     }
-    textarea {
-      width: 100%;
-      height: 320px;
-      font-family: 'Fira Code', monospace;
-      font-size: 0.82rem;
-      padding: 1rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      background: #0b0f19;
-      color: #e2e8f0;
-      outline: none;
-      line-height: 1.5;
-    }
-    input:focus, textarea:focus, select:focus {
-      border-color: var(--accent-brand);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-    .btn {
-      background: var(--accent-brand);
-      color: #ffffff;
-      border: none;
-      padding: 0.6rem 1.2rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-    }
-    .btn:hover { background: var(--accent-hover); }
-    .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid var(--border-subtle); }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
-    .btn-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
-    .btn-success:hover { background: rgba(16, 185, 129, 0.25); }
-    .btn-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
-    .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
-    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .view-container { flex: 1; overflow-y: auto; padding: 2rem; }
+    
+    /* Buttons & Inputs */
+    .btn { background: var(--text-main); color: var(--bg-base); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { background: #e2e8f0; transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-subtle); }
+    .btn-outline:hover { background: var(--bg-surface); }
+    
+    input, select { width: 100%; padding: 0.75rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-surface); color: var(--text-main); font-size: 0.9rem; outline: none; }
+    input:focus, select:focus { border-color: var(--accent-brand); box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-group { margin-bottom: 1.5rem; }
 
+    /* Builder Layout */
+    .builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; height: calc(100vh - 140px); }
+    .builder-pane { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+    .pane-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-subtle); font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: var(--bg-sidebar); }
+    .pane-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    
+    /* Code Editor */
+    .code-editor { width: 100%; height: 100%; background: transparent; border: none; color: #a1a1aa; font-family: 'Fira Code', monospace; font-size: 0.85rem; resize: none; outline: none; line-height: 1.6; }
+    
+    /* Visual Canvas blocks */
+    .block-card { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; position: relative; }
+    .block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .block-type { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    .block-delete { color: var(--error); cursor: pointer; font-size: 0.8rem; font-weight: 500; }
+    
     /* Ledger Table */
-    table.ledger-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
-    }
-    table.ledger-table th, table.ledger-table td {
-      padding: 0.85rem 1rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border-subtle);
-      font-size: 0.85rem;
-    }
-    table.ledger-table th {
-      font-weight: 600;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .doc-row {
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    .doc-row:hover { background: rgba(255, 255, 255, 0.02); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem; }
+    th { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .status-badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .status-active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .status-closed { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
-    .badge {
-      display: inline-block;
-      padding: 0.2rem 0.55rem;
-      border-radius: 6px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .badge-active { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25); }
-    .badge-closed { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25); }
-    .sig-pill {
-      background: rgba(168, 85, 247, 0.15);
-      color: #c084fc;
-      border: 1px solid rgba(192, 132, 252, 0.3);
-      padding: 0.2rem 0.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.75rem;
-    }
-
-    .tabs { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); }
-    .tab {
-      padding: 0.75rem 0;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      border-bottom: 2px solid transparent;
-      color: var(--text-muted);
-      transition: all 0.15s ease;
-    }
-    .tab.active {
-      border-bottom-color: var(--accent-brand);
-      color: var(--text-primary);
-    }
-
-    /* Modal Backdrop */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(8px);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-paper {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 1.75rem;
-      width: 90%;
-      max-width: 520px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1.5rem;
-      color: var(--text-muted);
-    }
-    .empty-state code {
-      display: block;
-      background: #0b0f19;
-      border: 1px solid var(--border-subtle);
-      padding: 0.85rem;
-      border-radius: 8px;
-      color: #34d399;
-      font-family: 'Fira Code', monospace;
-      font-size: 0.82rem;
-      margin: 1rem auto;
-      max-width: 440px;
-      text-align: left;
-    }
+    /* Modals */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-content { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 2rem; width: 400px; box-shadow: var(--shadow-lg); }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <div style="display:flex;align-items:center;gap:0.75rem">
-      <div style="width:28px;height:28px;background:linear-gradient(135deg, #3b82f6, #7c3aed);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.95rem">§</div>
-      <h1>Sig Admin Portal</h1>
-    </div>
-    <div id="auth-status" style="font-size:0.85rem;color:var(--text-muted)">
-      Not Authenticated
+  <!-- Auth -->
+  <div id="auth-view" class="auth-wrapper">
+    <div class="auth-box">
+      <div class="brand-mark" style="margin: 0 auto 1.5rem; width: 48px; height: 48px; font-size: 1.5rem;">S</div>
+      <h2 style="margin-bottom: 0.5rem; font-weight: 700;">Workspace Login</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Authenticate to manage your agreements.</p>
+      <form onsubmit="handleLogin(event)">
+        <input type="password" id="api-key" placeholder="Enter Workspace Key" required style="margin-bottom: 1rem; text-align: center;">
+        <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+      </form>
     </div>
   </div>
 
-  <div class="main">
-    <!-- AUTHENTICATION VIEW -->
-    <div id="login-view" class="card auth-box">
-      <h2 style="margin-top:0;font-size:1.25rem;font-weight:700">Admin Authentication</h2>
-      <p style="color:var(--text-subtle);font-size:0.85rem;margin-bottom:1.5rem">Enter your instance <code>ADMIN_API_KEY</code> to manage documents.</p>
-
-      <form id="login-form">
-        <div class="form-group">
-          <label for="api-key-input">Admin API Key</label>
-          <input type="password" id="api-key-input" placeholder="e.g., ASunder=1and" required>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem">
-          <input type="checkbox" id="remember-me" checked>
-          <label for="remember-me" style="margin:0;font-size:0.8rem;text-transform:none;color:var(--text-subtle)">Remember key on this device</label>
-        </div>
-        <button type="submit" class="btn" style="width:100%">Authenticate & Open Dashboard</button>
-      </form>
+  <!-- App -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">S</div> Sig Workspace
     </div>
+    <div class="nav-item active" id="nav-ledger" onclick="switchView('ledger')">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+      Documents
+    </div>
+    <div class="nav-item" id="nav-builder" onclick="switchView('builder')">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      New Template
+    </div>
+    <div style="flex:1"></div>
+    <div class="nav-item" onclick="logout()" style="color:var(--error);">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+      Sign Out
+    </div>
+  </div>
 
-    <!-- MAIN DASHBOARD VIEW -->
-    <div id="dashboard-view" style="display:none">
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab('ledger')">Document Ledger</div>
-        <div class="tab" onclick="switchTab('builder')">Visual Builder</div>
-        <div class="tab" onclick="switchTab('deploy')">YAML Spec Editor</div>
-      </div>
-
-      <!-- TAB: VISUAL BUILDER -->
-      <div id="tab-builder" class="card" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-          <div>
-            <h2 style="margin:0;font-size:1.15rem;font-weight:700">Visual Document Builder</h2>
-            <p style="color:var(--text-subtle);font-size:0.82rem;margin:0.2rem 0 0 0">Build court-enforceable agreements with dynamic reorderable sections.</p>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="exportVisualToYaml()">Switch to YAML Editor</button>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-          <div class="form-group">
-            <label for="builder-title">Document Title</label>
-            <input type="text" id="builder-title" value="Mutual Non-Disclosure Agreement" required>
-          </div>
-          <div class="form-group">
-            <label for="builder-id">Document ID</label>
-            <input type="text" id="builder-id" placeholder="nda-sample-01" required>
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem">
-          <div class="form-group">
-            <label for="builder-jurisdiction">Jurisdiction</label>
-            <input type="text" id="builder-jurisdiction" value="State of Delaware, USA & EU eIDAS">
-          </div>
-          <div class="form-group">
-            <label for="builder-expiry">Validity (Days)</label>
-            <input type="number" id="builder-expiry" value="30" min="1">
-          </div>
-          <div class="form-group">
-            <label for="builder-order">Signing Order</label>
-            <select id="builder-order">
-              <option value="sequential">Sequential (Step by Step)</option>
-              <option value="parallel">Parallel (Any Order)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Custom Modular Document Sections Container -->
-        <div style="border:1px solid var(--border-subtle);border-radius:10px;padding:1.25rem;background:#0b0f19;margin-bottom:1.25rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem">
-            <div>
-              <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">Document Sections & Layout</div>
-              <div style="font-size:0.75rem;color:var(--text-muted)">Add static legal clauses, form inputs, witness attestations, or signature blocks and move them freely.</div>
-            </div>
-            <div style="display:flex;gap:0.4rem">
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('static')">+ Static Clause</button>
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('form')">+ Form Section</button>
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('witness')">+ Witness Block</button>
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('signature')">+ Signature Block</button>
-            </div>
-          </div>
-          <div id="builder-sections-list">
-            <!-- Dynamically populated section blocks -->
-          </div>
-        </div>
-
-        <!-- Signer Roles & Parties Builder Area -->
-        <div style="border:1px solid var(--border-subtle);border-radius:10px;padding:1.25rem;background:#0b0f19;margin-bottom:1.5rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem">
-            <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">Signer Roles & Parties</div>
-            <button class="btn btn-secondary btn-sm" onclick="addBuilderParty()">+ Add Signer Role</button>
-          </div>
-          <div id="builder-parties-list">
-            <!-- Dynamically populated party rows -->
-          </div>
-        </div>
-
-        <div style="display:flex;gap:0.75rem">
-          <button class="btn btn-success" style="flex:1;padding:0.75rem" onclick="deployVisualDocument()">Publish Document & Generate Links</button>
-        </div>
-      </div>
-
-      <!-- TAB: LEDGER -->
-      <div id="tab-ledger" class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <div>
-            <h2 style="margin:0;font-size:1.15rem;font-weight:700">Document Ledger</h2>
-            <p style="margin:0.2rem 0 0 0;color:var(--text-subtle);font-size:0.8rem">Click any document row to expand signed execution records and audit logs</p>
-          </div>
-          <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh Ledger</button>
-        </div>
-
-        <div style="display:flex;gap:0.75rem;margin-bottom:1rem;align-items:center">
-          <input type="text" id="search-input" placeholder="Search by Document ID or Slug..." oninput="renderDocsTable()" style="max-width:320px;">
-          <select id="status-filter" onchange="renderDocsTable()" style="max-width:160px;">
-            <option value="all">All Statuses</option>
-            <option value="active">Active Only</option>
-            <option value="closed">Closed Only</option>
-          </select>
-        </div>
-
-        <table class="ledger-table">
+  <div class="main-content">
+    <div class="topbar">
+      <h2 id="view-title" style="font-size: 1.1rem; font-weight: 600;">Documents</h2>
+      <div id="topbar-actions"></div>
+    </div>
+    
+    <div class="view-container">
+      <!-- Ledger View -->
+      <div id="view-ledger">
+        <table id="docs-table">
           <thead>
-            <tr>
-              <th style="width:30px"></th>
-              <th>Document ID</th>
-              <th>Signing Slug</th>
-              <th>Executions</th>
-              <th>Status</th>
-              <th>Signing URL</th>
-              <th>Expires</th>
-              <th style="text-align:right">Actions</th>
-            </tr>
+            <tr><th>Document ID</th><th>Status</th><th>Executions</th><th>Link</th><th>Actions</th></tr>
           </thead>
-          <tbody id="docs-tbody">
-            <tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Loading document ledger...</td></tr>
-          </tbody>
+          <tbody id="docs-tbody"></tbody>
         </table>
       </div>
 
-      <!-- TAB: DEPLOY YAML -->
-      <div id="tab-deploy" class="card" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <div>
-            <h2 style="margin:0;font-size:1.15rem;font-weight:700">YAML Document Spec Editor</h2>
-            <p style="color:var(--text-subtle);font-size:0.8rem;margin:0.2rem 0 0 0">Paste or edit raw LegalForm YAML schema definitions</p>
+      <!-- Builder View -->
+      <div id="view-builder" style="display:none;">
+        <div class="builder-grid">
+          <!-- Visual Pane -->
+          <div class="builder-pane">
+            <div class="pane-header">
+              Visual Canvas
+              <div style="display:flex;gap:0.5rem">
+                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="addVisualBlock('text')">+ Text</button>
+                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="addVisualBlock('form')">+ Form</button>
+                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="addVisualBlock('signature')">+ Sign</button>
+              </div>
+            </div>
+            <div class="pane-content" id="visual-blocks">
+              <div class="form-group">
+                <label>Document Title</label>
+                <input type="text" id="b-title" value="Mutual Non-Disclosure Agreement" oninput="syncToYaml()">
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:2rem;">
+                <div class="form-group"><label>ID</label><input type="text" id="b-id" value="nda-001" oninput="syncToYaml()"></div>
+                <div class="form-group"><label>Validity (Days)</label><input type="number" id="b-exp" value="30" oninput="syncToYaml()"></div>
+              </div>
+              <div id="blocks-container"></div>
+            </div>
           </div>
-          <div style="display:flex;gap:0.5rem">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Load NDA Template</button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Load Waiver</button>
+          
+          <!-- YAML Pane -->
+          <div class="builder-pane">
+            <div class="pane-header">
+              YAML Source
+              <button class="btn btn-sm" onclick="deploy()">Deploy Now</button>
+            </div>
+            <div class="pane-content" style="padding:0;">
+              <textarea id="yaml-code" class="code-editor" style="padding:1.5rem;" spellcheck="false" oninput="syncFromYaml()"></textarea>
+            </div>
           </div>
         </div>
-
-        <form id="deploy-form">
-          <div class="form-group">
-            <label for="yaml-spec">YAML Specification</label>
-            <textarea id="yaml-spec" required placeholder="Paste legal document YAML spec here..."></textarea>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">
-            <div class="form-group">
-              <label for="admin-email-input">Admin Notification Email (Optional)</label>
-              <input type="email" id="admin-email-input" placeholder="admin@company.com">
-            </div>
-            <div class="form-group">
-              <label for="prefill-input">Prefill Counterparty Name (Optional)</label>
-              <input type="text" id="prefill-input" placeholder="Partner Corp LLC">
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-success" style="width:100%;padding:0.75rem">Deploy & Publish Document</button>
-        </form>
       </div>
     </div>
   </div>
 
-  <!-- NOTIFICATION & CONFIRMATION MODAL -->
-  <div id="notification-modal" class="modal-backdrop">
-    <div class="modal-paper" style="max-width:460px;text-align:center">
-      <div id="modal-icon" style="width:48px;height:48px;border-radius:50%;background:rgba(59, 130, 246, 0.15);color:#60a5fa;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem auto;font-weight:700;font-size:1.25rem">i</div>
-      <h3 id="modal-title" style="margin-top:0;font-size:1.15rem;font-weight:700;color:var(--text-primary)">Notification</h3>
-      <div id="modal-message" style="color:var(--text-subtle);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.5;white-space:pre-wrap;text-align:left;background:#0b0f19;padding:0.85rem;border-radius:8px;border:1px solid var(--border-subtle)"></div>
-      
-      <div style="display:flex;justify-content:flex-end;gap:0.5rem">
-        <button id="modal-cancel-btn" class="btn btn-secondary" style="display:none" onclick="closeNotificationModal(false)">Cancel</button>
-        <button id="modal-confirm-btn" class="btn" style="min-width:90px" onclick="closeNotificationModal(true)">OK</button>
+  <!-- Modal -->
+  <div class="modal" id="sys-modal">
+    <div class="modal-content">
+      <h3 id="mod-title" style="margin-bottom:1rem;font-weight:600;">Alert</h3>
+      <p id="mod-body" style="color:var(--text-muted);font-size:0.9rem;line-height:1.5;margin-bottom:2rem;word-break:break-all;"></p>
+      <div style="display:flex;justify-content:flex-end;gap:1rem;">
+        <button class="btn btn-outline" id="mod-cancel" style="display:none;" onclick="closeModal(false)">Cancel</button>
+        <button class="btn" id="mod-confirm" onclick="closeModal(true)">OK</button>
       </div>
     </div>
   </div>
 
 <script>
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8787'
-  : 'https://legalform-api.tomcallan0.workers.dev';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8787' : 'https://legalform-api.tomcallan0.workers.dev';
+const ORIGIN = window.location.origin;
+let key = localStorage.getItem('WORKSPACE_KEY') || '';
+let modalCb = null;
 
-const PAGES_BASE = window.location.origin;
-
-let apiKey = localStorage.getItem('LEGALFORM_ADMIN_KEY') || '';
-let allDocs = [];
-let notificationCallback = null;
-
-if (apiKey) {
-  showDashboard();
-} else {
-  document.getElementById('login-view').style.display = 'block';
+if (key) {
+  document.getElementById('auth-view').style.display = 'none';
+  loadLedger();
 }
 
-document.getElementById('login-form').addEventListener('submit', (e) => {
+function handleLogin(e) {
   e.preventDefault();
-  const inputKey = document.getElementById('api-key-input').value.trim();
-  const remember = document.getElementById('remember-me').checked;
-  if (!inputKey) return;
-  apiKey = inputKey;
-  if (remember) {
-    localStorage.setItem('LEGALFORM_ADMIN_KEY', apiKey);
-  }
-  showDashboard();
-});
-
-document.getElementById('refresh-btn').addEventListener('click', loadDocs);
-
-document.getElementById('deploy-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const rawYaml = document.getElementById('yaml-spec').value;
-  const adminEmail = document.getElementById('admin-email-input').value.trim();
-  const prefillReceiving = document.getElementById('prefill-input').value.trim();
-
-  try {
-    const parsedSpec = jsyaml.load(rawYaml);
-    if (!parsedSpec || !parsedSpec.document || !parsedSpec.document.id) {
-      showNotification('Invalid YAML Specification', 'Missing required top-level document.id field.', false, '✕');
-      return;
-    }
-
-    if (adminEmail) parsedSpec.document.admin_notification_email = adminEmail;
-
-    const docId = parsedSpec.document.id;
-    const slug = Math.random().toString(36).substring(2, 14);
-    const expiresDays = parsedSpec.document.expires_in_days || 30;
-    const expiresAt = Math.floor(Date.now() / 1000) + (expiresDays * 86400);
-
-    const payload = {
-      id: docId,
-      slug: slug,
-      spec: JSON.stringify(parsedSpec),
-      expires_at: expiresAt,
-      max_per_email: 99,
-      max_per_ip: 99,
-      require_verification: 0
-    };
-
-    const res = await fetch(`${API_BASE}/api/documents`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      const shareUrl = `${PAGES_BASE}/?slug=${slug}`;
-      await showNotification('Document Published', `Document ID: ${docId}\nSigning URL: ${shareUrl}`, false, '✓');
-      switchTab('ledger');
-      loadDocs();
-    } else {
-      await showNotification('Deployment Failed', result.error || 'Unknown error', false, '✕');
-    }
-  } catch (err) {
-    await showNotification('YAML Syntax Error', err.message, false, '✕');
-  }
-});
-
-function showNotification(title, message, isConfirm = false, iconSymbol = 'i') {
-  return new Promise((resolve) => {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').textContent = message;
-    document.getElementById('modal-icon').textContent = iconSymbol;
-    const cancelBtn = document.getElementById('modal-cancel-btn');
-    cancelBtn.style.display = isConfirm ? 'inline-flex' : 'none';
-    document.getElementById('notification-modal').style.display = 'flex';
-    notificationCallback = resolve;
-  });
+  key = document.getElementById('api-key').value.trim();
+  localStorage.setItem('WORKSPACE_KEY', key);
+  document.getElementById('auth-view').style.display = 'none';
+  loadLedger();
 }
+function logout() { localStorage.removeItem('WORKSPACE_KEY'); location.reload(); }
 
-function closeNotificationModal(result) {
-  document.getElementById('notification-modal').style.display = 'none';
-  if (notificationCallback) {
-    notificationCallback(result);
-    notificationCallback = null;
-  }
-}
-
-function addBuilderSection(type = 'static') {
-  const container = document.getElementById('builder-sections-list');
-  const secId = `sec_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-  const secCard = document.createElement('div');
-  secCard.id = secId;
-  secCard.dataset.type = type;
-  secCard.style.background = 'var(--bg-card)';
-  secCard.style.border = '1px solid var(--border-subtle)';
-  secCard.style.borderRadius = '8px';
-  secCard.style.padding = '1rem';
-  secCard.style.marginBottom = '0.75rem';
-
-  let innerContent = '';
-  if (type === 'static') {
-    innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Static Legal Clause</div>
-      <textarea class="sec-content" style="height:90px;background:#0b0f19" placeholder="Enter clause text or preamble..."></textarea>
-    `;
-  } else if (type === 'form') {
-    innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Signer Form Fields Group</div>
-      <div class="sec-fields-list"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addInnerFieldToSection('${secId}')" style="margin-top:0.4rem">+ Add Field</button>
-    `;
-  } else if (type === 'witness') {
-    innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Witness / Notary Attestation Block</div>
-      <input type="text" class="sec-witness-label" placeholder="Section Heading" value="NOTARY / WITNESS ATTESTATION OF EXECUTION" style="margin-bottom:0.4rem">
-      <textarea class="sec-content" style="height:70px;background:#0b0f19" placeholder="Attestation statement text...">I hereby attest under penalty of perjury that I witnessed the execution of this document by the primary party.</textarea>
-    `;
-  } else if (type === 'signature') {
-    innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Signature Block of Record</div>
-      <input type="text" class="sec-sig-label" placeholder="Signer Heading" value="EXECUTION & SIGNATURE OF RECORD">
-    `;
-  }
-
-  secCard.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;border-bottom:1px solid var(--border-subtle);padding-bottom:0.4rem">
-      <div style="display:flex;align-items:center;gap:0.3rem">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="moveSection('${secId}', 'up')">↑</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="moveSection('${secId}', 'down')">↓</button>
-        <span style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-left:0.3rem">TYPE: ${type.toUpperCase()}</span>
-      </div>
-      <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${secId}').remove()">Delete Section</button>
-    </div>
-    ${innerContent}
-  `;
-  container.appendChild(secCard);
-
-  if (type === 'form') {
-    addInnerFieldToSection(secId, 'signer_name', 'Signer Full Name', 'text', true);
-  }
-}
-
-function addInnerFieldToSection(secId, name = '', label = '', type = 'text', required = true) {
-  const secCard = document.getElementById(secId);
-  const container = secCard.querySelector('.sec-fields-list');
-  const fieldId = `field_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-  const row = document.createElement('div');
-  row.id = fieldId;
-  row.style.display = 'grid';
-  row.style.gridTemplateColumns = '1fr 1.5fr 1fr 80px 40px';
-  row.style.gap = '0.5rem';
-  row.style.alignItems = 'center';
-  row.style.marginBottom = '0.4rem';
-
-  row.innerHTML = `
-    <input type="text" class="field-name" placeholder="field_id" value="${name}">
-    <input type="text" class="field-label" placeholder="Field Label" value="${label}">
-    <select class="field-type">
-      <option value="text" ${type==='text'?'selected':''}>Text Input</option>
-      <option value="email" ${type==='email'?'selected':''}>Email Address</option>
-      <option value="textarea" ${type==='textarea'?'selected':''}>Multi-line Text</option>
-      <option value="date" ${type==='date'?'selected':''}>Date</option>
-      <option value="datetime-auto" ${type==='datetime-auto'?'selected':''}>Auto Timestamp</option>
-    </select>
-    <label style="display:flex;align-items:center;gap:0.2rem;font-size:0.75rem;margin:0">
-      <input type="checkbox" class="field-req" ${required?'checked':''}> Required
-    </label>
-    <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${fieldId}').remove()">✕</button>
-  `;
-  container.appendChild(row);
-}
-
-function moveSection(secId, direction) {
-  const card = document.getElementById(secId);
-  if (!card) return;
-  if (direction === 'up' && card.previousElementSibling) {
-    card.parentNode.insertBefore(card, card.previousElementSibling);
-  } else if (direction === 'down' && card.nextElementSibling) {
-    card.parentNode.insertBefore(card.nextElementSibling, card);
-  }
-}
-
-function switchTab(tabName) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-ledger').style.display = 'none';
-  document.getElementById('tab-builder').style.display = 'none';
-  document.getElementById('tab-deploy').style.display = 'none';
-
-  if (tabName === 'ledger') {
-    document.querySelectorAll('.tab')[0].classList.add('active');
-    document.getElementById('tab-ledger').style.display = 'block';
-  } else if (tabName === 'builder') {
-    document.querySelectorAll('.tab')[1].classList.add('active');
-    document.getElementById('tab-builder').style.display = 'block';
-    if (!document.getElementById('builder-id').value) {
-      document.getElementById('builder-id').value = `doc-${Date.now().toString(36)}`;
-    }
-    if (document.getElementById('builder-sections-list').children.length === 0) {
-      addBuilderSection('static');
-      addBuilderSection('form');
-      addBuilderSection('signature');
-    }
-    if (document.getElementById('builder-parties-list').children.length === 0) {
-      addBuilderParty('discloser', 'Disclosing Party Signer', 'discloser@acme.com');
-      addBuilderParty('recipient', 'Receiving Party Signer', 'recipient@partner.com');
-    }
+function switchView(view) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + view).classList.add('active');
+  document.getElementById('view-ledger').style.display = view === 'ledger' ? 'block' : 'none';
+  document.getElementById('view-builder').style.display = view === 'builder' ? 'block' : 'none';
+  
+  if (view === 'ledger') {
+    document.getElementById('view-title').textContent = 'Documents';
+    document.getElementById('topbar-actions').innerHTML = '<button class="btn btn-outline btn-sm" onclick="loadLedger()">Refresh</button>';
+    loadLedger();
   } else {
-    document.querySelectorAll('.tab')[2].classList.add('active');
-    document.getElementById('tab-deploy').style.display = 'block';
+    document.getElementById('view-title').textContent = 'New Template';
+    document.getElementById('topbar-actions').innerHTML = '';
+    if (document.getElementById('blocks-container').children.length === 0) initBuilder();
   }
 }
 
-function addBuilderParty(id = '', role = '', email = '') {
-  const container = document.getElementById('builder-parties-list');
-  const partyId = `party_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-  const row = document.createElement('div');
-  row.id = partyId;
-  row.style.display = 'grid';
-  row.style.gridTemplateColumns = '1fr 1.5fr 1.5fr 40px';
-  row.style.gap = '0.5rem';
-  row.style.alignItems = 'center';
-  row.style.marginBottom = '0.5rem';
-
-  row.innerHTML = `
-    <input type="text" class="party-id" placeholder="party_role_id" value="${id}">
-    <input type="text" class="party-role" placeholder="Signer Role Title" value="${role}">
-    <input type="email" class="party-email" placeholder="signer@company.com" value="${email}">
-    <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${partyId}').remove()">✕</button>
-  `;
-  container.appendChild(row);
-}
-
-function buildSpecFromVisual() {
-  const title = document.getElementById('builder-title').value.trim() || "Untitled Legal Agreement";
-  const docId = document.getElementById('builder-id').value.trim() || `doc-${Date.now()}`;
-  const jurisdiction = document.getElementById('builder-jurisdiction').value.trim();
-  const expiryDays = parseInt(document.getElementById('builder-expiry').value, 10) || 30;
-  const signingOrder = document.getElementById('builder-order').value;
-
-  const sections = [];
-  document.querySelectorAll('#builder-sections-list > div').forEach(secCard => {
-    const type = secCard.dataset.type;
-    if (type === 'static') {
-      const content = secCard.querySelector('.sec-content').value.trim();
-      if (content) sections.push({ type: 'static', content });
-    } else if (type === 'form') {
-      const fields = [];
-      secCard.querySelectorAll('.sec-fields-list > div').forEach(row => {
-        const fn = row.querySelector('.field-name').value.trim();
-        const fl = row.querySelector('.field-label').value.trim();
-        const ft = row.querySelector('.field-type').value;
-        const fr = row.querySelector('.field-req').checked;
-        if (fn) fields.push({ name: fn, label: fl || fn, type: ft, required: fr });
-      });
-      if (fields.length > 0) sections.push({ type: 'form', fields });
-    } else if (type === 'witness') {
-      const heading = secCard.querySelector('.sec-witness-label').value.trim();
-      const content = secCard.querySelector('.sec-content').value.trim();
-      sections.push({ type: 'witness', witness_label: heading || 'WITNESS ATTESTATION', content });
-    } else if (type === 'signature') {
-      const label = secCard.querySelector('.sec-sig-label').value.trim();
-      sections.push({
-        type: 'signature',
-        signer_label: label || 'EXECUTION OF RECORD',
-        fields: [{ name: "signature_timestamp", label: "Date & Time of Execution", type: "datetime-auto", required: true }]
-      });
-    }
+function modal(title, body, confirm = false) {
+  return new Promise(res => {
+    document.getElementById('mod-title').textContent = title;
+    document.getElementById('mod-body').innerHTML = body;
+    document.getElementById('mod-cancel').style.display = confirm ? 'block' : 'none';
+    document.getElementById('sys-modal').style.display = 'flex';
+    modalCb = res;
   });
-
-  const parties = [];
-  let seq = 1;
-  document.querySelectorAll('#builder-parties-list > div').forEach(row => {
-    const pid = row.querySelector('.party-id').value.trim();
-    const prole = row.querySelector('.party-role').value.trim();
-    const pemail = row.querySelector('.party-email').value.trim();
-    if (pid || prole) {
-      parties.push({
-        id: pid || `party_${seq}`,
-        role: prole || `Signer ${seq}`,
-        email: pemail || undefined,
-        sequence: seq++
-      });
-    }
-  });
-
-  return {
-    document: {
-      id: docId,
-      title: title,
-      jurisdiction: jurisdiction,
-      expires_in_days: expiryDays,
-      signing_order: signingOrder,
-      legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Agreement electronically."
-    },
-    parties: parties.length > 0 ? parties : undefined,
-    sections: sections.length > 0 ? sections : [{ type: 'static', content: '## AGREEMENT TERMS' }]
-  };
 }
+function closeModal(val) { document.getElementById('sys-modal').style.display = 'none'; if(modalCb) modalCb(val); }
 
-async function deployVisualDocument() {
-  const specObj = buildSpecFromVisual();
-  const slug = Math.random().toString(36).substring(2, 14);
-  const expiresDays = specObj.document.expires_in_days || 30;
-  const expiresAt = Math.floor(Date.now() / 1000) + (expiresDays * 86400);
-
-  const payload = {
-    id: specObj.document.id,
-    slug: slug,
-    spec: JSON.stringify(specObj),
-    expires_at: expiresAt,
-    max_per_email: 99,
-    max_per_ip: 99,
-    require_verification: 0
-  };
-
+async function loadLedger() {
+  const tbody = document.getElementById('docs-tbody');
   try {
-    const res = await fetch(`${API_BASE}/api/documents`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+    const res = await fetch(\`\${API}/api/documents/list\`, { headers: { 'Authorization': \`Bearer \${key}\` } });
+    if (res.status === 401) return logout();
+    const { documents } = await res.json();
+    
+    tbody.innerHTML = documents.length ? documents.map(d => \`
+      <tr>
+        <td><strong>\${d.id}</strong><br><span style="font-size:0.75rem;color:var(--text-muted);font-family:monospace">\${d.slug}</span></td>
+        <td><span class="status-badge \${d.status==='active'?'status-active':'status-closed'}">\${d.status}</span></td>
+        <td>\${d.submission_count||0}</td>
+        <td><a href="\${ORIGIN}/?slug=\${d.slug}" target="_blank" style="font-family:monospace;font-size:0.8rem">\${ORIGIN}/?slug=\${d.slug}</a></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="revoke('\${d.slug}')">Revoke</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--error);border-color:rgba(239,68,68,0.3)" onclick="del('\${d.id}')">Del</button>
+        </td>
+      </tr>
+    \`).join('') : '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--text-muted);">No documents deployed yet.</td></tr>';
+  } catch(e) { tbody.innerHTML = \`<tr><td colspan="5">Error: \${e.message}</td></tr>\`; }
+}
+
+async function revoke(slug) {
+  if(await modal('Revoke Access', \`Deactivate \${slug}?\`, true)) {
+    await fetch(\`\${API}/api/doc/\${slug}/close\`, {method:'POST', headers:{'Authorization':\`Bearer \${key}\`}}); loadLedger();
+  }
+}
+async function del(id) {
+  if(await modal('Delete Document', \`Purge \${id}?\`, true)) {
+    await fetch(\`\${API}/api/doc/\${id}\`, {method:'DELETE', headers:{'Authorization':\`Bearer \${key}\`}}); loadLedger();
+  }
+}
+
+function initBuilder() {
+  addVisualBlock('text');
+  addVisualBlock('signature');
+  syncToYaml();
+}
+
+function addVisualBlock(type) {
+  const container = document.getElementById('blocks-container');
+  const div = document.createElement('div');
+  div.className = 'block-card';
+  div.dataset.type = type;
+  
+  let content = '';
+  if (type === 'text') content = '<textarea style="width:100%;height:80px;background:var(--bg-surface);border:1px solid var(--border-subtle);color:var(--text-main);padding:0.75rem;border-radius:6px;resize:vertical;" oninput="syncToYaml()">## Terms\n</textarea>';
+  if (type === 'signature') content = '<input type="text" value="Execution Block" oninput="syncToYaml()">';
+  if (type === 'form') content = '<input type="text" placeholder="Field Label (e.g. Full Name)" value="Full Name" oninput="syncToYaml()">';
+  
+  div.innerHTML = \`
+    <div class="block-header">
+      <div class="block-type">\${type} Block</div>
+      <div class="block-delete" onclick="this.parentElement.parentElement.remove(); syncToYaml()">Remove</div>
+    </div>
+    \${content}
+  \`;
+  container.appendChild(div);
+}
+
+function syncToYaml() {
+  const doc = {
+    id: document.getElementById('b-id').value,
+    title: document.getElementById('b-title').value,
+    expires_in_days: parseInt(document.getElementById('b-exp').value) || 30,
+    signing_order: 'sequential'
+  };
+  
+  const sections = Array.from(document.getElementById('blocks-container').children).map(b => {
+    const type = b.dataset.type;
+    if (type === 'text') return { type: 'static', content: b.querySelector('textarea').value };
+    if (type === 'signature') return { type: 'signature', signer_label: b.querySelector('input').value, fields: [{name:"date", type:"datetime-auto", required:true}] };
+    if (type === 'form') return { type: 'form', fields: [{name:"field1", label: b.querySelector('input').value, type:"text", required:true}] };
+  });
+
+  const spec = { document: doc, parties: [{id:"signer1", role:"Primary Signer", sequence:1}], sections };
+  document.getElementById('yaml-code').value = jsyaml.dump(spec, { sortKeys: false });
+}
+
+function syncFromYaml() {
+  try {
+    const spec = jsyaml.load(document.getElementById('yaml-code').value);
+    if(spec.document) {
+      document.getElementById('b-id').value = spec.document.id || '';
+      document.getElementById('b-title').value = spec.document.title || '';
+      document.getElementById('b-exp').value = spec.document.expires_in_days || 30;
+    }
+  } catch(e) {} // ignore partial yaml parse errors while typing
+}
+
+async function deploy() {
+  try {
+    const spec = jsyaml.load(document.getElementById('yaml-code').value);
+    if (!spec.document?.id) throw new Error("Missing document ID");
+    
+    const slug = Math.random().toString(36).substring(2, 14);
+    const payload = {
+      id: spec.document.id, slug, spec: JSON.stringify(spec),
+      expires_at: Math.floor(Date.now()/1000) + ((spec.document.expires_in_days||30) * 86400),
+      max_per_email: 99, max_per_ip: 99, require_verification: 0
+    };
+    
+    const res = await fetch(\`\${API}/api/documents\`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${key}\` },
       body: JSON.stringify(payload)
     });
-
-    const result = await res.json();
-    if (res.ok) {
-      let partyMsg = "";
-      if (result.party_tokens) {
-        partyMsg = "\n\nPer-Party Signing Links:\n" + Object.entries(result.party_tokens).map(([pid, tok]) => `• ${pid}: ${PAGES_BASE}/?slug=${tok}`).join("\n");
-      }
-      await showNotification('Document Successfully Published', `Document ID: ${specObj.document.id}\nPrimary Link: ${PAGES_BASE}/?slug=${slug}${partyMsg}`, false, '✓');
-      switchTab('ledger');
-      loadDocs();
-    } else {
-      await showNotification('Deployment Failed', result.error || 'Unknown deployment error', false, '✕');
-    }
-  } catch (err) {
-    await showNotification('Error Deploying Document', err.message, false, '✕');
-  }
-}
-
-function exportVisualToYaml() {
-  const specObj = buildSpecFromVisual();
-  const yamlStr = jsyaml.dump(specObj, { sortKeys: false });
-  document.getElementById('yaml-spec').value = yamlStr;
-  switchTab('deploy');
-}
-
-function showDashboard() {
-  document.getElementById('login-view').style.display = 'none';
-  document.getElementById('dashboard-view').style.display = 'block';
-  document.getElementById('auth-status').innerHTML = `
-    Authenticated • <a href="#" onclick="logout()" style="color:var(--btn-danger)">Logout</a>
-  `;
-  loadDocs();
-}
-
-function logout() {
-  localStorage.removeItem('LEGALFORM_ADMIN_KEY');
-  apiKey = '';
-  location.reload();
-}
-
-async function loadDocs() {
-  const tbody = document.getElementById('docs-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Loading document ledger...</td></tr>';
-
-  try {
-    const res = await fetch(`${API_BASE}/api/documents/list`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-
-    if (res.status === 401) {
-      await showNotification('Unauthorized', 'Invalid ADMIN_API_KEY. Please authenticate again.', false, '✕');
-      logout();
-      return;
-    }
-
-    const data = await res.json();
-    allDocs = data.documents || [];
-    renderDocsTable();
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--btn-danger)">Error loading documents: ${err.message}</td></tr>`;
-  }
-}
-
-function renderDocsTable() {
-  const tbody = document.getElementById('docs-tbody');
-  const query = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
-  const statusFilter = document.getElementById('status-filter')?.value || 'all';
-
-  const filtered = allDocs.filter(d => {
-    const matchesSearch = d.id.toLowerCase().includes(query) || d.slug.toLowerCase().includes(query);
-    const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">
-          <div class="empty-state">
-            <p>No documents found in ledger.</p>
-            <span style="font-size:0.8rem">Deploy your first agreement via the CLI or MCP server:</span>
-            <code>python cli/legalform.py deploy templates/nda-mutual.yaml</code>
-          </div>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  let rowsHtml = '';
-  for (const d of filtered) {
-    const isActive = d.status === 'active';
-    const badgeClass = isActive ? 'badge-active' : 'badge-closed';
-    const signingUrl = `${PAGES_BASE}/?slug=${d.slug}`;
-    const expDate = d.expires_at ? new Date(d.expires_at * 1000).toLocaleDateString() : 'Never';
-    const sigCount = d.submission_count || 0;
-
-    rowsHtml += `
-      <tr class="doc-row">
-        <td>▶</td>
-        <td><strong>${d.id}</strong></td>
-        <td><code>${d.slug}</code></td>
-        <td><span class="sig-pill">${sigCount} ${sigCount === 1 ? 'sign' : 'signs'}</span></td>
-        <td><span class="badge ${badgeClass}">${d.status}</span></td>
-        <td><a href="${signingUrl}" target="_blank" style="font-family:monospace;font-size:0.8rem">${signingUrl}</a></td>
-        <td style="color:var(--text-muted);font-size:0.8rem">${expDate}</td>
-        <td style="text-align:right">
-          <div style="display:flex;gap:0.35rem;justify-content:flex-end">
-            ${isActive 
-              ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke</button>` 
-              : `<button class="btn btn-success btn-sm" onclick="reopenSlug('${d.slug}')">Re-up Slug</button>`}
-            <button class="btn btn-danger btn-sm" onclick="deleteDocPurgeR2('${d.id}')">Delete</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }
-
-  tbody.innerHTML = rowsHtml;
-}
-
-async function closeSlug(slug) {
-  const confirmed = await showNotification('Confirm Revoke Access', `Revoking will immediately deactivate slug '${slug}'. Signers will no longer be able to submit signatures.`, true, '!');
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/doc/${slug}/close`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      await showNotification('Slug Revoked', result.message || 'Slug revoked.', false, '✓');
-      loadDocs();
-    } else {
-      await showNotification('Revoke Failed', result.error || 'Failed to revoke slug.', false, '✕');
-    }
-  } catch (err) {
-    await showNotification('Error Revoking Slug', err.message, false, '✕');
-  }
-}
-
-async function reopenSlug(slug) {
-  const confirmed = await showNotification('Re-up Document Slug', `Re-activate and extend validity period for slug '${slug}' by 30 days?`, true, 'i');
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/doc/${slug}/reopen`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ extend_days: 30 })
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      await showNotification('Slug Reopened', result.message || 'Slug reopened.', false, '✓');
-      loadDocs();
-    } else {
-      await showNotification('Reopen Failed', result.error || 'Failed to reopen slug.', false, '✕');
-    }
-  } catch (err) {
-    await showNotification('Error Reopening Slug', err.message, false, '✕');
-  }
-}
-
-async function deleteDocPurgeR2(docId) {
-  const confirmed = await showNotification('Confirm Delete & Purge', `PERMANENTLY DELETE document '${docId}' and purge all associated R2 vault records?`, true, '!');
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/doc/${docId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-    const result = await res.json();
-    if (res.ok) {
-      await showNotification('Document Purged', result.message || 'Document purged.', false, '✓');
-      loadDocs();
-    } else {
-      await showNotification('Delete Failed', result.error || 'Failed to delete document.', false, '✕');
-    }
-  } catch(err) {
-    await showNotification('Error Deleting Document', err.message, false, '✕');
-  }
+    
+    if(!res.ok) throw new Error((await res.json()).error);
+    
+    await modal('Deployed Successfully', \`Link: <br><a href="\${ORIGIN}/?slug=\${slug}" target="_blank">\${ORIGIN}/?slug=\${slug}</a>\`);
+    switchView('ledger');
+  } catch(e) { modal('Deploy Failed', e.message); }
 }
 </script>
 </body>
