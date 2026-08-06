@@ -280,14 +280,21 @@
     <div id="dashboard-view" style="display:none">
       <div class="tabs">
         <div class="tab active" onclick="switchTab('ledger')">Documents & Ledger</div>
-        <div class="tab" onclick="switchTab('builder')">✨ Visual Document Builder</div>
+        <div class="tab" onclick="switchTab('builder')">Visual Document Builder</div>
         <div class="tab" onclick="switchTab('deploy')">YAML Spec Editor</div>
       </div>
 
       <!-- TAB: VISUAL BUILDER -->
       <div id="tab-builder" class="card" style="display:none">
-        <h2 style="margin-top:0;font-size:1.1rem;font-weight:600">Visual Document Builder</h2>
-        <p style="color:var(--muted);font-size:0.8rem">Build court-enforceable legal agreements without writing any YAML code.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div>
+            <h2 style="margin:0;font-size:1.1rem;font-weight:600">Visual Document Builder</h2>
+            <p style="color:var(--muted);font-size:0.8rem;margin:0.2rem 0 0 0">Build and customize court-enforceable legal agreements with dynamic reorderable sections.</p>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-secondary btn-sm" onclick="exportVisualToYaml()">Switch to YAML Editor</button>
+          </div>
+        </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
           <div class="form-group">
@@ -318,19 +325,22 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="builder-preamble">Preamble & Legal Terms (Markdown Supported)</label>
-          <textarea id="builder-preamble" style="height:140px;background:#ffffff;color:#1e293b;font-family:sans-serif" placeholder="Enter contract clauses, confidentiality obligations, or preamble text..."></textarea>
-        </div>
-
-        <!-- Form Fields Builder Area -->
-        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:#fafafa;margin-bottom:1rem">
+        <!-- Custom Modular Document Sections Container -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:#fafafa;margin-bottom:1.25rem">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-            <div style="font-weight:600;font-size:0.85rem;color:var(--text)">Signer Form Fields</div>
-            <button class="btn btn-secondary btn-sm" onclick="addBuilderField()">+ Add Field</button>
+            <div>
+              <div style="font-weight:600;font-size:0.85rem;color:var(--text)">Document Sections & Layout</div>
+              <div style="font-size:0.75rem;color:var(--muted)">Add static legal clauses, form inputs, witness attestations, or signature blocks and move them freely.</div>
+            </div>
+            <div style="display:flex;gap:0.4rem">
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('static')">+ Add Static Clause</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('form')">+ Add Form Section</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('witness')">+ Add Witness Block</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('signature')">+ Add Signature Block</button>
+            </div>
           </div>
-          <div id="builder-fields-list">
-            <!-- Dynamically populated field rows -->
+          <div id="builder-sections-list">
+            <!-- Dynamically populated section blocks -->
           </div>
         </div>
 
@@ -346,8 +356,7 @@
         </div>
 
         <div style="display:flex;gap:0.75rem">
-          <button class="btn btn-success" style="flex:1;padding:0.75rem" onclick="deployVisualDocument()">Publish & Generate Link</button>
-          <button class="btn btn-secondary" onclick="exportVisualToYaml()">Export to YAML</button>
+          <button class="btn btn-success" style="flex:1;padding:0.75rem" onclick="deployVisualDocument()">Publish Document & Generate Signing Link</button>
         </div>
       </div>
 
@@ -429,6 +438,20 @@
         </form>
       </div>
 
+    </div>
+  </div>
+
+  <!-- NOTIFICATION & CONFIRMATION MODAL -->
+  <div id="notification-modal" class="modal-backdrop">
+    <div class="modal-paper" style="max-width:460px;text-align:center">
+      <div id="modal-icon" style="width:48px;height:48px;border-radius:50%;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem auto;font-weight:700;font-size:1.25rem">i</div>
+      <h3 id="modal-title" style="margin-top:0;font-size:1.15rem;font-weight:600;color:var(--text)">Notification</h3>
+      <div id="modal-message" style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.5;white-space:pre-wrap;text-align:left;background:#f8fafc;padding:0.85rem;border-radius:8px;border:1px solid var(--border)"></div>
+      
+      <div style="display:flex;justify-content:flex-end;gap:0.5rem">
+        <button id="modal-cancel-btn" class="btn btn-secondary" style="display:none" onclick="closeNotificationModal(false)">Cancel</button>
+        <button id="modal-confirm-btn" class="btn" style="min-width:90px" onclick="closeNotificationModal(true)">OK</button>
+      </div>
     </div>
   </div>
 
@@ -666,40 +689,89 @@ document.getElementById('deploy-form').addEventListener('submit', async (e) => {
   }
 });
 
-function switchTab(tabName) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-ledger').style.display = 'none';
-  document.getElementById('tab-builder').style.display = 'none';
-  document.getElementById('tab-deploy').style.display = 'none';
+let notificationCallback = null;
 
-  if (tabName === 'ledger') {
-    document.querySelectorAll('.tab')[0].classList.add('active');
-    document.getElementById('tab-ledger').style.display = 'block';
-  } else if (tabName === 'builder') {
-    document.querySelectorAll('.tab')[1].classList.add('active');
-    document.getElementById('tab-builder').style.display = 'block';
-    if (!document.getElementById('builder-id').value) {
-      document.getElementById('builder-id').value = `doc-${Date.now().toString(36)}`;
-    }
-    if (document.getElementById('builder-fields-list').children.length === 0) {
-      addBuilderField('signer_name', 'Signer Full Name', 'text', true);
-      addBuilderField('signer_email', 'Signer Official Email', 'email', true);
-    }
-    if (document.getElementById('builder-parties-list').children.length === 0) {
-      addBuilderParty('discloser', 'Disclosing Party Signer', 'discloser@acme.com');
-      addBuilderParty('recipient', 'Receiving Party Signer', 'recipient@partner.com');
-    }
-  } else {
-    document.querySelectorAll('.tab')[2].classList.add('active');
-    document.getElementById('tab-deploy').style.display = 'block';
-    if (!document.getElementById('yaml-spec').value) {
-      loadTemplate('nda');
-    }
+function showNotification(title, message, isConfirm = false, iconSymbol = 'i') {
+  return new Promise((resolve) => {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-message').textContent = message;
+    document.getElementById('modal-icon').textContent = iconSymbol;
+    
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    cancelBtn.style.display = isConfirm ? 'inline-flex' : 'none';
+
+    document.getElementById('notification-modal').style.display = 'flex';
+    notificationCallback = resolve;
+  });
+}
+
+function closeNotificationModal(result) {
+  document.getElementById('notification-modal').style.display = 'none';
+  if (notificationCallback) {
+    notificationCallback(result);
+    notificationCallback = null;
   }
 }
 
-function addBuilderField(name = '', label = '', type = 'text', required = true) {
-  const container = document.getElementById('builder-fields-list');
+function addBuilderSection(type = 'static') {
+  const container = document.getElementById('builder-sections-list');
+  const secId = `sec_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const secCard = document.createElement('div');
+  secCard.id = secId;
+  secCard.className = 'builder-section-card';
+  secCard.dataset.type = type;
+  secCard.style.background = '#ffffff';
+  secCard.style.border = '1px solid var(--border)';
+  secCard.style.borderRadius = '8px';
+  secCard.style.padding = '1rem';
+  secCard.style.marginBottom = '0.75rem';
+
+  let innerContent = '';
+  if (type === 'static') {
+    innerContent = `
+      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Static Legal Clause</div>
+      <textarea class="sec-content" style="height:90px;background:#ffffff;color:#1e293b;font-family:sans-serif" placeholder="Enter clause text or preamble..."></textarea>
+    `;
+  } else if (type === 'form') {
+    innerContent = `
+      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Signer Form Fields Group</div>
+      <div class="sec-fields-list"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addInnerFieldToSection('${secId}')" style="margin-top:0.4rem">+ Add Field</button>
+    `;
+  } else if (type === 'witness') {
+    innerContent = `
+      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Witness / Notary Attestation Block</div>
+      <input type="text" class="sec-witness-label" placeholder="Section Heading" value="NOTARY / WITNESS ATTESTATION OF EXECUTION" style="margin-bottom:0.4rem">
+      <textarea class="sec-content" style="height:70px;background:#ffffff;color:#1e293b;font-family:sans-serif" placeholder="Attestation statement text...">I hereby attest under penalty of perjury that I witnessed the execution of this document by the primary party.</textarea>
+    `;
+  } else if (type === 'signature') {
+    innerContent = `
+      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Signature Block of Record</div>
+      <input type="text" class="sec-sig-label" placeholder="Signer Heading" value="EXECUTION & SIGNATURE OF RECORD">
+    `;
+  }
+
+  secCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;border-bottom:1px solid #f1f5f9;padding-bottom:0.4rem">
+      <div style="display:flex;align-items:center;gap:0.3rem">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="moveSection('${secId}', 'up')">↑</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="moveSection('${secId}', 'down')">↓</button>
+        <span style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-left:0.3rem">Type: ${type.toUpperCase()}</span>
+      </div>
+      <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${secId}').remove()">Delete Section</button>
+    </div>
+    ${innerContent}
+  `;
+  container.appendChild(secCard);
+
+  if (type === 'form') {
+    addInnerFieldToSection(secId, 'signer_name', 'Signer Full Name', 'text', true);
+  }
+}
+
+function addInnerFieldToSection(secId, name = '', label = '', type = 'text', required = true) {
+  const secCard = document.getElementById(secId);
+  const container = secCard.querySelector('.sec-fields-list');
   const fieldId = `field_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
   const row = document.createElement('div');
   row.id = fieldId;
@@ -707,7 +779,7 @@ function addBuilderField(name = '', label = '', type = 'text', required = true) 
   row.style.gridTemplateColumns = '1fr 1.5fr 1fr 80px 40px';
   row.style.gap = '0.5rem';
   row.style.alignItems = 'center';
-  row.style.marginBottom = '0.5rem';
+  row.style.marginBottom = '0.4rem';
 
   row.innerHTML = `
     <input type="text" class="field-name" placeholder="field_id" value="${name}">
@@ -725,6 +797,49 @@ function addBuilderField(name = '', label = '', type = 'text', required = true) 
     <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${fieldId}').remove()">✕</button>
   `;
   container.appendChild(row);
+}
+
+function moveSection(secId, direction) {
+  const card = document.getElementById(secId);
+  if (!card) return;
+  if (direction === 'up' && card.previousElementSibling) {
+    card.parentNode.insertBefore(card, card.previousElementSibling);
+  } else if (direction === 'down' && card.nextElementSibling) {
+    card.parentNode.insertBefore(card.nextElementSibling, card);
+  }
+}
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-ledger').style.display = 'none';
+  document.getElementById('tab-builder').style.display = 'none';
+  document.getElementById('tab-deploy').style.display = 'none';
+
+  if (tabName === 'ledger') {
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('tab-ledger').style.display = 'block';
+  } else if (tabName === 'builder') {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('tab-builder').style.display = 'block';
+    if (!document.getElementById('builder-id').value) {
+      document.getElementById('builder-id').value = `doc-${Date.now().toString(36)}`;
+    }
+    if (document.getElementById('builder-sections-list').children.length === 0) {
+      addBuilderSection('static');
+      addBuilderSection('form');
+      addBuilderSection('signature');
+    }
+    if (document.getElementById('builder-parties-list').children.length === 0) {
+      addBuilderParty('discloser', 'Disclosing Party Signer', 'discloser@acme.com');
+      addBuilderParty('recipient', 'Receiving Party Signer', 'recipient@partner.com');
+    }
+  } else {
+    document.querySelectorAll('.tab')[2].classList.add('active');
+    document.getElementById('tab-deploy').style.display = 'block';
+    if (!document.getElementById('yaml-spec').value) {
+      loadTemplate('nda');
+    }
+  }
 }
 
 function addBuilderParty(id = '', role = '', email = '') {
@@ -753,16 +868,34 @@ function buildSpecFromVisual() {
   const jurisdiction = document.getElementById('builder-jurisdiction').value.trim();
   const expiryDays = parseInt(document.getElementById('builder-expiry').value, 10) || 30;
   const signingOrder = document.getElementById('builder-order').value;
-  const preamble = document.getElementById('builder-preamble').value.trim();
 
-  const fields = [];
-  document.querySelectorAll('#builder-fields-list > div').forEach(row => {
-    const fn = row.querySelector('.field-name').value.trim();
-    const fl = row.querySelector('.field-label').value.trim();
-    const ft = row.querySelector('.field-type').value;
-    const fr = row.querySelector('.field-req').checked;
-    if (fn) {
-      fields.push({ name: fn, label: fl || fn, type: ft, required: fr });
+  const sections = [];
+  document.querySelectorAll('#builder-sections-list > div').forEach(secCard => {
+    const type = secCard.dataset.type;
+    if (type === 'static') {
+      const content = secCard.querySelector('.sec-content').value.trim();
+      if (content) sections.push({ type: 'static', content });
+    } else if (type === 'form') {
+      const fields = [];
+      secCard.querySelectorAll('.sec-fields-list > div').forEach(row => {
+        const fn = row.querySelector('.field-name').value.trim();
+        const fl = row.querySelector('.field-label').value.trim();
+        const ft = row.querySelector('.field-type').value;
+        const fr = row.querySelector('.field-req').checked;
+        if (fn) fields.push({ name: fn, label: fl || fn, type: ft, required: fr });
+      });
+      if (fields.length > 0) sections.push({ type: 'form', fields });
+    } else if (type === 'witness') {
+      const heading = secCard.querySelector('.sec-witness-label').value.trim();
+      const content = secCard.querySelector('.sec-content').value.trim();
+      sections.push({ type: 'witness', witness_label: heading || 'WITNESS ATTESTATION', content });
+    } else if (type === 'signature') {
+      const label = secCard.querySelector('.sec-sig-label').value.trim();
+      sections.push({
+        type: 'signature',
+        signer_label: label || 'EXECUTION OF RECORD',
+        fields: [{ name: "signature_timestamp", label: "Date & Time of Execution", type: "datetime-auto", required: true }]
+      });
     }
   });
 
@@ -792,23 +925,7 @@ function buildSpecFromVisual() {
       legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Agreement electronically."
     },
     parties: parties.length > 0 ? parties : undefined,
-    sections: [
-      {
-        type: "static",
-        content: preamble ? `## TERMS & CONDITIONS\n${preamble}` : "## TERMS & CONDITIONS\nBy signing below, you agree to all terms outlined herein."
-      },
-      {
-        type: "form",
-        fields: fields
-      },
-      {
-        type: "signature",
-        signer_label: "EXECUTION & SIGNATURE OF RECORD",
-        fields: [
-          { name: "signature_timestamp", label: "Date & Time of Execution", type: "datetime-auto", required: true }
-        ]
-      }
-    ]
+    sections: sections.length > 0 ? sections : [{ type: 'static', content: '## AGREEMENT TERMS' }]
   };
 
   return specObj;
@@ -846,14 +963,14 @@ async function deployVisualDocument() {
       if (result.party_tokens) {
         partyMsg = "\n\nPer-Party Signing Links:\n" + Object.entries(result.party_tokens).map(([pid, tok]) => `• ${pid}: ${PAGES_BASE}/?slug=${tok}`).join("\n");
       }
-      alert(`Document Successfully Published!\n\nDocument ID: ${specObj.document.id}\nPrimary Link: ${PAGES_BASE}/?slug=${slug}${partyMsg}`);
+      await showNotification('Document Successfully Published', `Document ID: ${specObj.document.id}\nPrimary Link: ${PAGES_BASE}/?slug=${slug}${partyMsg}`, false, '✓');
       switchTab('ledger');
       loadDocs();
     } else {
-      alert('Deployment failed: ' + (result.error || 'Unknown error'));
+      await showNotification('Deployment Failed', result.error || 'Unknown deployment error', false, '✕');
     }
   } catch (err) {
-    alert('Error deploying document: ' + err.message);
+    await showNotification('Error Deploying Document', err.message, false, '✕');
   }
 }
 
@@ -1339,6 +1456,27 @@ function exportSinglePdf(docId, subIdx) {
   doc.save(`executed_contract_${docId}_${subId.slice(0, 8)}.pdf`);
 }
 
+async function deleteDocPurgeR2(docId) {
+  const confirmed = await showNotification('Confirm Delete & Purge', `Are you sure you want to PERMANENTLY DELETE document '${docId}' and purge all associated JSON records from R2 vault?`, true, '!');
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/doc/${docId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const result = await res.json();
+    if (res.ok) {
+      await showNotification('Document Purged', result.message || 'Document and R2 objects purged.', false, '✓');
+      loadDocs();
+    } else {
+      await showNotification('Delete Failed', result.error || 'Failed to delete document.', false, '✕');
+    }
+  } catch(err) {
+    await showNotification('Error Deleting Document', err.message, false, '✕');
+  }
+}
+
 async function exportDocJson(docId) {
   try {
     const res = await fetch(`${API_BASE}/api/export/${docId}`, {
@@ -1346,7 +1484,7 @@ async function exportDocJson(docId) {
     });
 
     if (!res.ok) {
-      alert('Failed to export document data.');
+      await showNotification('Export Failed', 'Failed to export document data.', false, '✕');
       return;
     }
 
@@ -1359,12 +1497,13 @@ async function exportDocJson(docId) {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert('Error exporting JSON: ' + err.message);
+    await showNotification('Error Exporting JSON', err.message, false, '✕');
   }
 }
 
 async function closeSlug(slug) {
-  if (!confirm(`Are you sure you want to force-close and revoke access to slug '${slug}'?`)) return;
+  const confirmed = await showNotification('Revoke Signing Slug', `Are you sure you want to force-close and revoke access to slug '${slug}'?`, true, '!');
+  if (!confirmed) return;
 
   try {
     const res = await fetch(`${API_BASE}/api/doc/${slug}/close`, {
@@ -1374,20 +1513,19 @@ async function closeSlug(slug) {
 
     const result = await res.json();
     if (res.ok) {
-      alert(result.message || 'Slug revoked.');
+      await showNotification('Slug Revoked', result.message || 'Slug revoked.', false, '✓');
       loadDocs();
     } else {
-      alert(result.error || 'Failed to revoke slug.');
+      await showNotification('Revoke Failed', result.error || 'Failed to revoke slug.', false, '✕');
     }
   } catch (err) {
-    alert('Error closing slug: ' + err.message);
+    await showNotification('Error Closing Slug', err.message, false, '✕');
   }
 }
 
 async function reopenSlug(slug) {
-  const daysStr = prompt("How many days to re-up and extend this signing slug?", "30");
-  if (!daysStr) return;
-  const days = parseInt(daysStr, 10) || 30;
+  const confirmed = await showNotification('Re-up Document Slug', `Re-activate and extend validity period for slug '${slug}' by 30 days?`, true, 'i');
+  if (!confirmed) return;
 
   try {
     const res = await fetch(`${API_BASE}/api/doc/${slug}/reopen`, {
@@ -1396,18 +1534,18 @@ async function reopenSlug(slug) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({ extend_days: days })
+      body: JSON.stringify({ extend_days: 30 })
     });
 
     const result = await res.json();
     if (res.ok) {
-      alert(result.message || 'Slug reopened.');
+      await showNotification('Slug Reopened', result.message || 'Slug reopened.', false, '✓');
       loadDocs();
     } else {
-      alert(result.error || 'Failed to reopen slug.');
+      await showNotification('Reopen Failed', result.error || 'Failed to reopen slug.', false, '✕');
     }
   } catch (err) {
-    alert('Error reopening slug: ' + err.message);
+    await showNotification('Error Reopening Slug', err.message, false, '✕');
   }
 }
 </script>
