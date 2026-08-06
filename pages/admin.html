@@ -280,7 +280,75 @@
     <div id="dashboard-view" style="display:none">
       <div class="tabs">
         <div class="tab active" onclick="switchTab('ledger')">Documents & Ledger</div>
-        <div class="tab" onclick="switchTab('deploy')">Deploy New Document</div>
+        <div class="tab" onclick="switchTab('builder')">✨ Visual Document Builder</div>
+        <div class="tab" onclick="switchTab('deploy')">YAML Spec Editor</div>
+      </div>
+
+      <!-- TAB: VISUAL BUILDER -->
+      <div id="tab-builder" class="card" style="display:none">
+        <h2 style="margin-top:0;font-size:1.1rem;font-weight:600">Visual Document Builder</h2>
+        <p style="color:var(--muted);font-size:0.8rem">Build court-enforceable legal agreements without writing any YAML code.</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div class="form-group">
+            <label for="builder-title">Document Title</label>
+            <input type="text" id="builder-title" value="Mutual Non-Disclosure Agreement" required>
+          </div>
+          <div class="form-group">
+            <label for="builder-id">Document ID</label>
+            <input type="text" id="builder-id" placeholder="nda-sample-01" required>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div class="form-group">
+            <label for="builder-jurisdiction">Jurisdiction</label>
+            <input type="text" id="builder-jurisdiction" value="State of Delaware, USA & EU eIDAS">
+          </div>
+          <div class="form-group">
+            <label for="builder-expiry">Validity (Days)</label>
+            <input type="number" id="builder-expiry" value="30" min="1">
+          </div>
+          <div class="form-group">
+            <label for="builder-order">Signing Order</label>
+            <select id="builder-order">
+              <option value="sequential">Sequential (Step by Step)</option>
+              <option value="parallel">Parallel (Any Order)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="builder-preamble">Preamble & Legal Terms (Markdown Supported)</label>
+          <textarea id="builder-preamble" style="height:140px;background:#ffffff;color:#1e293b;font-family:sans-serif" placeholder="Enter contract clauses, confidentiality obligations, or preamble text..."></textarea>
+        </div>
+
+        <!-- Form Fields Builder Area -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:#fafafa;margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+            <div style="font-weight:600;font-size:0.85rem;color:var(--text)">Signer Form Fields</div>
+            <button class="btn btn-secondary btn-sm" onclick="addBuilderField()">+ Add Field</button>
+          </div>
+          <div id="builder-fields-list">
+            <!-- Dynamically populated field rows -->
+          </div>
+        </div>
+
+        <!-- Signer Roles & Parties Builder Area -->
+        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:#fafafa;margin-bottom:1.25rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+            <div style="font-weight:600;font-size:0.85rem;color:var(--text)">Signer Roles & Parties</div>
+            <button class="btn btn-secondary btn-sm" onclick="addBuilderParty()">+ Add Signer Role</button>
+          </div>
+          <div id="builder-parties-list">
+            <!-- Dynamically populated party rows -->
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0.75rem">
+          <button class="btn btn-success" style="flex:1;padding:0.75rem" onclick="deployVisualDocument()">Publish & Generate Link</button>
+          <button class="btn btn-secondary" onclick="exportVisualToYaml()">Export to YAML</button>
+        </div>
       </div>
 
       <!-- TAB 1: LEDGER -->
@@ -601,18 +669,199 @@ document.getElementById('deploy-form').addEventListener('submit', async (e) => {
 function switchTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-ledger').style.display = 'none';
+  document.getElementById('tab-builder').style.display = 'none';
   document.getElementById('tab-deploy').style.display = 'none';
 
   if (tabName === 'ledger') {
     document.querySelectorAll('.tab')[0].classList.add('active');
     document.getElementById('tab-ledger').style.display = 'block';
-  } else {
+  } else if (tabName === 'builder') {
     document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('tab-builder').style.display = 'block';
+    if (!document.getElementById('builder-id').value) {
+      document.getElementById('builder-id').value = `doc-${Date.now().toString(36)}`;
+    }
+    if (document.getElementById('builder-fields-list').children.length === 0) {
+      addBuilderField('signer_name', 'Signer Full Name', 'text', true);
+      addBuilderField('signer_email', 'Signer Official Email', 'email', true);
+    }
+    if (document.getElementById('builder-parties-list').children.length === 0) {
+      addBuilderParty('discloser', 'Disclosing Party Signer', 'discloser@acme.com');
+      addBuilderParty('recipient', 'Receiving Party Signer', 'recipient@partner.com');
+    }
+  } else {
+    document.querySelectorAll('.tab')[2].classList.add('active');
     document.getElementById('tab-deploy').style.display = 'block';
     if (!document.getElementById('yaml-spec').value) {
       loadTemplate('nda');
     }
   }
+}
+
+function addBuilderField(name = '', label = '', type = 'text', required = true) {
+  const container = document.getElementById('builder-fields-list');
+  const fieldId = `field_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const row = document.createElement('div');
+  row.id = fieldId;
+  row.style.display = 'grid';
+  row.style.gridTemplateColumns = '1fr 1.5fr 1fr 80px 40px';
+  row.style.gap = '0.5rem';
+  row.style.alignItems = 'center';
+  row.style.marginBottom = '0.5rem';
+
+  row.innerHTML = `
+    <input type="text" class="field-name" placeholder="field_id" value="${name}">
+    <input type="text" class="field-label" placeholder="Field Label" value="${label}">
+    <select class="field-type">
+      <option value="text" ${type==='text'?'selected':''}>Text Input</option>
+      <option value="email" ${type==='email'?'selected':''}>Email Address</option>
+      <option value="textarea" ${type==='textarea'?'selected':''}>Multi-line Text</option>
+      <option value="date" ${type==='date'?'selected':''}>Date</option>
+      <option value="datetime-auto" ${type==='datetime-auto'?'selected':''}>Auto Timestamp</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:0.2rem;font-size:0.75rem;margin:0">
+      <input type="checkbox" class="field-req" ${required?'checked':''}> Required
+    </label>
+    <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${fieldId}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function addBuilderParty(id = '', role = '', email = '') {
+  const container = document.getElementById('builder-parties-list');
+  const partyId = `party_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const row = document.createElement('div');
+  row.id = partyId;
+  row.style.display = 'grid';
+  row.style.gridTemplateColumns = '1fr 1.5fr 1.5fr 40px';
+  row.style.gap = '0.5rem';
+  row.style.alignItems = 'center';
+  row.style.marginBottom = '0.5rem';
+
+  row.innerHTML = `
+    <input type="text" class="party-id" placeholder="party_role_id" value="${id}">
+    <input type="text" class="party-role" placeholder="Signer Role Title" value="${role}">
+    <input type="email" class="party-email" placeholder="signer@company.com" value="${email}">
+    <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${partyId}').remove()">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function buildSpecFromVisual() {
+  const title = document.getElementById('builder-title').value.trim() || "Untitled Legal Agreement";
+  const docId = document.getElementById('builder-id').value.trim() || `doc-${Date.now()}`;
+  const jurisdiction = document.getElementById('builder-jurisdiction').value.trim();
+  const expiryDays = parseInt(document.getElementById('builder-expiry').value, 10) || 30;
+  const signingOrder = document.getElementById('builder-order').value;
+  const preamble = document.getElementById('builder-preamble').value.trim();
+
+  const fields = [];
+  document.querySelectorAll('#builder-fields-list > div').forEach(row => {
+    const fn = row.querySelector('.field-name').value.trim();
+    const fl = row.querySelector('.field-label').value.trim();
+    const ft = row.querySelector('.field-type').value;
+    const fr = row.querySelector('.field-req').checked;
+    if (fn) {
+      fields.push({ name: fn, label: fl || fn, type: ft, required: fr });
+    }
+  });
+
+  const parties = [];
+  let seq = 1;
+  document.querySelectorAll('#builder-parties-list > div').forEach(row => {
+    const pid = row.querySelector('.party-id').value.trim();
+    const prole = row.querySelector('.party-role').value.trim();
+    const pemail = row.querySelector('.party-email').value.trim();
+    if (pid || prole) {
+      parties.push({
+        id: pid || `party_${seq}`,
+        role: prole || `Signer ${seq}`,
+        email: pemail || undefined,
+        sequence: seq++
+      });
+    }
+  });
+
+  const specObj = {
+    document: {
+      id: docId,
+      title: title,
+      jurisdiction: jurisdiction,
+      expires_in_days: expiryDays,
+      signing_order: signingOrder,
+      legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Agreement electronically."
+    },
+    parties: parties.length > 0 ? parties : undefined,
+    sections: [
+      {
+        type: "static",
+        content: preamble ? `## TERMS & CONDITIONS\n${preamble}` : "## TERMS & CONDITIONS\nBy signing below, you agree to all terms outlined herein."
+      },
+      {
+        type: "form",
+        fields: fields
+      },
+      {
+        type: "signature",
+        signer_label: "EXECUTION & SIGNATURE OF RECORD",
+        fields: [
+          { name: "signature_timestamp", label: "Date & Time of Execution", type: "datetime-auto", required: true }
+        ]
+      }
+    ]
+  };
+
+  return specObj;
+}
+
+async function deployVisualDocument() {
+  const specObj = buildSpecFromVisual();
+  const slug = Math.random().toString(36).substring(2, 14);
+  const expiresDays = specObj.document.expires_in_days || 30;
+  const expiresAt = Math.floor(Date.now() / 1000) + (expiresDays * 86400);
+
+  const payload = {
+    id: specObj.document.id,
+    slug: slug,
+    spec: JSON.stringify(specObj),
+    expires_at: expiresAt,
+    max_per_email: 99,
+    max_per_ip: 99,
+    require_verification: 0
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/documents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      let partyMsg = "";
+      if (result.party_tokens) {
+        partyMsg = "\n\nPer-Party Signing Links:\n" + Object.entries(result.party_tokens).map(([pid, tok]) => `• ${pid}: ${PAGES_BASE}/?slug=${tok}`).join("\n");
+      }
+      alert(`Document Successfully Published!\n\nDocument ID: ${specObj.document.id}\nPrimary Link: ${PAGES_BASE}/?slug=${slug}${partyMsg}`);
+      switchTab('ledger');
+      loadDocs();
+    } else {
+      alert('Deployment failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Error deploying document: ' + err.message);
+  }
+}
+
+function exportVisualToYaml() {
+  const specObj = buildSpecFromVisual();
+  const yamlStr = jsyaml.dump(specObj, { sortKeys: false });
+  document.getElementById('yaml-spec').value = yamlStr;
+  switchTab('deploy');
 }
 
 function loadTemplate(type) {
