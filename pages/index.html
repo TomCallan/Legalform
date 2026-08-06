@@ -225,39 +225,132 @@ const slug = slugParam || (lastSegment && !lastSegment.includes('.html') && last
 const verificationToken = params.get('token');
 
 if (!slug) {
-  // Render project home landing page when no document slug is specified
+  // Render modern SaaS product homepage when accessing root site without a document slug
+  document.body.style.display = 'block';
+  document.body.style.padding = '0';
+  document.body.style.background = '#0a0d14';
+  document.body.style.color = '#f1f5f9';
+
+  document.getElementById('app').style.maxWidth = '100%';
   document.getElementById('app').innerHTML = `
-    <div class="paper" style="text-align:center; padding:3rem 2rem">
-      <div style="font-size:3rem;margin-bottom:1rem">📜</div>
-      <h1 style="font-family:'Cinzel',serif;color:var(--text-heading);margin-bottom:0.5rem">LegalForm</h1>
-      <p style="font-family:'Newsreader',serif;font-size:1.25rem;color:var(--text-muted);max-width:580px;margin:0 auto 2rem auto;line-height:1.6">
-        The open-source, serverless alternative to DocuSign. Deploy court-enforceable legal agreements in under 30 seconds via CLI or Web Admin.
-      </p>
-      
-      <div style="display:flex;gap:1rem;justify-content:center;margin-bottom:2.5rem;flex-wrap:wrap">
-        <a href="/admin.html" class="btn-submit" style="display:inline-block;text-decoration:none;width:auto;padding:0.85rem 1.75rem">
-          Go to Web Admin Portal
-        </a>
-        <a href="https://github.com/TomCallan/Sig" target="_blank" class="btn-submit" style="display:inline-block;text-decoration:none;width:auto;padding:0.85rem 1.75rem;background:#475569">
-          GitHub Repository
-        </a>
+    <!-- Top Navigation Header -->
+    <header style="max-width:1200px;margin:0 auto;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg, #2563eb, #7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:1.1rem;box-shadow:0 0 20px rgba(37,99,235,0.4);">§</div>
+        <span style="font-weight:700;font-size:1.25rem;letter-spacing:-0.02em;color:#ffffff">LegalForm</span>
+        <span style="background:rgba(37,99,235,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.3);font-size:0.7rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:12px;margin-left:0.25rem">Open Source</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <a href="https://github.com/TomCallan/Sig" target="_blank" style="color:#94a3b8;text-decoration:none;font-size:0.9rem;font-weight:500;transition:color 0.2s" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">GitHub</a>
+        <a href="/admin.html" style="background:linear-gradient(135deg, #2563eb, #1d4ed8);color:white;text-decoration:none;padding:0.55rem 1.1rem;border-radius:8px;font-size:0.85rem;font-weight:600;transition:all 0.2s;box-shadow:0 4px 12px rgba(37,99,235,0.25)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">Admin Portal →</a>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section style="max-width:1100px;margin:5rem auto 4rem auto;padding:0 2rem;text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:0.35rem 0.9rem;border-radius:30px;font-size:0.8rem;color:#cbd5e1;margin-bottom:1.75rem;">
+        <span style="width:8px;height:8px;background:#34d399;border-radius:50%;display:inline-block;box-shadow:0 0 8px #34d399"></span>
+        Self-Hostable • Serverless • Court-Enforceable (eIDAS & ESIGN)
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:left;margin-top:2rem">
-        <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1rem;border-radius:4px">
-          <div style="font-weight:600;color:var(--primary-navy);margin-bottom:0.25rem">EU & US Legal Standing</div>
-          <div style="font-size:0.8rem;color:var(--text-muted)">Native compliance with EU eIDAS (Art. 25 AdES) and US ESIGN Act.</div>
+      <h1 style="font-size:3.5rem;font-weight:800;line-height:1.15;letter-spacing:-0.03em;color:#ffffff;max-width:850px;margin:0 auto 1.5rem auto;">
+        The Developer-First <br>
+        <span style="background:linear-gradient(135deg, #60a5fa, #c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">DocuSign Alternative</span>
+      </h1>
+
+      <p style="font-size:1.2rem;color:#94a3b8;max-width:650px;margin:0 auto 2.5rem auto;line-height:1.6;font-weight:400;">
+        Declaratively create, deploy, pre-sign, and broadcast court-enforceable legal contracts, affidavits, and SAFEs in under 30 seconds via YAML, CLI, or MCP.
+      </p>
+
+      <div style="display:flex;gap:1rem;justify-content:center;align-items:center;flex-wrap:wrap;">
+        <a href="/admin.html" style="background:linear-gradient(135deg, #2563eb, #4f46e5);color:white;text-decoration:none;padding:0.9rem 2rem;border-radius:10px;font-weight:600;font-size:1rem;box-shadow:0 10px 25px rgba(37,99,235,0.4);transition:all 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+          Launch Admin Dashboard
+        </a>
+        <a href="https://github.com/TomCallan/Sig" target="_blank" style="background:rgba(255,255,255,0.06);color:#f1f5f9;border:1px solid rgba(255,255,255,0.15);text-decoration:none;padding:0.9rem 1.75rem;border-radius:10px;font-weight:600;font-size:1rem;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+          Star on GitHub ⭐
+        </a>
+      </div>
+    </section>
+
+    <!-- Code & Schema Preview Showcase -->
+    <section style="max-width:1000px;margin:0 auto 6rem auto;padding:0 1.5rem;">
+      <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+        <div style="background:#1e293b;padding:0.75rem 1.25rem;display:flex;align-items:center;gap:0.5rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <span style="width:12px;height:12px;background:#ef4444;border-radius:50%"></span>
+          <span style="width:12px;height:12px;background:#f59e0b;border-radius:50%"></span>
+          <span style="width:12px;height:12px;background:#10b981;border-radius:50%"></span>
+          <span style="margin-left:0.5rem;font-family:monospace;font-size:0.8rem;color:#94a3b8">templates/nda-mutual.yaml</span>
         </div>
-        <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1rem;border-radius:4px">
-          <div style="font-weight:600;color:var(--primary-navy);margin-bottom:0.25rem">Instant PDF Generation</div>
-          <div style="font-size:0.8rem;color:var(--text-muted)">Convert executed JSON audit logs directly into PDF legal certificates.</div>
+        <pre style="margin:0;padding:1.5rem;font-family:'Fira Code',monospace;font-size:0.85rem;color:#e2e8f0;line-height:1.6;overflow-x:auto;"><code><span style="color:#60a5fa">document</span>:
+  <span style="color:#f472b6">id</span>: <span style="color:#a7f3d0">"nda-2026-001"</span>
+  <span style="color:#f472b6">title</span>: <span style="color:#a7f3d0">"MUTUAL NON-DISCLOSURE AGREEMENT"</span>
+  <span style="color:#f472b6">signing_order</span>: <span style="color:#a7f3d0">"sequential"</span>
+  <span style="color:#f472b6">jurisdiction</span>: <span style="color:#a7f3d0">"International, EU eIDAS & State of Delaware, USA"</span>
+
+<span style="color:#60a5fa">parties</span>:
+  - <span style="color:#f472b6">id</span>: <span style="color:#a7f3d0">"discloser"</span>
+    <span style="color:#f472b6">role</span>: <span style="color:#a7f3d0">"Disclosing Party Signer"</span>
+    <span style="color:#f472b6">sequence</span>: 1
+  - <span style="color:#f472b6">id</span>: <span style="color:#a7f3d0">"recipient"</span>
+    <span style="color:#f472b6">role</span>: <span style="color:#a7f3d0">"Receiving Party Signer"</span>
+    <span style="color:#f472b6">sequence</span>: 2
+
+<span style="color:#60a5fa">sections</span>:
+  - <span style="color:#f472b6">type</span>: <span style="color:#a7f3d0">"static"</span>
+    <span style="color:#f472b6">content</span>: <span style="color:#a7f3d0">"## 1. CONFIDENTIALITY OBLIGATIONS..."</span>
+  - <span style="color:#f472b6">type</span>: <span style="color:#a7f3d0">"signature"</span>
+    <span style="color:#f472b6">signer_label</span>: <span style="color:#a7f3d0">"EXECUTION OF RECORD"</span></code></pre>
+      </div>
+    </section>
+
+    <!-- Feature Grid -->
+    <section style="max-width:1100px;margin:0 auto 6rem auto;padding:0 2rem;">
+      <h2 style="text-align:center;font-size:2rem;font-weight:700;margin-bottom:3rem;color:#ffffff">Everything you need for legally binding e-signatures</h2>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:1.75rem;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:1.75rem;border-radius:14px;">
+          <div style="width:40px;height:40px;background:rgba(37,99,235,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#60a5fa;font-weight:700;margin-bottom:1.25rem">⚖️</div>
+          <h3 style="font-size:1.15rem;font-weight:600;margin:0 0 0.5rem 0;color:#ffffff">EU & US Legal Standing</h3>
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0">Native compliance with US ESIGN Act (15 U.S.C. § 7001), UETA, and EU eIDAS Regulation (EU No 910/2014, Art. 25).</p>
         </div>
-        <div style="background:#f8fafc;border:1px solid var(--border-dark);padding:1rem;border-radius:4px">
-          <div style="font-weight:600;color:var(--primary-navy);margin-bottom:0.25rem">Serverless & Self-Hostable</div>
-          <div style="font-size:0.8rem;color:var(--text-muted)">Built on Cloudflare Workers, D1 SQL, R2 Vault, and Pages.</div>
+
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:1.75rem;border-radius:14px;">
+          <div style="width:40px;height:40px;background:rgba(168,85,247,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#c084fc;font-weight:700;margin-bottom:1.25rem">🔗</div>
+          <h3 style="font-size:1.15rem;font-weight:600;margin:0 0 0.5rem 0;color:#ffffff">Multi-Party & Sequential Flows</h3>
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0">Route documents to multiple signers in sequence. party links unlock automatically as prior signers complete execution.</p>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:1.75rem;border-radius:14px;">
+          <div style="width:40px;height:40px;background:rgba(52,211,153,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#34d399;font-weight:700;margin-bottom:1.25rem">📜</div>
+          <h3 style="font-size:1.15rem;font-weight:600;margin:0 0 0.5rem 0;color:#ffffff">Court-Grade Audit Telemetry</h3>
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0">Records field focus events, value hashes, UTC NTP timestamps, and SHA-256 digests archived to Cloudflare R2 Vault.</p>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:1.75rem;border-radius:14px;">
+          <div style="width:40px;height:40px;background:rgba(245,158,11,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fbbf24;font-weight:700;margin-bottom:1.25rem">📄</div>
+          <h3 style="font-size:1.15rem;font-weight:600;margin:0 0 0.5rem 0;color:#ffffff">Instant PDF Execution Certificates</h3>
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0">Generate official PDF certificates complete with embedded signature graphics, full contract text, and legal footers.</p>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:1.75rem;border-radius:14px;">
+          <div style="width:40px;height:40px;background:rgba(59,130,246,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#60a5fa;font-weight:700;margin-bottom:1.25rem">⚡</div>
+          <h3 style="font-size:1.15rem;font-weight:600;margin:0 0 0.5rem 0;color:#ffffff">Model Context Protocol (MCP)</h3>
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0">Control your legal workflow directly from Claude Code, Antigravity CLI, or OpenCode using native MCP server tools.</p>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:1.75rem;border-radius:14px;">
+          <div style="width:40px;height:40px;background:rgba(236,72,153,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#f472b6;font-weight:700;margin-bottom:1.25rem">🔒</div>
+          <h3 style="font-size:1.15rem;font-weight:600;margin:0 0 0.5rem 0;color:#ffffff">100% Self-Hostable</h3>
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0">Zero vendor lock-in. Runs on your own Cloudflare infrastructure (Workers, D1, R2, Pages) or locally via Python CLI.</p>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="border-top:1px solid rgba(255,255,255,0.08);padding:3rem 2rem;text-align:center;color:#64748b;font-size:0.85rem;">
+      <p style="margin:0 0 0.5rem 0">LegalForm — Open Source Legal Document Infrastructure</p>
+      <p style="margin:0">Released under the MIT License • Built for Cloudflare Workers & Pages</p>
+    </footer>
   `;
 } else {
 
