@@ -6,36 +6,37 @@
   <title>LegalForm Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
-      --bg: #f5f5f7;
-      --paper: #ffffff;
-      --border: #e5e5ea;
-      --text: #1d1d1f;
-      --muted: #86868b;
-      --primary: #0066cc;
-      --primary-hover: #004499;
-      --success: #34c759;
-      --danger: #ff3b30;
-      --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
-      --radius: 10px;
+      --bg-app:        #090d16;
+      --bg-card:       #111726;
+      --bg-input:      #1a2234;
+      --border-subtle: #1e293b;
+      --border-active: #334155;
+      --text-primary:  #f8fafc;
+      --text-muted:    #64748b;
+      --text-subtle:   #94a3b8;
+      --accent-brand:  #3b82f6;
+      --accent-hover:  #2563eb;
     }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Inter, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; -webkit-font-smoothing: antialiased; }
     body {
       margin: 0;
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg-app);
+      color: var(--text-primary);
       min-height: 100vh;
     }
+    a { color: var(--accent-brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
     .header {
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(17, 23, 38, 0.85);
       backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-subtle);
       padding: 1rem 2rem;
       display: flex;
       justify-content: space-between;
@@ -47,22 +48,23 @@
     .header h1 {
       margin: 0;
       font-size: 1.15rem;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.01em;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
     }
+
     .main {
-      max-width: 1060px;
+      max-width: 1100px;
       margin: 2rem auto;
-      padding: 0 1.25rem;
+      padding: 0 1.5rem;
     }
     .card {
-      background: var(--paper);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
-      box-shadow: var(--card-shadow);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     }
     .auth-box {
       max-width: 380px;
@@ -70,25 +72,27 @@
       text-align: center;
     }
     .form-group {
-      margin-bottom: 1rem;
+      margin-bottom: 1.2rem;
       text-align: left;
     }
     label {
       display: block;
-      font-weight: 500;
-      font-size: 0.8rem;
+      font-weight: 600;
+      font-size: 0.78rem;
       margin-bottom: 0.4rem;
-      color: var(--muted);
-      letter-spacing: -0.01em;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    input[type="password"], input[type="text"], input[type="email"], select {
+    input[type="password"], input[type="text"], input[type="email"], input[type="number"], select {
       width: 100%;
       padding: 0.65rem 0.85rem;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       outline: none;
-      background: #fafafa;
+      background: var(--bg-input);
+      color: var(--text-primary);
       transition: all 0.15s ease;
     }
     textarea {
@@ -97,26 +101,25 @@
       font-family: 'Fira Code', monospace;
       font-size: 0.82rem;
       padding: 1rem;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      background: #1c1c1e;
-      color: #f2f2f7;
+      background: #0b0f19;
+      color: #e2e8f0;
       outline: none;
       line-height: 1.5;
     }
     input:focus, textarea:focus, select:focus {
-      border-color: var(--primary);
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.15);
+      border-color: var(--accent-brand);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
     .btn {
-      background: var(--primary);
-      color: white;
+      background: var(--accent-brand);
+      color: #ffffff;
       border: none;
-      padding: 0.55rem 1.1rem;
+      padding: 0.6rem 1.2rem;
       border-radius: 8px;
       font-size: 0.85rem;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.15s ease;
       display: inline-flex;
@@ -124,16 +127,16 @@
       justify-content: center;
       gap: 0.4rem;
     }
-    .btn:hover { background: var(--primary-hover); }
-    .btn-secondary { background: #e5e5ea; color: #1d1d1f; }
-    .btn-secondary:hover { background: #d1d1d6; }
-    .btn-success { background: #34c759; color: white; }
-    .btn-success:hover { background: #28a745; }
-    .btn-danger { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
-    .btn-danger:hover { background: var(--danger); color: white; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid var(--border-subtle); }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .btn-success:hover { background: rgba(16, 185, 129, 0.25); }
+    .btn-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
     .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 
-    /* Hierarchical Accordion Ledger Table */
+    /* Ledger Table */
     table.ledger-table {
       width: 100%;
       border-collapse: collapse;
@@ -142,98 +145,55 @@
     table.ledger-table th, table.ledger-table td {
       padding: 0.85rem 1rem;
       text-align: left;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border-subtle);
       font-size: 0.85rem;
     }
     table.ledger-table th {
-      font-weight: 500;
-      color: var(--muted);
+      font-weight: 600;
+      color: var(--text-muted);
       font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .doc-row {
       cursor: pointer;
       transition: background 0.15s ease;
     }
-    .doc-row:hover {
-      background: #fafafa;
-    }
-    .expand-toggle {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--muted);
-      display: inline-block;
-      width: 20px;
-      transition: transform 0.2s ease;
-    }
-    .expand-toggle.open {
-      transform: rotate(90deg);
-      color: var(--primary);
-    }
-    
-    .submissions-container {
-      background: #fbfbfd;
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.82rem;
-    }
-    .submission-card {
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
-      margin-bottom: 0.65rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    }
+    .doc-row:hover { background: rgba(255, 255, 255, 0.02); }
 
     .badge {
       display: inline-block;
       padding: 0.2rem 0.55rem;
       border-radius: 6px;
       font-size: 0.72rem;
-      font-weight: 500;
+      font-weight: 600;
+      text-transform: uppercase;
     }
-    .badge-active { background: #e4f9ec; color: #1b8a43; }
-    .badge-closed { background: #ffebeb; color: #d70015; }
+    .badge-active { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25); }
+    .badge-closed { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25); }
     .sig-pill {
-      background: #eef2ff;
-      color: #3730a3;
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(192, 132, 252, 0.3);
       padding: 0.2rem 0.5rem;
       border-radius: 12px;
       font-weight: 600;
       font-size: 0.75rem;
     }
 
-    .url-link {
-      color: var(--primary);
-      text-decoration: none;
-      font-family: monospace;
-      font-size: 0.8rem;
-    }
-    .url-link:hover { text-decoration: underline; }
-    .tabs { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+    .tabs { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); }
     .tab {
       padding: 0.75rem 0;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
       font-size: 0.9rem;
       border-bottom: 2px solid transparent;
-      color: var(--muted);
+      color: var(--text-muted);
       transition: all 0.15s ease;
     }
     .tab.active {
-      border-bottom-color: var(--primary);
-      color: var(--text);
-    }
-
-    /* Filter Controls Header */
-    .filter-bar {
-      display: flex;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      align-items: center;
+      border-bottom-color: var(--accent-brand);
+      color: var(--text-primary);
     }
 
     /* Modal Backdrop */
@@ -241,59 +201,88 @@
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(5px);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
       z-index: 200;
       align-items: center;
       justify-content: center;
     }
     .modal-paper {
-      background: #ffffff;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
       border-radius: 12px;
-      width: 100%;
-      max-width: 520px;
       padding: 1.75rem;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      width: 90%;
+      max-width: 520px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+    }
+    .empty-state code {
+      display: block;
+      background: #0b0f19;
+      border: 1px solid var(--border-subtle);
+      padding: 0.85rem;
+      border-radius: 8px;
+      color: #34d399;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.82rem;
+      margin: 1rem auto;
+      max-width: 440px;
+      text-align: left;
     }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h1>LegalForm Admin</h1>
-    <div id="auth-status" style="font-size:0.82rem;color:var(--muted)"></div>
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <div style="width:28px;height:28px;background:linear-gradient(135deg, #3b82f6, #7c3aed);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.95rem">§</div>
+      <h1>Sig Admin Portal</h1>
+    </div>
+    <div id="auth-status" style="font-size:0.85rem;color:var(--text-muted)">
+      Not Authenticated
+    </div>
   </div>
 
   <div class="main">
+    <!-- AUTHENTICATION VIEW -->
     <div id="login-view" class="card auth-box">
-      <h2 style="font-size:1.25rem;font-weight:600;margin-top:0">Authentication</h2>
-      <p style="color:var(--muted);font-size:0.85rem">Enter your secret ADMIN_API_KEY to access your legal documents.</p>
+      <h2 style="margin-top:0;font-size:1.25rem;font-weight:700">Admin Authentication</h2>
+      <p style="color:var(--text-subtle);font-size:0.85rem;margin-bottom:1.5rem">Enter your instance <code>ADMIN_API_KEY</code> to manage documents.</p>
+
       <form id="login-form">
         <div class="form-group">
-          <label for="admin-key">Admin Secret Key</label>
-          <input type="password" id="admin-key" placeholder="Enter ADMIN_API_KEY" required>
+          <label for="api-key-input">Admin API Key</label>
+          <input type="password" id="api-key-input" placeholder="e.g., ASunder=1and" required>
         </div>
-        <button type="submit" class="btn" style="width:100%">Authenticate</button>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem">
+          <input type="checkbox" id="remember-me" checked>
+          <label for="remember-me" style="margin:0;font-size:0.8rem;text-transform:none;color:var(--text-subtle)">Remember key on this device</label>
+        </div>
+        <button type="submit" class="btn" style="width:100%">Authenticate & Open Dashboard</button>
       </form>
     </div>
 
+    <!-- MAIN DASHBOARD VIEW -->
     <div id="dashboard-view" style="display:none">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('ledger')">Documents & Ledger</div>
-        <div class="tab" onclick="switchTab('builder')">Visual Document Builder</div>
+        <div class="tab active" onclick="switchTab('ledger')">Document Ledger</div>
+        <div class="tab" onclick="switchTab('builder')">Visual Builder</div>
         <div class="tab" onclick="switchTab('deploy')">YAML Spec Editor</div>
       </div>
 
       <!-- TAB: VISUAL BUILDER -->
       <div id="tab-builder" class="card" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
           <div>
-            <h2 style="margin:0;font-size:1.1rem;font-weight:600">Visual Document Builder</h2>
-            <p style="color:var(--muted);font-size:0.8rem;margin:0.2rem 0 0 0">Build and customize court-enforceable legal agreements with dynamic reorderable sections.</p>
+            <h2 style="margin:0;font-size:1.15rem;font-weight:700">Visual Document Builder</h2>
+            <p style="color:var(--text-subtle);font-size:0.82rem;margin:0.2rem 0 0 0">Build court-enforceable agreements with dynamic reorderable sections.</p>
           </div>
-          <div style="display:flex;gap:0.5rem">
-            <button class="btn btn-secondary btn-sm" onclick="exportVisualToYaml()">Switch to YAML Editor</button>
-          </div>
+          <button class="btn btn-secondary btn-sm" onclick="exportVisualToYaml()">Switch to YAML Editor</button>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
@@ -326,17 +315,17 @@
         </div>
 
         <!-- Custom Modular Document Sections Container -->
-        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:#fafafa;margin-bottom:1.25rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <div style="border:1px solid var(--border-subtle);border-radius:10px;padding:1.25rem;background:#0b0f19;margin-bottom:1.25rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem">
             <div>
-              <div style="font-weight:600;font-size:0.85rem;color:var(--text)">Document Sections & Layout</div>
-              <div style="font-size:0.75rem;color:var(--muted)">Add static legal clauses, form inputs, witness attestations, or signature blocks and move them freely.</div>
+              <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">Document Sections & Layout</div>
+              <div style="font-size:0.75rem;color:var(--text-muted)">Add static legal clauses, form inputs, witness attestations, or signature blocks and move them freely.</div>
             </div>
             <div style="display:flex;gap:0.4rem">
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('static')">+ Add Static Clause</button>
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('form')">+ Add Form Section</button>
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('witness')">+ Add Witness Block</button>
-              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('signature')">+ Add Signature Block</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('static')">+ Static Clause</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('form')">+ Form Section</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('witness')">+ Witness Block</button>
+              <button class="btn btn-secondary btn-sm" onclick="addBuilderSection('signature')">+ Signature Block</button>
             </div>
           </div>
           <div id="builder-sections-list">
@@ -345,9 +334,9 @@
         </div>
 
         <!-- Signer Roles & Parties Builder Area -->
-        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:#fafafa;margin-bottom:1.25rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-            <div style="font-weight:600;font-size:0.85rem;color:var(--text)">Signer Roles & Parties</div>
+        <div style="border:1px solid var(--border-subtle);border-radius:10px;padding:1.25rem;background:#0b0f19;margin-bottom:1.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem">
+            <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">Signer Roles & Parties</div>
             <button class="btn btn-secondary btn-sm" onclick="addBuilderParty()">+ Add Signer Role</button>
           </div>
           <div id="builder-parties-list">
@@ -356,120 +345,94 @@
         </div>
 
         <div style="display:flex;gap:0.75rem">
-          <button class="btn btn-success" style="flex:1;padding:0.75rem" onclick="deployVisualDocument()">Publish Document & Generate Signing Link</button>
+          <button class="btn btn-success" style="flex:1;padding:0.75rem" onclick="deployVisualDocument()">Publish Document & Generate Links</button>
         </div>
       </div>
 
-      <!-- TAB 1: LEDGER -->
+      <!-- TAB: LEDGER -->
       <div id="tab-ledger" class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
           <div>
-            <h2 style="margin:0;font-size:1.1rem;font-weight:600">Document Ledger</h2>
-            <p style="margin:0.2rem 0 0 0;color:var(--muted);font-size:0.8rem">Click any document row to expand signed execution records and audit logs</p>
+            <h2 style="margin:0;font-size:1.15rem;font-weight:700">Document Ledger</h2>
+            <p style="margin:0.2rem 0 0 0;color:var(--text-subtle);font-size:0.8rem">Click any document row to expand signed execution records and audit logs</p>
           </div>
-          <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
+          <button id="refresh-btn" class="btn btn-secondary btn-sm">Refresh Ledger</button>
         </div>
 
-        <div class="filter-bar">
-          <input type="text" id="search-input" placeholder="Search by Document ID or Slug..." oninput="renderDocsTable()" style="max-width:260px;">
-          <select id="status-filter" onchange="renderDocsTable()" style="max-width:140px;">
+        <div style="display:flex;gap:0.75rem;margin-bottom:1rem;align-items:center">
+          <input type="text" id="search-input" placeholder="Search by Document ID or Slug..." oninput="renderDocsTable()" style="max-width:320px;">
+          <select id="status-filter" onchange="renderDocsTable()" style="max-width:160px;">
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
             <option value="closed">Closed Only</option>
           </select>
         </div>
 
-        <div style="overflow-x:auto">
-          <table class="ledger-table">
-            <thead>
-              <tr>
-                <th style="width:30px"></th>
-                <th>Document ID</th>
-                <th>Slug</th>
-                <th>Signatures</th>
-                <th>Status</th>
-                <th>Signing URL</th>
-                <th>Expires</th>
-                <th style="text-align:right">Management</th>
-              </tr>
-            </thead>
-            <tbody id="docs-tbody">
-              <tr><td colspan="8" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <table class="ledger-table">
+          <thead>
+            <tr>
+              <th style="width:30px"></th>
+              <th>Document ID</th>
+              <th>Signing Slug</th>
+              <th>Executions</th>
+              <th>Status</th>
+              <th>Signing URL</th>
+              <th>Expires</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="docs-tbody">
+            <tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Loading document ledger...</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- TAB 2: DEPLOY NEW SPEC -->
+      <!-- TAB: DEPLOY YAML -->
       <div id="tab-deploy" class="card" style="display:none">
-        <h2 style="margin-top:0;font-size:1.1rem;font-weight:600">Deploy New Document</h2>
-        <p style="color:var(--muted);font-size:0.8rem">Declaratively configure and publish court-grade legal agreements to Cloudflare D1 & R2.</p>
-
-        <!-- Template & Import Toolbar -->
-        <div style="background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.25rem;">
-          <div style="font-weight:600;font-size:0.82rem;margin-bottom:0.5rem;color:var(--text)">Quick Template Loader</div>
-          <div style="display:flex;gap:0.5rem;align-items:center;">
-            <button class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Mutual NDA Spec</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Liability Waiver Spec</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadTemplate('presigned_nda')">Pre-Signed Owner NDA</button>
-            <input type="file" id="yaml-file-input" accept=".yaml,.yml" style="display:none" onchange="uploadYamlFile(event)">
-            <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="document.getElementById('yaml-file-input').click()">Upload YAML File</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div>
+            <h2 style="margin:0;font-size:1.15rem;font-weight:700">YAML Document Spec Editor</h2>
+            <p style="color:var(--text-subtle);font-size:0.8rem;margin:0.2rem 0 0 0">Paste or edit raw LegalForm YAML schema definitions</p>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('nda')">Load NDA Template</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadTemplate('waiver')">Load Waiver</button>
           </div>
         </div>
 
         <form id="deploy-form">
           <div class="form-group">
-            <label for="yaml-spec">YAML Document Specification</label>
-            <textarea id="yaml-spec" required></textarea>
+            <label for="yaml-spec">YAML Specification</label>
+            <textarea id="yaml-spec" required placeholder="Paste legal document YAML spec here..."></textarea>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">
             <div class="form-group">
-              <label for="admin-email-input">Admin Notification Copy Email</label>
-              <input type="email" id="admin-email-input" placeholder="admin@yourcompany.com">
+              <label for="admin-email-input">Admin Notification Email (Optional)</label>
+              <input type="email" id="admin-email-input" placeholder="admin@company.com">
             </div>
             <div class="form-group">
-              <label for="prefill-input">Pre-fill Receiving Party Entity</label>
-              <input type="text" id="prefill-input" placeholder="e.g. Acme Corp">
+              <label for="prefill-input">Prefill Counterparty Name (Optional)</label>
+              <input type="text" id="prefill-input" placeholder="Partner Corp LLC">
             </div>
           </div>
 
-          <button type="submit" class="btn" style="width:100%;margin-top:0.5rem;padding:0.75rem">Publish Document & Generate Signing Link</button>
+          <button type="submit" class="btn btn-success" style="width:100%;padding:0.75rem">Deploy & Publish Document</button>
         </form>
       </div>
-
     </div>
   </div>
 
   <!-- NOTIFICATION & CONFIRMATION MODAL -->
   <div id="notification-modal" class="modal-backdrop">
     <div class="modal-paper" style="max-width:460px;text-align:center">
-      <div id="modal-icon" style="width:48px;height:48px;border-radius:50%;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem auto;font-weight:700;font-size:1.25rem">i</div>
-      <h3 id="modal-title" style="margin-top:0;font-size:1.15rem;font-weight:600;color:var(--text)">Notification</h3>
-      <div id="modal-message" style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.5;white-space:pre-wrap;text-align:left;background:#f8fafc;padding:0.85rem;border-radius:8px;border:1px solid var(--border)"></div>
+      <div id="modal-icon" style="width:48px;height:48px;border-radius:50%;background:rgba(59, 130, 246, 0.15);color:#60a5fa;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem auto;font-weight:700;font-size:1.25rem">i</div>
+      <h3 id="modal-title" style="margin-top:0;font-size:1.15rem;font-weight:700;color:var(--text-primary)">Notification</h3>
+      <div id="modal-message" style="color:var(--text-subtle);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.5;white-space:pre-wrap;text-align:left;background:#0b0f19;padding:0.85rem;border-radius:8px;border:1px solid var(--border-subtle)"></div>
       
       <div style="display:flex;justify-content:flex-end;gap:0.5rem">
         <button id="modal-cancel-btn" class="btn btn-secondary" style="display:none" onclick="closeNotificationModal(false)">Cancel</button>
         <button id="modal-confirm-btn" class="btn" style="min-width:90px" onclick="closeNotificationModal(true)">OK</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PRE-SIGN MODAL -->
-  <div id="presign-modal" class="modal-backdrop">
-    <div class="modal-paper">
-      <h3 style="margin-top:0;font-size:1.1rem;font-weight:600">Owner Pre-Sign</h3>
-      <p style="color:var(--muted);font-size:0.82rem;margin-bottom:1rem">Affix your owner signature to this agreement before sharing the link.</p>
-      
-      <div class="form-group">
-        <label>Owner Signature Canvas</label>
-        <canvas id="presign-canvas" style="width:100%;height:150px;border:1px solid var(--border);border-radius:8px;background:#fafafa;touch-action:none;"></canvas>
-        <button type="button" id="clear-presign-btn" class="btn btn-secondary btn-sm" style="margin-top:0.4rem">Clear Canvas</button>
-      </div>
-
-      <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1.5rem">
-        <button class="btn btn-secondary" onclick="closePreSignModal()">Cancel</button>
-        <button class="btn" onclick="savePreSignature()">Save Pre-Signature</button>
       </div>
     </div>
   </div>
@@ -482,141 +445,24 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 const PAGES_BASE = window.location.origin;
 
 let apiKey = localStorage.getItem('LEGALFORM_ADMIN_KEY') || '';
-let currentPresignDocId = null;
-let presignCanvasCtx = null;
-let presignDataUrl = null;
-let fetchedDocDetails = {};
 let allDocs = [];
-
-const STARTER_NDA_YAML = `document:
-  id: "nda-sample-${Date.now()}"
-  title: "MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT"
-  jurisdiction: "International, European Union (eIDAS Regulation EU No 910/2014) & State of Delaware, USA"
-  expires_in_days: 30
-  max_submissions_per_email: 99
-  max_submissions_per_ip: 99
-  require_email_verification: false
-  admin_notification_email: "tomcallan0@outlook.com"
-  legal_footer: "IN WITNESS WHEREOF, the Parties have executed this Mutual Non-Disclosure Agreement electronically as of the timestamp recorded below."
-
-sections:
-  - type: "static"
-    content: |
-      ## PREAMBLE & PARTIES
-      This Mutual Non-Disclosure Agreement ("Agreement") is entered into by and between the Disclosing Party and the Receiving Party identified herein.
-
-  - type: "form"
-    fields:
-      - name: "disclosing_party"
-        label: "Disclosing Party Legal Entity"
-        type: "text"
-        required: true
-        value: "Acme Corporation"
-
-      - name: "receiving_party"
-        label: "Receiving Party Legal Entity / Signer Name"
-        type: "text"
-        required: true
-        placeholder: "Enter Full Legal Entity or Individual Name"
-
-      - name: "signer_email"
-        label: "Signer Official Email Address"
-        type: "email"
-        required: true
-        placeholder: "name@company.com"
-
-  - type: "static"
-    content: |
-      ## 1. OBLIGATIONS OF RECEIVING PARTY
-      Receiving Party shall hold and maintain the Confidential Information in strictest confidence for a period of five (5) years from the execution timestamp.
-
-  - type: "signature"
-    signer_label: "EXECUTION & SIGNATURE OF RECORD"
-    fields:
-      - name: "signer_title"
-        label: "Signer Title / Corporate Capacity"
-        type: "text"
-        required: true
-        placeholder: "e.g., Chief Executive Officer, Managing Director"
-
-      - name: "signature_timestamp"
-        label: "Date & Timestamp of Execution"
-        type: "datetime-auto"
-        required: true`;
-
-const STARTER_WAIVER_YAML = `document:
-  id: "waiver-${Date.now()}"
-  title: "GENERAL RELEASE AND LIABILITY WAIVER AGREEMENT"
-  jurisdiction: "State of Delaware, USA"
-  expires_in_days: 14
-  legal_footer: "By signing below, you voluntarily agree to all terms and conditions outlined in this Release and Liability Waiver."
-
-sections:
-  - type: "static"
-    content: |
-      ## ASSUMPTION OF RISK & WAIVER OF LIABILITY
-      The undersigned acknowledges and agrees that participation in company activities involves inherent risks. I voluntarily assume full responsibility for any risks of loss, property damage, or personal injury.
-
-  - type: "form"
-    fields:
-      - name: "participant_name"
-        label: "Participant Full Name"
-        type: "text"
-        required: true
-      - name: "participant_email"
-        label: "Participant Email"
-        type: "email"
-        required: true
-
-  - type: "signature"
-    signer_label: "PARTICIPANT SIGNATURE"
-    fields:
-      - name: "signature_timestamp"
-        label: "Execution Date"
-        type: "datetime-auto"
-        required: true`;
-
-const STARTER_PRESIGNED_NDA_YAML = `document:
-  id: "presigned-nda-${Date.now()}"
-  title: "MUTUAL NON-DISCLOSURE AGREEMENT (PRE-EXECUTED BY OWNER)"
-  jurisdiction: "State of Delaware, USA & EU eIDAS"
-  expires_in_days: 30
-  legal_footer: "Executed electronically under US ESIGN & EU eIDAS Regulations."
-
-sections:
-  - type: "static"
-    content: |
-      ## PRE-EXECUTED MUTUAL NON-DISCLOSURE AGREEMENT
-      This Agreement has been pre-signed by the Disclosing Party and is ready for counterparty execution.
-
-  - type: "form"
-    fields:
-      - name: "disclosing_party"
-        label: "Disclosing Party Legal Entity"
-        type: "text"
-        value: "Acme Corporation"
-      - name: "receiving_party"
-        label: "Receiving Party Entity Name"
-        type: "text"
-        required: true
-
-  - type: "signature"
-    signer_label: "EXECUTION BLOCK"
-    pre_signed: true
-    fields:
-      - name: "signature_timestamp"
-        label: "Date & Time of Execution"
-        type: "datetime-auto"
-        required: true`;
+let notificationCallback = null;
 
 if (apiKey) {
   showDashboard();
+} else {
+  document.getElementById('login-view').style.display = 'block';
 }
 
 document.getElementById('login-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  apiKey = document.getElementById('admin-key').value.trim();
-  localStorage.setItem('LEGALFORM_ADMIN_KEY', apiKey);
+  const inputKey = document.getElementById('api-key-input').value.trim();
+  const remember = document.getElementById('remember-me').checked;
+  if (!inputKey) return;
+  apiKey = inputKey;
+  if (remember) {
+    localStorage.setItem('LEGALFORM_ADMIN_KEY', apiKey);
+  }
   showDashboard();
 });
 
@@ -631,25 +477,11 @@ document.getElementById('deploy-form').addEventListener('submit', async (e) => {
   try {
     const parsedSpec = jsyaml.load(rawYaml);
     if (!parsedSpec || !parsedSpec.document || !parsedSpec.document.id) {
-      alert('Invalid YAML: missing top-level document.id');
+      showNotification('Invalid YAML Specification', 'Missing required top-level document.id field.', false, '✕');
       return;
     }
 
-    if (adminEmail) {
-      parsedSpec.document.admin_notification_email = adminEmail;
-    }
-
-    if (prefillReceiving) {
-      (parsedSpec.sections || []).forEach(s => {
-        if (s.fields) {
-          s.fields.forEach(f => {
-            if (f.name === 'receiving_party' || f.name === 'counterparty_name') {
-              f.value = prefillReceiving;
-            }
-          });
-        }
-      });
-    }
+    if (adminEmail) parsedSpec.document.admin_notification_email = adminEmail;
 
     const docId = parsedSpec.document.id;
     const slug = Math.random().toString(36).substring(2, 14);
@@ -661,9 +493,9 @@ document.getElementById('deploy-form').addEventListener('submit', async (e) => {
       slug: slug,
       spec: JSON.stringify(parsedSpec),
       expires_at: expiresAt,
-      max_per_email: parsedSpec.document.max_submissions_per_email || 99,
-      max_per_ip: parsedSpec.document.max_submissions_per_ip || 99,
-      require_verification: parsedSpec.document.require_email_verification ? 1 : 0
+      max_per_email: 99,
+      max_per_ip: 99,
+      require_verification: 0
     };
 
     const res = await fetch(`${API_BASE}/api/documents`, {
@@ -678,28 +510,24 @@ document.getElementById('deploy-form').addEventListener('submit', async (e) => {
     const result = await res.json();
     if (res.ok) {
       const shareUrl = `${PAGES_BASE}/?slug=${slug}`;
-      alert(`Document Successfully Deployed!\n\nDocument ID: ${docId}\nSigning URL: ${shareUrl}`);
+      await showNotification('Document Published', `Document ID: ${docId}\nSigning URL: ${shareUrl}`, false, '✓');
       switchTab('ledger');
       loadDocs();
     } else {
-      alert('Deployment failed: ' + (result.error || 'Unknown error'));
+      await showNotification('Deployment Failed', result.error || 'Unknown error', false, '✕');
     }
   } catch (err) {
-    alert('Error parsing or deploying YAML: ' + err.message);
+    await showNotification('YAML Syntax Error', err.message, false, '✕');
   }
 });
-
-let notificationCallback = null;
 
 function showNotification(title, message, isConfirm = false, iconSymbol = 'i') {
   return new Promise((resolve) => {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-message').textContent = message;
     document.getElementById('modal-icon').textContent = iconSymbol;
-    
     const cancelBtn = document.getElementById('modal-cancel-btn');
     cancelBtn.style.display = isConfirm ? 'inline-flex' : 'none';
-
     document.getElementById('notification-modal').style.display = 'flex';
     notificationCallback = resolve;
   });
@@ -718,10 +546,9 @@ function addBuilderSection(type = 'static') {
   const secId = `sec_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
   const secCard = document.createElement('div');
   secCard.id = secId;
-  secCard.className = 'builder-section-card';
   secCard.dataset.type = type;
-  secCard.style.background = '#ffffff';
-  secCard.style.border = '1px solid var(--border)';
+  secCard.style.background = 'var(--bg-card)';
+  secCard.style.border = '1px solid var(--border-subtle)';
   secCard.style.borderRadius = '8px';
   secCard.style.padding = '1rem';
   secCard.style.marginBottom = '0.75rem';
@@ -729,34 +556,34 @@ function addBuilderSection(type = 'static') {
   let innerContent = '';
   if (type === 'static') {
     innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Static Legal Clause</div>
-      <textarea class="sec-content" style="height:90px;background:#ffffff;color:#1e293b;font-family:sans-serif" placeholder="Enter clause text or preamble..."></textarea>
+      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Static Legal Clause</div>
+      <textarea class="sec-content" style="height:90px;background:#0b0f19" placeholder="Enter clause text or preamble..."></textarea>
     `;
   } else if (type === 'form') {
     innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Signer Form Fields Group</div>
+      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Signer Form Fields Group</div>
       <div class="sec-fields-list"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addInnerFieldToSection('${secId}')" style="margin-top:0.4rem">+ Add Field</button>
     `;
   } else if (type === 'witness') {
     innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Witness / Notary Attestation Block</div>
+      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Witness / Notary Attestation Block</div>
       <input type="text" class="sec-witness-label" placeholder="Section Heading" value="NOTARY / WITNESS ATTESTATION OF EXECUTION" style="margin-bottom:0.4rem">
-      <textarea class="sec-content" style="height:70px;background:#ffffff;color:#1e293b;font-family:sans-serif" placeholder="Attestation statement text...">I hereby attest under penalty of perjury that I witnessed the execution of this document by the primary party.</textarea>
+      <textarea class="sec-content" style="height:70px;background:#0b0f19" placeholder="Attestation statement text...">I hereby attest under penalty of perjury that I witnessed the execution of this document by the primary party.</textarea>
     `;
   } else if (type === 'signature') {
     innerContent = `
-      <div style="font-weight:600;font-size:0.8rem;color:var(--primary);margin-bottom:0.4rem">Signature Block of Record</div>
+      <div style="font-weight:600;font-size:0.8rem;color:var(--accent-brand);margin-bottom:0.4rem">Signature Block of Record</div>
       <input type="text" class="sec-sig-label" placeholder="Signer Heading" value="EXECUTION & SIGNATURE OF RECORD">
     `;
   }
 
   secCard.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;border-bottom:1px solid #f1f5f9;padding-bottom:0.4rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;border-bottom:1px solid var(--border-subtle);padding-bottom:0.4rem">
       <div style="display:flex;align-items:center;gap:0.3rem">
         <button type="button" class="btn btn-secondary btn-sm" onclick="moveSection('${secId}', 'up')">↑</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="moveSection('${secId}', 'down')">↓</button>
-        <span style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-left:0.3rem">Type: ${type.toUpperCase()}</span>
+        <span style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-left:0.3rem">TYPE: ${type.toUpperCase()}</span>
       </div>
       <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('${secId}').remove()">Delete Section</button>
     </div>
@@ -836,9 +663,6 @@ function switchTab(tabName) {
   } else {
     document.querySelectorAll('.tab')[2].classList.add('active');
     document.getElementById('tab-deploy').style.display = 'block';
-    if (!document.getElementById('yaml-spec').value) {
-      loadTemplate('nda');
-    }
   }
 }
 
@@ -915,7 +739,7 @@ function buildSpecFromVisual() {
     }
   });
 
-  const specObj = {
+  return {
     document: {
       id: docId,
       title: title,
@@ -927,8 +751,6 @@ function buildSpecFromVisual() {
     parties: parties.length > 0 ? parties : undefined,
     sections: sections.length > 0 ? sections : [{ type: 'static', content: '## AGREEMENT TERMS' }]
   };
-
-  return specObj;
 }
 
 async function deployVisualDocument() {
@@ -981,27 +803,11 @@ function exportVisualToYaml() {
   switchTab('deploy');
 }
 
-function loadTemplate(type) {
-  if (type === 'nda') document.getElementById('yaml-spec').value = STARTER_NDA_YAML;
-  else if (type === 'waiver') document.getElementById('yaml-spec').value = STARTER_WAIVER_YAML;
-  else if (type === 'presigned_nda') document.getElementById('yaml-spec').value = STARTER_PRESIGNED_NDA_YAML;
-}
-
-function uploadYamlFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById('yaml-spec').value = e.target.result;
-  };
-  reader.readAsText(file);
-}
-
 function showDashboard() {
   document.getElementById('login-view').style.display = 'none';
   document.getElementById('dashboard-view').style.display = 'block';
   document.getElementById('auth-status').innerHTML = `
-    Authenticated • <a href="#" onclick="logout()" style="color:var(--danger)">Logout</a>
+    Authenticated • <a href="#" onclick="logout()" style="color:var(--btn-danger)">Logout</a>
   `;
   loadDocs();
 }
@@ -1014,7 +820,7 @@ function logout() {
 
 async function loadDocs() {
   const tbody = document.getElementById('docs-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">Loading document ledger...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Loading document ledger...</td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/api/documents/list`, {
@@ -1022,7 +828,7 @@ async function loadDocs() {
     });
 
     if (res.status === 401) {
-      alert('Unauthorized: Invalid ADMIN_API_KEY');
+      await showNotification('Unauthorized', 'Invalid ADMIN_API_KEY. Please authenticate again.', false, '✕');
       logout();
       return;
     }
@@ -1031,7 +837,7 @@ async function loadDocs() {
     allDocs = data.documents || [];
     renderDocsTable();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger)">Error loading documents: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--btn-danger)">Error loading documents: ${err.message}</td></tr>`;
   }
 }
 
@@ -1047,7 +853,17 @@ function renderDocsTable() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No matching documents found.</td></tr>';
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="empty-state">
+            <p>No documents found in ledger.</p>
+            <span style="font-size:0.8rem">Deploy your first agreement via the CLI or MCP server:</span>
+            <code>python cli/legalform.py deploy templates/nda-mutual.yaml</code>
+          </div>
+        </td>
+      </tr>
+    `;
     return;
   }
 
@@ -1060,28 +876,20 @@ function renderDocsTable() {
     const sigCount = d.submission_count || 0;
 
     rowsHtml += `
-      <tr class="doc-row" onclick="toggleDocSubmissions('${d.id}', event)">
-        <td><span id="toggle-icon-${d.id}" class="expand-toggle">▶</span></td>
+      <tr class="doc-row">
+        <td>▶</td>
         <td><strong>${d.id}</strong></td>
         <td><code>${d.slug}</code></td>
         <td><span class="sig-pill">${sigCount} ${sigCount === 1 ? 'sign' : 'signs'}</span></td>
         <td><span class="badge ${badgeClass}">${d.status}</span></td>
-        <td><a href="${signingUrl}" target="_blank" class="url-link" onclick="event.stopPropagation()">${signingUrl}</a></td>
-        <td style="color:var(--muted);font-size:0.8rem">${expDate}</td>
-        <td style="text-align:right" onclick="event.stopPropagation()">
+        <td><a href="${signingUrl}" target="_blank" style="font-family:monospace;font-size:0.8rem">${signingUrl}</a></td>
+        <td style="color:var(--text-muted);font-size:0.8rem">${expDate}</td>
+        <td style="text-align:right">
           <div style="display:flex;gap:0.35rem;justify-content:flex-end">
-            <button class="btn btn-secondary btn-sm" onclick="openPreSignModal('${d.id}')">Pre-Sign</button>
             ${isActive 
-              ? `<button class="btn btn-secondary btn-sm" onclick="closeSlug('${d.slug}')">Revoke</button>` 
+              ? `<button class="btn btn-danger btn-sm" onclick="closeSlug('${d.slug}')">Revoke</button>` 
               : `<button class="btn btn-success btn-sm" onclick="reopenSlug('${d.slug}')">Re-up Slug</button>`}
             <button class="btn btn-danger btn-sm" onclick="deleteDocPurgeR2('${d.id}')">Delete</button>
-          </div>
-        </td>
-      </tr>
-      <tr id="sub-row-${d.id}" style="display:none">
-        <td colspan="8" style="padding:0">
-          <div id="sub-content-${d.id}" class="submissions-container">
-            <div style="color:var(--muted)">Loading execution records & audit trail...</div>
           </div>
         </td>
       </tr>
@@ -1091,418 +899,8 @@ function renderDocsTable() {
   tbody.innerHTML = rowsHtml;
 }
 
-async function toggleDocSubmissions(docId, event) {
-  const subRow = document.getElementById(`sub-row-${docId}`);
-  const toggleIcon = document.getElementById(`toggle-icon-${docId}`);
-
-  if (subRow.style.display === 'table-row') {
-    subRow.style.display = 'none';
-    toggleIcon.classList.remove('open');
-    return;
-  }
-
-  subRow.style.display = 'table-row';
-  toggleIcon.classList.add('open');
-
-  const container = document.getElementById(`sub-content-${docId}`);
-
-  try {
-    const res = await fetch(`${API_BASE}/api/export/${docId}`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-    const data = await res.json();
-    fetchedDocDetails[docId] = data;
-
-    const subs = data.submissions || [];
-    if (subs.length === 0) {
-      container.innerHTML = `
-        <div style="color:var(--muted);padding:0.5rem 0">
-          No signed execution records found for <strong>${docId}</strong> yet. Share the signing URL to collect executed agreements.
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = `
-      <div style="font-weight:600;margin-bottom:0.75rem;color:var(--text);display:flex;justify-content:space-between;align-items:center">
-        <span>Recorded Executions & Court Audit Trail (${subs.length} Signed)</span>
-        <button class="btn btn-secondary btn-sm" onclick="exportDocJson('${docId}')">Export JSON Bundle</button>
-      </div>
-      ${subs.map((s, idx) => {
-        const subDate = s.submitted_at ? new Date(s.submitted_at * 1000).toUTCString() : 'N/A';
-        return `
-          <div class="submission-card">
-            <div>
-              <div style="font-weight:600;color:var(--text)">Signer: ${s.email || 'Anonymous'}</div>
-              <div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem">
-                Execution UTC: ${subDate} • Submission ID: <code>${s.id}</code>
-              </div>
-              <div style="font-size:0.75rem;color:var(--primary);font-family:monospace;margin-top:0.25rem">
-                SHA-256 Digest: ${s.audit_hash}
-              </div>
-            </div>
-            <div style="display:flex;gap:0.4rem">
-              <button class="btn btn-sm" onclick="exportSinglePdf('${docId}', ${idx})">Export Signed PDF</button>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    `;
-  } catch (err) {
-    container.innerHTML = `<div style="color:var(--danger)">Error fetching submission details: ${err.message}</div>`;
-  }
-}
-
-async function openPreSignModal(docId) {
-  currentPresignDocId = docId;
-  document.getElementById('presign-modal').style.display = 'flex';
-  
-  const canvas = document.getElementById('presign-canvas');
-  canvas.width = canvas.offsetWidth;
-  canvas.height = 150;
-  presignCanvasCtx = canvas.getContext('2d');
-  presignCanvasCtx.strokeStyle = '#0f172a';
-  presignCanvasCtx.lineWidth = 2.2;
-  presignCanvasCtx.lineCap = 'round';
-
-  let drawing = false;
-  const getPos = (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  };
-
-  canvas.onmousedown = canvas.ontouchstart = (e) => {
-    drawing = true;
-    const p = getPos(e);
-    presignCanvasCtx.beginPath();
-    presignCanvasCtx.moveTo(p.x, p.y);
-  };
-  canvas.onmousemove = canvas.ontouchmove = (e) => {
-    if (!drawing) return;
-    const p = getPos(e);
-    presignCanvasCtx.lineTo(p.x, p.y);
-    presignCanvasCtx.stroke();
-  };
-  canvas.onmouseup = canvas.ontouchend = () => {
-    drawing = false;
-    presignDataUrl = canvas.toDataURL();
-  };
-
-  document.getElementById('clear-presign-btn').onclick = () => {
-    presignCanvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-    presignDataUrl = null;
-  };
-}
-
-function closePreSignModal() {
-  document.getElementById('presign-modal').style.display = 'none';
-}
-
-async function savePreSignature() {
-  if (!presignDataUrl) {
-    alert('Please draw your owner pre-signature on the canvas first.');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/api/export/${currentPresignDocId}`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-    const data = await res.json();
-    if (!data.doc || !data.doc.spec) {
-      alert('Could not fetch document spec to update pre-signature.');
-      return;
-    }
-
-    const specObj = typeof data.doc.spec === 'string' ? JSON.parse(data.doc.spec) : data.doc.spec;
-    (specObj.sections || []).forEach(s => {
-      if (s.type === 'signature') {
-        s.pre_signed = true;
-        s.pre_signature_data = presignDataUrl;
-      }
-    });
-
-    const updateRes = await fetch(`${API_BASE}/api/documents`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        id: data.doc.id,
-        slug: data.doc.slug,
-        spec: JSON.stringify(specObj),
-        expires_at: data.doc.expires_at,
-        max_per_email: data.doc.max_per_email,
-        max_per_ip: data.doc.max_per_ip,
-        require_verification: data.doc.require_verification
-      })
-    });
-
-    if (updateRes.ok) {
-      alert('Owner Pre-Signature successfully saved to document!');
-      closePreSignModal();
-    } else {
-      alert('Failed to save pre-signature.');
-    }
-  } catch(err) {
-    alert('Error saving pre-signature: ' + err.message);
-  }
-}
-
-async function deleteDocPurgeR2(docId) {
-  if (!confirm(`Are you sure you want to PERMANENTLY DELETE document '${docId}' and purge all associated JSON records from R2 vault?`)) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/doc/${docId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-    const result = await res.json();
-    if (res.ok) {
-      alert(result.message || 'Document and R2 objects purged.');
-      loadDocs();
-    } else {
-      alert(result.error || 'Failed to delete document.');
-    }
-  } catch(err) {
-    alert('Error deleting document: ' + err.message);
-  }
-}
-
-function exportSinglePdf(docId, subIdx) {
-  const data = fetchedDocDetails[docId];
-  if (!data || !data.submissions || !data.submissions[subIdx]) {
-    alert('Submission data not found.');
-    return;
-  }
-
-  const sub = data.submissions[subIdx];
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const email = sub.email || 'N/A';
-  const subId = sub.id || 'N/A';
-  const submittedAt = sub.submitted_at ? new Date(sub.submitted_at * 1000).toUTCString() : 'N/A';
-  const auditHash = sub.audit_hash || 'N/A';
-
-  let fields = {};
-  try { fields = typeof sub.data_json === 'string' ? JSON.parse(sub.data_json) : (sub.data_json || {}); }
-  catch(e) {}
-
-  let specObj = null;
-  if (sub.spec) {
-    specObj = typeof sub.spec === 'string' ? JSON.parse(sub.spec) : sub.spec;
-  } else if (data.doc && data.doc.spec) {
-    specObj = typeof data.doc.spec === 'string' ? JSON.parse(data.doc.spec) : data.doc.spec;
-  }
-
-  const docTitle = (specObj?.document?.title || "OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION").toUpperCase();
-  const jurisdiction = specObj?.document?.jurisdiction || "";
-  const legalFooter = specObj?.document?.legal_footer || "";
-  const sections = specObj?.sections || [];
-
-  // Header Title
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(15, 23, 42);
-  doc.text(docTitle, 105, 18, { align: "center", maxWidth: 180 });
-
-  // Subtitle / Jurisdiction
-  let currentY = 25;
-  if (jurisdiction) {
-    doc.setFont("helvetica", "oblique");
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Jurisdiction: ${jurisdiction}`, 105, currentY, { align: "center", maxWidth: 180 });
-    currentY += 6;
-  }
-
-  doc.setLineWidth(0.8);
-  doc.setDrawColor(15, 23, 42);
-  doc.line(14, currentY, 196, currentY);
-  currentY += 6;
-
-  // Render Contract Clauses if spec sections present
-  if (sections.length > 0) {
-    sections.forEach(sec => {
-      if (sec.type === 'static' && sec.content) {
-        const lines = sec.content.split('\n');
-        lines.forEach(l => {
-          const trimmed = l.trim();
-          if (!trimmed) return;
-          if (currentY > 270) { doc.addPage(); currentY = 20; }
-          
-          if (trimmed.startsWith('## ')) {
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10.5);
-            doc.setTextColor(15, 23, 42);
-            doc.text(trimmed.replace('## ', ''), 14, currentY);
-            currentY += 6;
-          } else if (trimmed.startsWith('# ')) {
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.setTextColor(15, 23, 42);
-            doc.text(trimmed.replace('# ', ''), 14, currentY);
-            currentY += 7;
-          } else {
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8.5);
-            doc.setTextColor(30, 41, 59);
-            const splitText = doc.splitTextToSize(trimmed, 180);
-            doc.text(splitText, 14, currentY);
-            currentY += (splitText.length * 4) + 2;
-          }
-        });
-        currentY += 4;
-      } else if (sec.type === 'form' && sec.fields) {
-        const formRows = [];
-        sec.fields.forEach(f => {
-          const val = fields[f.name] !== undefined ? fields[f.name] : (f.value || '');
-          formRows.push([f.label || f.name, String(val)]);
-        });
-        if (formRows.length > 0) {
-          if (currentY > 250) { doc.addPage(); currentY = 20; }
-          doc.autoTable({
-            startY: currentY,
-            body: formRows,
-            theme: 'grid',
-            styles: { fontSize: 8.5, cellPadding: 3 }
-          });
-          currentY = doc.lastAutoTable.finalY + 6;
-        }
-      }
-    });
-  } else {
-    // Fallback metadata table
-    const tableRows = [
-      ["Document ID", docId],
-      ["Submission ID", subId],
-      ["Execution UTC Timestamp", submittedAt],
-      ["Signer Email", email]
-    ];
-
-    Object.entries(fields).forEach(([k, v]) => {
-      tableRows.push([k, String(v)]);
-    });
-
-    doc.autoTable({
-      startY: currentY,
-      head: [['Field Name', 'Value / Execution Data']],
-      body: tableRows,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 8.5, cellPadding: 3.5 }
-    });
-    currentY = doc.lastAutoTable.finalY + 8;
-  }
-
-  if (currentY > 240) { doc.addPage(); currentY = 20; }
-
-  // Legal Footer
-  if (legalFooter) {
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(7.5);
-    doc.setTextColor(71, 85, 105);
-    const splitFooter = doc.splitTextToSize(legalFooter, 180);
-    doc.text(splitFooter, 14, currentY);
-    currentY += (splitFooter.length * 3.5) + 6;
-  }
-
-  // Metadata Summary Table
-  const sigMeta = [
-    ["Execution UTC Timestamp", submittedAt],
-    ["Signer Email", email],
-    ["Submission ID", subId],
-    ["Cryptographic Audit SHA-256 Digest", auditHash]
-  ];
-
-  doc.autoTable({
-    startY: currentY,
-    body: sigMeta,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 3 }
-  });
-
-  currentY = doc.lastAutoTable.finalY + 8;
-  if (currentY > 250) { doc.addPage(); currentY = 20; }
-
-  // Signature Image
-  const sigData = sub.signature_svg || '';
-  if (sigData && sigData.startsWith('data:image')) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    doc.text("SIGNATURE OF RECORD:", 14, currentY);
-    try {
-      doc.addImage(sigData, 'PNG', 14, currentY + 3, 65, 22);
-      currentY += 28;
-    } catch(imgErr) {
-      currentY += 8;
-    }
-  }
-
-  doc.setLineWidth(0.4);
-  doc.setDrawColor(203, 213, 225);
-  doc.line(14, currentY, 196, currentY);
-
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text("Legally Binding Advanced Electronic Signature (eIDAS Regulation EU No 910/2014 & US ESIGN Act)", 105, currentY + 5, { align: "center" });
-
-  doc.save(`executed_contract_${docId}_${subId.slice(0, 8)}.pdf`);
-}
-
-async function deleteDocPurgeR2(docId) {
-  const confirmed = await showNotification('Confirm Delete & Purge', `Are you sure you want to PERMANENTLY DELETE document '${docId}' and purge all associated JSON records from R2 vault?`, true, '!');
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/doc/${docId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-    const result = await res.json();
-    if (res.ok) {
-      await showNotification('Document Purged', result.message || 'Document and R2 objects purged.', false, '✓');
-      loadDocs();
-    } else {
-      await showNotification('Delete Failed', result.error || 'Failed to delete document.', false, '✕');
-    }
-  } catch(err) {
-    await showNotification('Error Deleting Document', err.message, false, '✕');
-  }
-}
-
-async function exportDocJson(docId) {
-  try {
-    const res = await fetch(`${API_BASE}/api/export/${docId}`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-
-    if (!res.ok) {
-      await showNotification('Export Failed', 'Failed to export document data.', false, '✕');
-      return;
-    }
-
-    const data = await res.json();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `export_${docId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    await showNotification('Error Exporting JSON', err.message, false, '✕');
-  }
-}
-
 async function closeSlug(slug) {
-  const confirmed = await showNotification('Revoke Signing Slug', `Are you sure you want to force-close and revoke access to slug '${slug}'?`, true, '!');
+  const confirmed = await showNotification('Confirm Revoke Access', `Revoking will immediately deactivate slug '${slug}'. Signers will no longer be able to submit signatures.`, true, '!');
   if (!confirmed) return;
 
   try {
@@ -1519,7 +917,7 @@ async function closeSlug(slug) {
       await showNotification('Revoke Failed', result.error || 'Failed to revoke slug.', false, '✕');
     }
   } catch (err) {
-    await showNotification('Error Closing Slug', err.message, false, '✕');
+    await showNotification('Error Revoking Slug', err.message, false, '✕');
   }
 }
 
@@ -1546,6 +944,27 @@ async function reopenSlug(slug) {
     }
   } catch (err) {
     await showNotification('Error Reopening Slug', err.message, false, '✕');
+  }
+}
+
+async function deleteDocPurgeR2(docId) {
+  const confirmed = await showNotification('Confirm Delete & Purge', `PERMANENTLY DELETE document '${docId}' and purge all associated R2 vault records?`, true, '!');
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/doc/${docId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    const result = await res.json();
+    if (res.ok) {
+      await showNotification('Document Purged', result.message || 'Document purged.', false, '✓');
+      loadDocs();
+    } else {
+      await showNotification('Delete Failed', result.error || 'Failed to delete document.', false, '✕');
+    }
+  } catch(err) {
+    await showNotification('Error Deleting Document', err.message, false, '✕');
   }
 }
 </script>
