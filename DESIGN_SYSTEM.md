@@ -1,78 +1,74 @@
-# Sig (LegalForm) Design System
+# MONARCH Site Styleguide
 
-This document defines the core visual design tokens, component standards, typography rules, and status color maps for **Sig (LegalForm)** to ensure consistency across the home landing page and admin dashboard.
+## Core Philosophy
+The site employs a retro, terminal-inspired, maximalist aesthetic with a distinct dark theme. It combines stark contrasts (black, white, and subtle greys) with technical, utilitarian typography to emulate early tech systems, trading terminals, and operational dashboards.
 
----
+## Color Palette
+The color scheme relies entirely on high contrast defaults. Do not use Tailwind default colors without explicit mapping.
+- **Background:** `#000` (Defined as `--bg` in `globals.css`)
+- **Foreground:** `#fff` (Defined as `--fg` in `globals.css` - used for primary text and major borders)
+- **Lines/Borders:** `#2b2b2b` (Defined as `--line` in `globals.css` - used heavily for grid lines and panels)
+- **Accents:** 
+  - Grey text (`#777`, `#888`, `#999`, `#b9b9b9`, `#ccc`) for metadata, labels, and secondary reading.
+  - `#f1c48f` for specific status highlights (e.g. `desktopFeedPanelStatus`).
+  - Dark grey `#111` for repeating gradients or subtle backgrounds.
 
-## 🎨 Color Palette & Tokens
+## Typography
+The UI pairs two main fonts to separate human-readable prose from technical readouts.
 
-```css
-:root {
-  /* Surface & Backgrounds */
-  --bg-app:        #090d16; /* Deep dark slate background */
-  --bg-card:       #111726; /* Dark panel & card fill */
-  --bg-input:      #1a2234; /* Dark input background */
-  --border-subtle: #1e293b; /* Subtle structural divider border */
-  --border-active: #334155; /* Interactive hover border */
+1. **Primary Font (Prose & Body text):** `Zen Kaku Gothic New`, `sans-serif`
+   Used for: Body copy, long-form reading, primary page titles (e.g. `heroTitle`).
+   
+2. **Technical Accent Font:** `var(--font-dot-gothic)`, `monospace`
+   Used for: System labels, timestamps, metadata, component boundaries, button text. Usually paired with `uppercase` and moderate-to-high letter spacing (`0.1em` to `0.14em`).
 
-  /* Typography */
-  --text-primary:  #f8fafc; /* Primary headings & body text */
-  --text-muted:    #64748b; /* Secondary metadata & labels */
-  --text-subtle:   #94a3b8; /* Paragraphs & descriptions */
+## Layout Patterns
 
-  /* Brand & Accents */
-  --accent-brand:  #3b82f6; /* Electric blue primary action color */
-  --accent-hover:  #2563eb; /* Hover state for primary action */
-}
-```
+### Project Dimensions & Gutter
+- **Max Width:** `1360px`
+- **Dynamic Gutter:** `var(--gutter)` -> `clamp(18px, 4vw, 56px)`
 
----
+### The `retroPage` Wrapper
+Acts as the central scaffold, featuring a repeating linear gradient background to simulate scanlines/terminal grids:
+- Displays vertical dividing lines.
+- Horizontal repeating `#111` lines explicitly patterned every 38px/39px.
 
-## 🏷️ Status Badge Color Map
+### Key Components
 
-Status pills reflect exact database states from `schema.sql` (`documents` and `document_parties` tables):
+#### Desktop Ops Brief (`.desktopOpsBrief`)
+A 4-column compact data display at the header/sidebar area.
+- Uses strict borders (`var(--line)` and `#222`).
+- Relies heavily on the technical tracking font for labels and huge, prominent `<strong>` numbers.
 
-| Status Enum | Usage | Styling Rule |
-| :--- | :--- | :--- |
-| `active` / `unlocked` / `sent` | Active signing links ready for execution | `background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25);` |
-| `pending` / `partially-signed` | Multi-party sequence waiting for prior signer | `background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.25);` |
-| `completed` / `fully_executed` | All signers have completed execution | `background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.25);` |
-| `expired` / `revoked` / `closed` | Slugs force closed, expired, or purged | `background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25);` |
+#### Desktop Feed Panel (`.desktopFeedPanel`)
+Horizontal data ticker look.
+- 3 columns, solid `#000` background.
+- Connect buttons with `cursor: pointer` and simple inverse hover states (white bg, black text).
 
----
+#### Grid / Feed System (`.feedGrid`)
+- Dense grid layout (`grid-auto-flow: dense`).
+- Dynamic column spans (`data-col-span="2"`, `data-col-span="3"`) to build mosaic-like content walls.
+- Items are strictly boxed with `var(--line)`.
 
-## 🔤 Typography & Font System
+#### Hero Section (`.heroGrid`, `.heroCopy`)
+- Extreme typography: up to `74px` titles (`heroTitle`) and `170px` for giant nameplates.
+- Japanese characters (`.jp`) often used alongside English to emphasize a dystopian/cyberpunk tech influence. Writing mode `vertical-rl` is occasionally used for right rails (`.heroRail`).
 
-- **Display / Headings:** `Inter`, `-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`
-  - Font weights: `600`, `700`, `800`
-  - Letter spacing: `-0.025em`
-- **Body Text:** `Inter`, `system-ui, sans-serif`
-  - Font weight: `400`
-  - Line height: `1.6`
-- **Monospace / Utility Text:** `'Fira Code', 'SF Mono', Consolas, monospace`
-  - Usage: Document IDs, Slugs, Party Tokens, SHA-256 Audit Hashes, UTC Timestamps, and YAML Spec Code Panels.
+## Interaction Elements
 
----
+### Buttons and Tags
+- **Base Style:** Transparent background, `1px solid` border, uppercase, high letter spacing.
+- **Hover/Active:** Direct inversion—background becomes `#fff` or `#000`, text flips contrast.
+- Uses `transition: background 0.2s ease, color 0.2s ease` to ensure sharp but non-jarring feedback.
 
-## 🔐 Signature Visual Element
+### Modals (`.modalOverlay`)
+- Deep blur backdrop (`backdrop-filter: blur(4px)`) atop `rgba(0, 0, 0, 0.85)`.
+- Center-aligned floating panel with stark white borders and heavy drop shadow.
 
-The signature visual element is the **Cryptographic Verification Pill**:
-```html
-<div class="verification-badge">
-  <span class="dot"></span>
-  <code>sha256: 8f3a...b19e VERIFIED</code>
-</div>
-```
-This element anchors Sig to its core technical differentiator: cryptographic non-repudiation and field-level audit telemetry.
+### Forms
+- High-contrast inputs `.formInput` (`#111` background with `#333` border).
+- Status hints use semi-transparent distinct colors: Success (`#4ade80`), Error (`#f87171`).
 
----
-
-## 📱 Component Standards
-
-1. **Buttons (`.btn`, `.btn-secondary`, `.btn-danger`):**
-   - High-contrast rounded buttons with subtle hover lift and 2px focus ring.
-   - NO emojis in button labels or tab headers.
-2. **Modal Dialogs (`#notification-modal`):**
-   - Backdrop blur overlays (`backdrop-filter: blur(8px)`) with explicit action confirmation buttons ("Revoke", "Delete", "Re-up").
-3. **Empty States (`.empty-state`):**
-   - Actionable zero-state panels featuring copyable CLI / MCP deployment commands when no documents are returned.
+## Spacing & Responsive Behaviors
+- Use `clamp()` extensively to keep elements fluid matching viewport width/height seamlessly (e.g., `clamp(18px, 2.2vh, 32px)`).
+- Collapse large multi-column grids (like the Feed) into fewer columns via simple media queries: `@media (max-width: 1200px)` drops feed to 2 columns.

@@ -76,6 +76,31 @@ def init(name: str = typer.Option("document.yaml", "--output", "-o", help="Outpu
     console.print(f"[bold green]Created document template:[/bold green] {path.resolve()}")
 
 @app.command()
+def create_workspace(
+    workspace_id: str = typer.Argument(..., help="Unique ID for the workspace"),
+    name: str = typer.Argument(..., help="Name of the workspace")
+):
+    """Create a new workspace in the backend."""
+    api_base, api_key, _, _ = get_config()
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+        
+    payload = {"id": workspace_id, "name": name}
+    
+    with console.status("[bold blue]Creating workspace...[/bold blue]"):
+        try:
+            r = requests.post(f"{api_base}/api/workspaces", json=payload, headers=headers, timeout=15)
+            r.raise_for_status()
+            res = r.json()
+            console.print(f"[bold green]Workspace created:[/bold green] {res['workspace']['id']} - {res['workspace']['name']}")
+        except requests.RequestException as e:
+            console.print(f"[bold red]Failed to create workspace:[/bold red] {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                console.print(e.response.text)
+            raise typer.Exit(code=1)
+
+@app.command()
 def deploy(
     spec_path: Path = typer.Argument(Path("document.yaml"), help="Path to YAML spec or template name (e.g. templates/nda-mutual.yaml)"),
     fill: list[str] = typer.Option([], "--fill", "-f", help="Pre-fill field values (e.g. -f counterparty_name='Acme Corp')"),

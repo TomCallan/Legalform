@@ -126,6 +126,10 @@
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
       New Template
     </div>
+    <div class="nav-item" onclick="createWorkspace()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      Create Workspace
+    </div>
     <div style="flex:1"></div>
     <div class="nav-item" onclick="logout()" style="color:var(--error);">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
@@ -237,6 +241,25 @@ function switchView(view) {
     document.getElementById('view-title').textContent = 'New Template';
     document.getElementById('topbar-actions').innerHTML = '';
     if (document.getElementById('blocks-container').children.length === 0) initBuilder();
+  }
+}
+
+async function createWorkspace() {
+  const wsId = prompt("Enter a unique Workspace ID:");
+  if (!wsId) return;
+  const wsName = prompt("Enter Workspace Name:");
+  if (!wsName) return;
+  try {
+    const res = await fetch(`${API}/api/workspaces`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ id: wsId, name: wsName })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    alert(`Workspace created: ${data.workspace.name}`);
+  } catch (e) {
+    alert(`Failed to create workspace: ${e.message}`);
   }
 }
 

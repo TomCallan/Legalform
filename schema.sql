@@ -100,3 +100,9 @@ CREATE INDEX IF NOT EXISTS idx_submissions_doc ON submissions(document_id, submi
 CREATE INDEX IF NOT EXISTS idx_doc_parties ON document_parties(document_id, party_token);
 CREATE INDEX IF NOT EXISTS idx_doc_parties_seq ON document_parties(document_id, sequence, status);
 
+-- Workspaces
+CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at INTEGER DEFAULT (unixepoch())
+);

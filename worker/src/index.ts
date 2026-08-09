@@ -145,6 +145,30 @@ app.post('/api/doc/:slug/reopen', async (c) => {
   return c.json({ success: true, message: `Document slug '${slug}' has been reopened and re-upped for ${extendDays} days.`, expires_at: newExpiresAt });
 });
 
+// ── Admin: Workspaces ──────────────────────
+app.post('/api/workspaces', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
+  const body = await c.req.json();
+  const effectiveKey = apiKey || body.api_key;
+
+  const adminKey = c.env.ADMIN_API_KEY;
+  if (adminKey && effectiveKey !== adminKey) {
+    return c.json({ error: 'Unauthorized: Invalid API Key' }, 401);
+  }
+
+  const { id, name } = body;
+  if (!id || !name) {
+    return c.json({ error: 'Missing required fields: id, name' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    `INSERT INTO workspaces (id, name) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name`
+  ).bind(id, name).run();
+
+  return c.json({ success: true, workspace: { id, name } });
+});
+
 // ── Admin: Deploy Document (from CLI) ──────────────────────
 app.post('/api/documents', async (c) => {
   const authHeader = c.req.header('Authorization');
