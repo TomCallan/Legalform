@@ -3,28 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Workspace | Sig</title>
+  <title>Workspace | Legalform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
   <style>
     :root {
-      --bg-base: #06080c;
-      --bg-surface: #0f131a;
-      --bg-sidebar: #0a0d14;
-      --border-subtle: #1e2532;
-      --border-active: #2c3647;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent-brand: #3b82f6;
-      --accent-hover: #2563eb;
-      --success: #10b981;
-      --error: #ef4444;
-      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
+      --bg-base: #ffffff;
+      --bg-surface: #fafafa;
+      --bg-sidebar: #fafafa;
+      --border-subtle: #e5e5e5;
+      --border-active: #000000;
+      --text-main: #000000;
+      --text-muted: #6e6e73;
+      --success: #0f7b3d;
+      --error: #c02424;
     }
     
-    * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
+    * { box-sizing: border-box; font-family: 'Zen Kaku Gothic New', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
     body { background: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
     
     /* Login Screen */
@@ -33,8 +30,8 @@
       display: flex; align-items: center; justify-content: center;
     }
     .auth-box {
-      background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 16px;
-      padding: 3rem; width: 100%; max-width: 420px; box-shadow: var(--shadow-lg); text-align: center;
+      background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 0;
+      padding: 3rem; width: 100%; max-width: 420px; box-shadow: none; text-align: center;
     }
     
     /* App Layout */
@@ -42,15 +39,14 @@
       width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle);
       display: flex; flex-direction: column; padding: 1.5rem;
     }
-    .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.25rem; margin-bottom: 3rem; }
-    .brand-mark { width: 32px; height: 32px; background: var(--text-main); color: var(--bg-base); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; border-radius: 6px; }
+    .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1rem; margin-bottom: 3rem; text-transform: uppercase; letter-spacing: 0.22em; }
     
     .nav-item {
       display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: var(--text-muted);
-      border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; margin-bottom: 0.5rem;
+      border-radius: 0; cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 0.9rem; margin-bottom: 0.5rem;
     }
-    .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-main); }
-    .nav-item.active { background: rgba(59, 130, 246, 0.1); color: var(--accent-brand); }
+    .nav-item:hover { background: #f5f5f5; color: var(--text-main); }
+    .nav-item.active { background: var(--text-main); color: var(--bg-base); }
     
     .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .topbar {
@@ -59,43 +55,44 @@
     .view-container { flex: 1; overflow-y: auto; padding: 2rem; }
     
     /* Buttons & Inputs */
-    .btn { background: var(--text-main); color: var(--bg-base); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .btn:hover { background: #e2e8f0; transform: translateY(-1px); }
+    .btn { background: var(--text-main); color: var(--bg-base); border: 1px solid var(--text-main); padding: 0.6rem 1.2rem; border-radius: 0; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { background: var(--bg-base); color: var(--text-main); }
     .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-subtle); }
-    .btn-outline:hover { background: var(--bg-surface); }
+    .btn-outline:hover { background: var(--bg-surface); border-color: var(--text-main); }
     
-    input, select { width: 100%; padding: 0.75rem; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-surface); color: var(--text-main); font-size: 0.9rem; outline: none; }
-    input:focus, select:focus { border-color: var(--accent-brand); box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
-    label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    input, select { width: 100%; padding: 0.75rem; border: 1px solid var(--border-subtle); border-radius: 0; background: #f5f5f5; color: var(--text-main); font-size: 0.9rem; outline: none; transition: border-color 0.2s, background 0.2s; }
+    input:focus, select:focus { border-color: var(--border-active); background: var(--bg-base); }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.24em; }
     .form-group { margin-bottom: 1.5rem; }
 
     /* Builder Layout */
     .builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; height: calc(100vh - 140px); }
-    .builder-pane { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
-    .pane-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-subtle); font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: var(--bg-sidebar); }
+    .builder-pane { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .pane-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-subtle); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.24em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); }
     .pane-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
     
     /* Code Editor */
-    .code-editor { width: 100%; height: 100%; background: transparent; border: none; color: #a1a1aa; font-family: 'Fira Code', monospace; font-size: 0.85rem; resize: none; outline: none; line-height: 1.6; }
+    .code-editor { width: 100%; height: 100%; background: transparent; border: none; color: var(--text-main); font-size: 0.85rem; resize: none; outline: none; line-height: 1.6; }
     
     /* Visual Canvas blocks */
-    .block-card { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; position: relative; }
+    .block-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 0; padding: 1.25rem; margin-bottom: 1rem; position: relative; }
     .block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .block-type { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-    .block-delete { color: var(--error); cursor: pointer; font-size: 0.8rem; font-weight: 500; }
+    .block-type { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.24em; color: var(--text-muted); }
+    .block-delete { color: var(--error); cursor: pointer; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.24em; }
     
     /* Ledger Table */
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem; }
-    th { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-    .status-badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-    .status-active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-    .status-closed { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    th { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.24em; border-bottom: 1px solid var(--text-main); }
+    tr:hover td { background: #f5f5f5; }
+    .status-badge { display: inline-block; padding: 0.25rem 0.5rem; border: 1px solid var(--border-subtle); border-radius: 0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.24em; }
+    .status-active { color: var(--success); border-color: var(--success); }
+    .status-closed { color: var(--error); border-color: var(--error); }
+    .tabular-id { font-variant-numeric: tabular-nums; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em; }
 
     /* Modals */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; }
-    .modal-content { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 2rem; width: 400px; box-shadow: var(--shadow-lg); }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-content { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 0; padding: 2rem; width: 400px; box-shadow: 0 24px 60px rgba(0,0,0,0.12); }
   </style>
 </head>
 <body>
@@ -103,21 +100,43 @@
   <!-- Auth -->
   <div id="auth-view" class="auth-wrapper">
     <div class="auth-box">
-      <div class="brand-mark" style="margin: 0 auto 1.5rem; width: 48px; height: 48px; font-size: 1.5rem;">S</div>
-      <h2 style="margin-bottom: 0.5rem; font-weight: 700;">Workspace Login</h2>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Authenticate to manage your agreements.</p>
-      <form onsubmit="handleLogin(event)">
-        <input type="password" id="api-key" placeholder="Enter Workspace Key" required style="margin-bottom: 1rem; text-align: center;">
-        <button type="submit" class="btn" style="width: 100%;">Sign In</button>
-      </form>
+      <div style="margin: 0 auto 1.5rem; font-weight: 700; font-size: 1rem; letter-spacing: 0.22em; text-transform: uppercase;">Legalform</div>
+      <div id="login-form">
+        <h2 style="margin-bottom: 0.5rem; font-weight: 700;">Workspace Login</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Authenticate to manage your agreements.</p>
+        <form onsubmit="handleLogin(event)">
+          <input type="password" id="api-key" placeholder="Enter Workspace Key" required style="margin-bottom: 1rem; text-align: center;">
+          <button type="submit" class="btn" style="width: 100%; margin-bottom: 1rem;">Sign In</button>
+        </form>
+        <div style="display: flex; align-items: center; justify-content: center; margin: 1rem 0;">
+          <div style="height: 1px; background: var(--border-subtle); flex: 1;"></div>
+          <span style="padding: 0 1rem; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">OR</span>
+          <div style="height: 1px; background: var(--border-subtle); flex: 1;"></div>
+        </div>
+        <button type="button" class="btn btn-outline" style="width: 100%;" onclick="toggleAuthMode()">Create New Workspace</button>
+      </div>
+
+      <div id="create-form" style="display: none;">
+        <h2 style="margin-bottom: 0.5rem; font-weight: 700;">Create Workspace</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Set up a new workspace for your documents.</p>
+        <form onsubmit="handleCreateWorkspace(event)">
+          <input type="text" id="new-ws-name" placeholder="Workspace Name (e.g. Acme Corp)" required style="margin-bottom: 0.75rem; text-align: center;">
+          <input type="password" id="new-ws-id" placeholder="Choose a secure Workspace Key" required style="margin-bottom: 1rem; text-align: center;">
+          <button type="submit" class="btn" style="width: 100%; margin-bottom: 1rem;">Create Workspace</button>
+        </form>
+        <div style="display: flex; align-items: center; justify-content: center; margin: 1rem 0;">
+          <div style="height: 1px; background: var(--border-subtle); flex: 1;"></div>
+          <span style="padding: 0 1rem; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">OR</span>
+          <div style="height: 1px; background: var(--border-subtle); flex: 1;"></div>
+        </div>
+        <button type="button" class="btn btn-outline" style="width: 100%;" onclick="toggleAuthMode()">Back to Sign In</button>
+      </div>
     </div>
   </div>
 
   <!-- App -->
   <div class="sidebar">
-    <div class="brand">
-      <div class="brand-mark">S</div> Sig Workspace
-    </div>
+    <div class="brand">Legalform Workspace</div>
     <div class="nav-item active" id="nav-ledger" onclick="switchView('ledger')">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
       Documents
@@ -263,6 +282,44 @@ async function createWorkspace() {
   }
 }
 
+function toggleAuthMode() {
+  const loginForm = document.getElementById('login-form');
+  const createForm = document.getElementById('create-form');
+  if (loginForm.style.display === 'none') {
+    loginForm.style.display = 'block';
+    createForm.style.display = 'none';
+  } else {
+    loginForm.style.display = 'none';
+    createForm.style.display = 'block';
+  }
+}
+
+async function handleCreateWorkspace(e) {
+  e.preventDefault();
+  const wsName = document.getElementById('new-ws-name').value.trim();
+  const wsId = document.getElementById('new-ws-id').value.trim();
+  
+  if (!wsId || !wsName) return;
+  
+  try {
+    const res = await fetch(`${API}/api/workspaces`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: wsId, name: wsName, api_key: wsId })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    
+    // Automatically log in with the new workspace key
+    key = wsId;
+    localStorage.setItem('WORKSPACE_KEY', key);
+    document.getElementById('auth-view').style.display = 'none';
+    loadLedger();
+  } catch (err) {
+    alert(`Failed to create workspace: ${err.message}`);
+  }
+}
+
 function modal(title, body, confirm = false) {
   return new Promise(res => {
     document.getElementById('mod-title').textContent = title;
@@ -277,33 +334,33 @@ function closeModal(val) { document.getElementById('sys-modal').style.display = 
 async function loadLedger() {
   const tbody = document.getElementById('docs-tbody');
   try {
-    const res = await fetch(\`\${API}/api/documents/list\`, { headers: { 'Authorization': \`Bearer \${key}\` } });
+    const res = await fetch(`${API}/api/documents/list`, { headers: { 'Authorization': `Bearer ${key}` } });
     if (res.status === 401) return logout();
     const { documents } = await res.json();
     
-    tbody.innerHTML = documents.length ? documents.map(d => \`
+    tbody.innerHTML = documents.length ? documents.map(d => `
       <tr>
-        <td><strong>\${d.id}</strong><br><span style="font-size:0.75rem;color:var(--text-muted);font-family:monospace">\${d.slug}</span></td>
-        <td><span class="status-badge \${d.status==='active'?'status-active':'status-closed'}">\${d.status}</span></td>
-        <td>\${d.submission_count||0}</td>
-        <td><a href="\${ORIGIN}/?slug=\${d.slug}" target="_blank" style="font-family:monospace;font-size:0.8rem">\${ORIGIN}/?slug=\${d.slug}</a></td>
+        <td><strong>${d.id}</strong><br><span class="tabular-id">${d.slug}</span></td>
+        <td><span class="status-badge ${d.status==='active'?'status-active':'status-closed'}">${d.status}</span></td>
+        <td style="font-variant-numeric: tabular-nums;">${d.submission_count||0}</td>
+        <td><a href="${ORIGIN}/?slug=${d.slug}" target="_blank" style="font-size:0.8rem; text-decoration: underline; text-decoration-color: var(--border-subtle); text-underline-offset: 4px; color: var(--text-main); font-weight: 500;">View Document</a></td>
         <td>
-          <button class="btn btn-outline btn-sm" onclick="revoke('\${d.slug}')">Revoke</button>
-          <button class="btn btn-outline btn-sm" style="color:var(--error);border-color:rgba(239,68,68,0.3)" onclick="del('\${d.id}')">Del</button>
+          <button class="btn btn-outline btn-sm" onclick="revoke('${d.slug}')">Revoke</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--error);border-color:var(--error)" onclick="del('${d.id}')">Del</button>
         </td>
       </tr>
-    \`).join('') : '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--text-muted);">No documents deployed yet.</td></tr>';
-  } catch(e) { tbody.innerHTML = \`<tr><td colspan="5">Error: \${e.message}</td></tr>\`; }
+    `).join('') : '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--text-muted);">No documents deployed yet.</td></tr>';
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="5">Error: ${e.message}</td></tr>`; }
 }
 
 async function revoke(slug) {
-  if(await modal('Revoke Access', \`Deactivate \${slug}?\`, true)) {
-    await fetch(\`\${API}/api/doc/\${slug}/close\`, {method:'POST', headers:{'Authorization':\`Bearer \${key}\`}}); loadLedger();
+  if(await modal('Revoke Access', `Deactivate ${slug}?`, true)) {
+    await fetch(`${API}/api/doc/${slug}/close`, {method:'POST', headers:{'Authorization':`Bearer ${key}`}}); loadLedger();
   }
 }
 async function del(id) {
-  if(await modal('Delete Document', \`Purge \${id}?\`, true)) {
-    await fetch(\`\${API}/api/doc/\${id}\`, {method:'DELETE', headers:{'Authorization':\`Bearer \${key}\`}}); loadLedger();
+  if(await modal('Delete Document', `Purge ${id}?`, true)) {
+    await fetch(`${API}/api/doc/${id}`, {method:'DELETE', headers:{'Authorization':`Bearer ${key}`}}); loadLedger();
   }
 }
 
@@ -320,17 +377,17 @@ function addVisualBlock(type) {
   div.dataset.type = type;
   
   let content = '';
-  if (type === 'text') content = '<textarea style="width:100%;height:80px;background:var(--bg-surface);border:1px solid var(--border-subtle);color:var(--text-main);padding:0.75rem;border-radius:6px;resize:vertical;" oninput="syncToYaml()">## Terms\n</textarea>';
+  if (type === 'text') content = `<textarea style="width:100%;height:80px;background:#f5f5f5;border:1px solid transparent;color:var(--text-main);padding:0.75rem;border-radius:0;resize:vertical;" onfocus="this.style.borderColor='var(--border-active)';this.style.background='var(--bg-base)';" onblur="this.style.borderColor='transparent';this.style.background='#f5f5f5';" oninput="syncToYaml()">## Terms\n</textarea>`;
   if (type === 'signature') content = '<input type="text" value="Execution Block" oninput="syncToYaml()">';
   if (type === 'form') content = '<input type="text" placeholder="Field Label (e.g. Full Name)" value="Full Name" oninput="syncToYaml()">';
   
-  div.innerHTML = \`
+  div.innerHTML = `
     <div class="block-header">
-      <div class="block-type">\${type} Block</div>
+      <div class="block-type">${type} Block</div>
       <div class="block-delete" onclick="this.parentElement.parentElement.remove(); syncToYaml()">Remove</div>
     </div>
-    \${content}
-  \`;
+    ${content}
+  `;
   container.appendChild(div);
 }
 
@@ -376,14 +433,14 @@ async function deploy() {
       max_per_email: 99, max_per_ip: 99, require_verification: 0
     };
     
-    const res = await fetch(\`\${API}/api/documents\`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${key}\` },
+    const res = await fetch(`${API}/api/documents`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify(payload)
     });
     
     if(!res.ok) throw new Error((await res.json()).error);
     
-    await modal('Deployed Successfully', \`Link: <br><a href="\${ORIGIN}/?slug=\${slug}" target="_blank">\${ORIGIN}/?slug=\${slug}</a>\`);
+    await modal('Deployed Successfully', `Link: <br><a href="${ORIGIN}/?slug=${slug}" target="_blank">${ORIGIN}/?slug=${slug}</a>`);
     switchView('ledger');
   } catch(e) { modal('Deploy Failed', e.message); }
 }

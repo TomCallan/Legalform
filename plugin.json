@@ -4,7 +4,7 @@
   "description": "LegalForm AI Assistant Plugin for Claude, Antigravity, and OpenCode",
   "author": "Tom Callan",
   "homepage": "https://legalform-ui.pages.dev",
-  "repository": "https://github.com/TomCallan/Sig",
+  "repository": "https://github.com/TomCallan/Legalform",
   "skills": [
     "./skills/legalform/SKILL.md"
   ]

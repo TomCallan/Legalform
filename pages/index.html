@@ -3,29 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Sig - Cryptographic Legal Agreements</title>
+  <title>Legalform - Cryptographic Legal Agreements</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-base: #06080c;
-      --bg-surface: #0f131a;
-      --bg-surface-hover: #161b24;
-      --border-subtle: #1e2532;
-      --border-active: #2c3647;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent-brand: #3b82f6;
-      --accent-hover: #2563eb;
-      --success: #10b981;
-      --error: #ef4444;
-      
-      --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
-      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
+      --bg-base: #ffffff;
+      --bg-surface: #fafafa;
+      --bg-surface-hover: #f5f5f5;
+      --border-subtle: #e5e5e5;
+      --border-active: #000000;
+      --text-main: #000000;
+      --text-muted: #6e6e73;
+      --accent-brand: #000000;
+      --success: #0f7b3d;
+      --error: #c02424;
     }
-    * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; font-family: 'Zen Kaku Gothic New', sans-serif; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0;
       padding: 0;
@@ -37,19 +32,17 @@
       flex-direction: column;
     }
     a { color: var(--accent-brand); text-decoration: none; transition: color 0.2s; }
-    a:hover { color: var(--text-main); }
     
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0 2rem;
+      padding: 0 clamp(20px, 4vw, 64px);
       width: 100%;
     }
     
     header {
       border-bottom: 1px solid var(--border-subtle);
-      background: rgba(6, 8, 12, 0.8);
-      backdrop-filter: blur(12px);
+      background: var(--bg-base);
       position: sticky;
       top: 0;
       z-index: 50;
@@ -65,96 +58,92 @@
       align-items: center;
       gap: 0.75rem;
       font-weight: 700;
-      font-size: 1.25rem;
-      letter-spacing: -0.02em;
+      font-size: 1rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
       color: var(--text-main);
-    }
-    .brand-mark {
-      width: 28px;
-      height: 28px;
-      background: var(--text-main);
-      color: var(--bg-base);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Playfair Display', serif;
-      font-size: 1.1rem;
-      border-radius: 4px;
     }
     
     .nav-links { display: flex; align-items: center; gap: 2rem; }
-    .nav-links a.muted { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
-    .nav-links a.muted:hover { color: var(--text-main); }
+    .nav-links a.muted { 
+      color: var(--text-main); 
+      font-size: clamp(13px, 0.95vw, 15px); 
+      font-weight: 500; 
+      text-decoration: underline; 
+      text-decoration-color: var(--border-subtle); 
+      text-decoration-thickness: 1px; 
+      text-underline-offset: 4px;
+    }
+    .nav-links a.muted:hover { text-decoration-color: var(--text-main); }
     
     .btn {
       background: var(--text-main);
       color: var(--bg-base);
-      padding: 0.6rem 1.25rem;
-      border-radius: 6px;
-      font-size: 0.9rem;
+      padding: 0.8rem 2rem;
+      border-radius: 0;
+      font-size: clamp(12px, 1vw, 15px);
       font-weight: 600;
-      border: 1px solid transparent;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border: 1px solid var(--text-main);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
     }
-    .btn:hover { background: #e2e8f0; transform: translateY(-1px); box-shadow: var(--shadow-sm); color: var(--bg-base); }
+    .btn:hover { background: var(--bg-base); color: var(--text-main); }
     .btn-outline {
       background: transparent;
       color: var(--text-main);
       border: 1px solid var(--border-subtle);
     }
-    .btn-outline:hover { background: var(--bg-surface); border-color: var(--text-muted); color: var(--text-main); }
+    .btn-outline:hover { background: var(--bg-surface); border-color: var(--text-main); color: var(--text-main); }
     
     /* Hero Section */
     .hero {
-      padding: 8rem 0 6rem;
-      text-align: center;
+      padding: 6rem 0 4rem;
+      text-align: left;
     }
     .hero-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.4rem 1rem;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border-subtle);
-      border-radius: 100px;
-      font-size: 0.8rem;
-      font-family: 'Fira Code', monospace;
+      padding: 0;
+      background: transparent;
+      border: none;
+      font-size: clamp(10px, 0.8vw, 12px);
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 2rem;
-    }
-    .hero-badge .dot {
-      width: 6px; height: 6px; border-radius: 50%; background: var(--success);
-      box-shadow: 0 0 8px var(--success);
+      margin-bottom: 1.5rem;
     }
     .hero h1 {
-      font-size: 4rem;
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.04em;
+      font-size: clamp(40px, 6.4vw, 104px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.03em;
       margin: 0 0 1.5rem;
-      color: #fff;
+      color: var(--text-main);
+      text-transform: uppercase;
     }
     .hero h1 span {
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      font-weight: 600;
-      color: var(--text-muted);
+      font-style: normal;
+      font-weight: 900;
+      color: var(--text-main);
     }
     .hero p {
-      font-size: 1.25rem;
+      font-size: clamp(13px, 0.95vw, 15px);
       color: var(--text-muted);
-      max-width: 680px;
-      margin: 0 auto 3rem;
-      line-height: 1.6;
+      max-width: 46ch;
+      margin: 0 0 3rem;
+      line-height: 1.5;
     }
     .hero-actions {
       display: flex;
       gap: 1rem;
-      justify-content: center;
+      justify-content: flex-start;
     }
     
     /* Demo Section */
@@ -162,11 +151,9 @@
       margin-bottom: 8rem;
     }
     .demo-window {
-      background: var(--bg-surface);
+      background: var(--bg-base);
       border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: var(--shadow-lg);
+      border-radius: 0;
       display: grid;
       grid-template-columns: 1fr 1fr;
     }
@@ -176,17 +163,13 @@
       align-items: center;
       padding: 1rem 1.5rem;
       border-bottom: 1px solid var(--border-subtle);
-      background: rgba(255,255,255,0.02);
-    }
-    .demo-header-dots {
-      display: flex; gap: 6px; margin-right: 1.5rem;
-    }
-    .demo-header-dots span {
-      width: 10px; height: 10px; border-radius: 50%; background: var(--border-active);
+      background: var(--bg-surface);
     }
     .demo-header-title {
-      font-family: 'Fira Code', monospace;
-      font-size: 0.8rem;
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
       color: var(--text-muted);
       display: flex;
       justify-content: space-between;
@@ -194,106 +177,300 @@
     }
     .demo-code {
       padding: 2rem;
-      font-family: 'Fira Code', monospace;
-      font-size: 0.85rem;
+      font-size: 13px;
       line-height: 1.7;
       border-right: 1px solid var(--border-subtle);
-      color: #a1a1aa;
+      color: var(--text-main);
       overflow-x: auto;
       white-space: pre;
     }
-    .demo-code .key { color: #f472b6; }
-    .demo-code .string { color: #34d399; }
-    .demo-code .keyword { color: #60a5fa; }
+    .demo-code .key { color: var(--text-muted); font-weight: 600; }
+    .demo-code .string { color: var(--text-main); }
+    .demo-code .keyword { color: var(--text-main); font-weight: 700; }
     
     .demo-preview {
       padding: 2rem;
-      background: #090c11;
+      background: var(--bg-surface);
       display: flex;
       flex-direction: column;
     }
     .doc-paper {
-      background: #ffffff;
-      border-radius: 4px;
+      background: var(--bg-base);
+      border-radius: 0;
+      border: 1px solid var(--border-subtle);
       padding: 2rem;
-      color: #1a1a1a;
+      color: var(--text-main);
       flex: 1;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .doc-paper h3 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.25rem;
+      font-size: clamp(12px, 1vw, 15px);
+      font-weight: 600;
+      letter-spacing: 0.02em;
       margin: 0 0 1rem;
-      text-align: center;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
     .doc-paper p {
-      font-size: 0.75rem;
-      line-height: 1.6;
-      color: #4a4a4a;
+      font-size: clamp(13px, 0.95vw, 15px);
+      line-height: 1.5;
+      color: var(--text-muted);
       margin-bottom: 1.5rem;
     }
     .doc-signer {
-      border: 1px solid #e5e5e5;
+      border: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
       padding: 1rem;
-      border-radius: 4px;
+      border-radius: 0;
       margin-bottom: 0.75rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: var(--bg-base);
     }
-    .doc-signer-name { font-weight: 600; font-size: 0.85rem; }
+    .doc-signer-name { font-weight: 600; font-size: clamp(12px, 1vw, 15px); }
     .status-badge {
-      font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 2px;
-      text-transform: uppercase; letter-spacing: 0.05em;
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
     }
-    .status-completed { background: #dcfce7; color: #166534; }
-    .status-pending { background: #f3f4f6; color: #4b5563; }
+    .status-completed { color: var(--success); border-color: var(--success); }
+    .status-pending { color: var(--text-muted); border-color: var(--border-subtle); }
     
     /* Features */
     .features {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
+      gap: 0;
       margin-bottom: 8rem;
+      border: 1px solid var(--border-subtle);
     }
     .feature {
       padding: 2rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.01);
+      border-right: 1px solid var(--border-subtle);
+      background: var(--bg-base);
       transition: background 0.3s;
     }
+    .feature:last-child { border-right: none; }
     .feature:hover { background: var(--bg-surface); }
-    .feature-icon {
-      width: 40px; height: 40px;
-      border: 1px solid var(--border-active);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1.5rem;
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      color: var(--text-main);
-    }
-    .feature h3 { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.75rem; }
-    .feature p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; margin: 0; }
+    .feature h3 { font-size: clamp(12px, 1vw, 15px); font-weight: 600; margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.02em; }
+    .feature p { font-size: clamp(13px, 0.95vw, 15px); color: var(--text-muted); line-height: 1.5; margin: 0; }
     
     @media (max-width: 900px) {
       .demo-window { grid-template-columns: 1fr; }
       .demo-code { border-right: none; border-bottom: 1px solid var(--border-subtle); }
-      .features { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 3rem; }
+      .features { grid-template-columns: 1fr; border-right: 1px solid var(--border-subtle); border-bottom: none; }
+      .feature { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .hero h1 { font-size: clamp(34px, 11vw, 56px); }
+      .hero { padding: 4rem 0; }
     }
     
     footer {
       margin-top: auto;
       border-top: 1px solid var(--border-subtle);
-      padding: 3rem 0;
-      text-align: center;
+      padding: 1.5rem 0;
+      display: flex;
+      justify-content: space-between;
       color: var(--text-muted);
-      font-size: 0.85rem;
+      font-size: clamp(9px, 0.7vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
     }
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .footer-inner { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+    }
+
+    /* Signer Flow (app view — scrolls normally) */
+    .signer {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: clamp(32px, 6vh, 72px) 0 4rem;
+    }
+    .signer-card {
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-base);
+    }
+    .signer-head {
+      padding: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .signer-eyebrow {
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    .signer-title {
+      font-size: clamp(22px, 3.2vw, 38px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      color: var(--text-main);
+      margin: 0 0 1.25rem;
+    }
+    .signer-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 2rem;
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .signer-body { padding: 2rem; }
+    .signer-section { margin-bottom: 2.5rem; }
+    .signer-section:last-child { margin-bottom: 0; }
+    .section-label {
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .static-body p {
+      margin: 0 0 1rem;
+      font-size: clamp(13px, 0.95vw, 15px);
+      line-height: 1.7;
+      color: var(--text-main);
+    }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label {
+      display: block;
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .form-control {
+      width: 100%;
+      background: var(--bg-surface-hover);
+      border: 1px solid transparent;
+      padding: 0.8rem 1rem;
+      font-family: inherit;
+      font-size: clamp(13px, 0.95vw, 15px);
+      color: var(--text-main);
+      outline: none;
+      border-radius: 0;
+      transition: all 0.2s;
+    }
+    .form-control:focus {
+      background: var(--bg-base);
+      border-color: var(--border-active);
+    }
+    .form-control[readonly] { cursor: default; }
+    .legal-footer {
+      margin: 2rem 0;
+      padding: 1.25rem 0;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: clamp(13px, 0.95vw, 15px);
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+    .sig-pad {
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      width: 100%;
+      height: 200px;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .sig-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+    .sig-hint {
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .btn-danger-ghost {
+      background: transparent;
+      color: var(--error);
+      border: 1px solid var(--error);
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 0;
+      transition: all 0.2s;
+    }
+    .btn-danger-ghost:hover { background: var(--error); color: var(--bg-base); }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .loading-card {
+      border: 1px solid var(--border-subtle);
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--text-main);
+      margin: 0 auto 1.5rem;
+      animation: spin 1s linear infinite;
+    }
+    .error-card {
+      border: 1px solid var(--error);
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .error-title {
+      color: var(--error);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: clamp(12px, 1vw, 15px);
+      margin-bottom: 0.75rem;
+    }
+    .error-msg {
+      color: var(--text-muted);
+      font-size: clamp(13px, 0.95vw, 15px);
+      line-height: 1.5;
+      margin: 0;
+    }
+    .audit-row {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 1.5rem;
+      margin-top: 2rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .audit-hash {
+      font-size: clamp(10px, 0.75vw, 12px);
+      color: var(--text-main);
+      letter-spacing: 0.08em;
+      word-break: break-all;
+      line-height: 1.6;
+      margin-top: 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -301,11 +478,10 @@
   <header>
     <div class="container header-inner">
       <a href="/" class="brand">
-        <div class="brand-mark">S</div>
-        Sig
+        Legalform
       </a>
       <div class="nav-links">
-        <a href="https://github.com/TomCallan/Sig" target="_blank" class="muted">Documentation</a>
+        <a href="https://github.com/TomCallan/Legalform" target="_blank" class="muted">Documentation</a>
         <a href="/admin.html" class="btn">Workspace Login</a>
       </div>
     </div>
@@ -316,7 +492,6 @@
     <div class="container">
       <section class="hero">
         <div class="hero-badge">
-          <span class="dot"></span>
           Self-Hostable Infrastructure
         </div>
         <h1>
@@ -324,18 +499,17 @@
           <span>Cryptographically secured.</span>
         </h1>
         <p>
-          Sig provides a developer-first protocol to define, deploy, and execute court-enforceable legal documents. Ditch legacy vendors for a precise, self-hosted signing pipeline.
+          Legalform provides a developer-first protocol to define, deploy, and execute court-enforceable legal documents. Ditch legacy vendors for a precise, self-hosted signing pipeline.
         </p>
         <div class="hero-actions">
           <a href="/admin.html" class="btn" style="padding: 0.8rem 2rem; font-size: 1rem;">Open Workspace</a>
-          <a href="https://github.com/TomCallan/Sig" target="_blank" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">View on GitHub</a>
+          <a href="https://github.com/TomCallan/Legalform" target="_blank" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">View on GitHub</a>
         </div>
       </section>
 
       <section class="demo-section">
         <div class="demo-window">
           <div class="demo-header">
-            <div class="demo-header-dots"><span></span><span></span><span></span></div>
             <div class="demo-header-title">
               <span>definitions/nda.yaml</span>
               <span>Compiled Output</span>
@@ -377,7 +551,7 @@
                 <div class="status-badge status-pending">Pending</div>
               </div>
             </div>
-            <div style="margin-top:1.5rem; text-align:center; font-family:'Fira Code', monospace; font-size:0.75rem; color:var(--text-muted);">
+            <div style="margin-top:1.5rem; text-align:center; font-size:clamp(10px, 0.75vw, 11px); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.24em; font-variant-numeric: tabular-nums;">
               SHA-256 Digest: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
             </div>
           </div>
@@ -386,17 +560,14 @@
 
       <section class="features">
         <div class="feature">
-          <div class="feature-icon">§</div>
           <h3>Legal Rigor</h3>
           <p>Native compliance with ESIGN Act and eIDAS Regulation. Every execution generates a tamper-evident audit trail backed by SHA-256 hashing.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">{ }</div>
           <h3>Declarative Specs</h3>
           <p>Define documents, parties, and routing logic entirely in YAML or via our Visual Builder. Treat your legal templates like application code.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">⚡</div>
           <h3>Cloudflare Native</h3>
           <p>Built for the edge. Deploy directly to Cloudflare Workers and Pages for global low-latency access and zero maintenance overhead.</p>
         </div>
@@ -405,9 +576,9 @@
   </main>
 
   <footer>
-    <div class="container">
-      <p style="margin:0 0 0.5rem">Sig — Open Source Legal Document Infrastructure</p>
-      <p style="margin:0; opacity:0.6;">MIT License • Hosted on your domain.</p>
+    <div class="container footer-inner">
+      <p style="margin:0">LEGALFORM — OPEN SOURCE LEGAL DOCUMENT INFRASTRUCTURE</p>
+      <p style="margin:0;">MIT LICENSE • HOSTED ON YOUR DOMAIN</p>
     </div>
   </footer>
 
@@ -423,60 +594,435 @@ const slugParam = params.get('slug');
 const slug = slugParam || (lastSegment && !lastSegment.includes('.html') && lastSegment !== 'index' ? lastSegment : null);
 
 if (slug) {
-  // Clear the landing page content
   const appContainer = document.getElementById('app');
-  appContainer.innerHTML = `
-    <div class="container" style="display:flex; justify-content:center; padding: 4rem 2rem;">
-      <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:12px; padding:3rem; max-width:600px; width:100%; text-align:center; box-shadow:var(--shadow-lg);">
-        <div style="width:40px; height:40px; border:2px solid var(--border-active); border-top-color:var(--accent-brand); border-radius:50%; margin:0 auto 1.5rem; animation: spin 1s linear infinite;"></div>
-        <h2 style="margin:0 0 0.5rem; font-weight:600;">Loading Document</h2>
-        <p style="color:var(--text-muted); margin:0; font-size:0.9rem;">Fetching cryptographic signatures...</p>
-      </div>
-    </div>
-    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-  `;
-
-  let auditTrail = [];
-  let spec = null;
+  const auditTrail = [];
 
   function audit(type, data = {}) {
     auditTrail.push({ type, data, client_timestamp: Date.now(), url: window.location.href });
   }
 
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function setView(html) {
+    appContainer.innerHTML = `<div class="container"><div class="signer">${html}</div></div>`;
+  }
+
+  function loadingView() {
+    setView(`
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <div class="section-label" style="margin-bottom: 0.5rem;">Loading Document</div>
+        <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching cryptographic signature record…</p>
+      </div>`);
+  }
+
+  function errorView(title, message) {
+    setView(`
+      <div class="error-card">
+        <div class="error-title">${esc(title)}</div>
+        <p class="error-msg">${esc(message)}</p>
+      </div>`);
+  }
+
+  function renderStatic(content) {
+    const wrap = document.createElement('div');
+    wrap.className = 'static-body';
+    (content || '').split(/\n+/).forEach(line => {
+      const t = line.trim();
+      if (!t) return;
+      if (/^#{1,3}\s+/.test(t)) {
+        const label = document.createElement('div');
+        label.className = 'section-label';
+        label.textContent = t.replace(/^#{1,3}\s+/, '');
+        wrap.appendChild(label);
+      } else if (/^[-*]\s+/.test(t)) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 0.75rem; margin-bottom: 0.5rem; line-height: 1.6; font-size: clamp(13px, 0.95vw, 15px); color: var(--text-main);';
+        const dash = document.createElement('span');
+        dash.style.color = 'var(--text-muted)';
+        dash.textContent = '—';
+        const bodyText = document.createElement('span');
+        bodyText.textContent = t.replace(/^[-*]\s+/, '');
+        row.append(dash, bodyText);
+        wrap.appendChild(row);
+      } else {
+        const p = document.createElement('p');
+        p.textContent = t;
+        wrap.appendChild(p);
+      }
+    });
+    return wrap;
+  }
+
+  function renderField(f) {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    const label = document.createElement('label');
+    label.textContent = (f.label || f.name) + (f.required ? ' *' : '');
+    group.appendChild(label);
+
+    let input;
+    if (f.type === 'select') {
+      input = document.createElement('select');
+      input.className = 'form-control';
+      (f.options || []).forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o;
+        opt.textContent = o;
+        input.appendChild(opt);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = f.type === 'email' ? 'email' : (f.type === 'date' ? 'date' : 'text');
+      input.className = 'form-control';
+    }
+
+    input.dataset.name = f.name;
+    if (f.type === 'datetime-auto') {
+      input.value = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      input.readOnly = true;
+    } else if (f.value != null) {
+      input.value = f.value;
+    }
+    if (f.required) input.required = true;
+    input.addEventListener('focus', () => audit('field_focus', { name: f.name }));
+    group.appendChild(input);
+    return group;
+  }
+
+  function initSigPad(canvas) {
+    const ctx = canvas.getContext('2d');
+    const strokes = [];
+    let drawing = false;
+    let stroke = null;
+
+    function size() {
+      const w = canvas.offsetWidth || 300;
+      const h = canvas.offsetHeight || 200;
+      canvas.width = w * devicePixelRatio;
+      canvas.height = h * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      strokes.forEach(pts => {
+        if (!pts.length) return;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      });
+      return { w, h };
+    }
+
+    function point(e) {
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      drawing = true;
+      stroke = [point(e)];
+      strokes.push(stroke);
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      ctx.stroke();
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!drawing || !stroke) return;
+      const p = point(e);
+      const last = stroke[stroke.length - 1];
+      if (Math.abs(p.x - last.x) + Math.abs(p.y - last.y) < 2) return;
+      stroke.push(p);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    });
+    const stop = () => { drawing = false; stroke = null; };
+    canvas.addEventListener('pointerup', stop);
+    canvas.addEventListener('pointerleave', stop);
+
+    size();
+    window.addEventListener('resize', size);
+
+    return {
+      hasSignature: () => strokes.length > 0,
+      clear() {
+        strokes.length = 0;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      },
+      toSVG() {
+        if (!strokes.length) return '';
+        const { w, h } = size();
+        const d = strokes.map(pts => pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')).join(' ');
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><path d="${d}" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      }
+    };
+  }
+
+  async function fingerprint() {
+    const parts = [navigator.userAgent, `${screen.width}x${screen.height}`, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.language];
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts.join('|') + Date.now()));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function showSuccess(doc, data) {
+    setView(`
+      <div class="signer-card">
+        <div class="signer-head">
+          <div class="signer-eyebrow" style="color: var(--success);">Execution Recorded</div>
+          <h1 class="signer-title">Document Signed</h1>
+          <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">${esc(doc.id)} — execution complete. A certificate of electronic execution has been dispatched by email.</p>
+        </div>
+        <div class="signer-body">
+          <div class="signer-meta" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem;">
+            <span>Submission ${esc(data.submission_id)}</span>
+            <span>Vault ${esc(data.r2_key || '—')}</span>
+          </div>
+          <div class="audit-row">
+            <div class="section-label">Cryptographic Audit — SHA-256 Digest</div>
+            <div class="audit-hash">${esc(data.audit_hash)}</div>
+          </div>
+        </div>
+      </div>`);
+  }
+
+  function buildSigner(doc, verification) {
+    const spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
+    const d = spec.document || {};
+    const party = doc.active_party;
+    const signerEmail = (party && party.email) || (verification && verification.email) || '';
+    const verificationToken = (verification && verification.token) || null;
+    const formValues = {};
+    let emailInput = null;
+    let sigPad = null;
+
+    const card = document.createElement('div');
+    card.className = 'signer-card';
+
+    const head = document.createElement('div');
+    head.className = 'signer-head';
+    head.innerHTML = `
+      <div class="signer-eyebrow">${esc(d.jurisdiction || 'Electronic Execution')}</div>
+      <h1 class="signer-title">${esc(d.title || 'Legal Document')}</h1>
+      <div class="signer-meta">
+        <span>Document ${esc(doc.id)}</span>
+        <span>Expires ${doc.expires_at ? esc(new Date(doc.expires_at * 1000).toUTCString().replace('GMT', 'UTC')) : '—'}</span>
+        ${party ? `<span>Signing as ${esc(party.role)}</span>` : ''}
+      </div>`;
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'signer-body';
+
+    let hasSignature = false;
+    (spec.sections || []).forEach(s => {
+      const sec = document.createElement('div');
+      sec.className = 'signer-section';
+
+      if (s.type === 'static') {
+        sec.appendChild(renderStatic(s.content));
+      } else if (s.type === 'form') {
+        (s.fields || []).forEach(f => {
+          const el = renderField(f);
+          const control = el.querySelector('input, select');
+          if (f.type === 'datetime-auto') {
+            formValues[f.name] = control.value;
+          } else {
+            control.addEventListener('input', e => { formValues[f.name] = e.target.value; });
+          }
+          sec.appendChild(el);
+        });
+      } else if (s.type === 'signature') {
+        hasSignature = true;
+        const label = document.createElement('div');
+        label.className = 'section-label';
+        label.textContent = s.signer_label || 'Signature';
+        sec.appendChild(label);
+
+        (s.fields || []).forEach(f => {
+          const el = renderField(f);
+          const control = el.querySelector('input');
+          if (f.type === 'datetime-auto') formValues[f.name] = control.value;
+          sec.appendChild(el);
+        });
+
+        if (d.legal_footer) {
+          const footer = document.createElement('p');
+          footer.className = 'legal-footer';
+          footer.textContent = d.legal_footer;
+          sec.appendChild(footer);
+        }
+
+        const pad = document.createElement('canvas');
+        pad.className = 'sig-pad';
+        sec.appendChild(pad);
+        sigPad = initSigPad(pad);
+
+        const actions = document.createElement('div');
+        actions.className = 'sig-actions';
+        const hint = document.createElement('span');
+        hint.className = 'sig-hint';
+        hint.textContent = 'Draw signature above';
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'btn-danger-ghost';
+        clear.textContent = 'Clear';
+        clear.addEventListener('click', () => sigPad.clear());
+        actions.append(hint, clear);
+        sec.appendChild(actions);
+      }
+      body.appendChild(sec);
+    });
+
+    if (!signerEmail) {
+      const group = document.createElement('div');
+      group.className = 'form-group';
+      const label = document.createElement('label');
+      label.textContent = 'Signer Email *';
+      const input = document.createElement('input');
+      input.type = 'email';
+      input.className = 'form-control';
+      input.required = true;
+      group.append(label, input);
+      emailInput = input;
+      body.appendChild(group);
+    }
+
+    const submit = document.createElement('button');
+    submit.type = 'button';
+    submit.className = 'btn';
+    submit.style.cssText = 'width: 100%; padding: 0.9rem 2rem; margin-top: 1rem;';
+    submit.textContent = 'Sign & Execute';
+
+    submit.addEventListener('click', async () => {
+      const email = (emailInput ? emailInput.value.trim() : signerEmail) || '';
+      if (!email) {
+        submit.textContent = 'Signer email required';
+        setTimeout(() => { submit.textContent = 'Sign & Execute'; }, 2000);
+        return;
+      }
+      if (hasSignature && sigPad && !sigPad.hasSignature()) {
+        submit.textContent = 'Signature required';
+        setTimeout(() => { submit.textContent = 'Sign & Execute'; }, 2000);
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Recording Execution…';
+      audit('submit', { document_id: doc.id });
+      try {
+        const payload = {
+          email,
+          fields: formValues,
+          signature_svg: hasSignature && sigPad ? sigPad.toSVG() : '',
+          fingerprint: await fingerprint(),
+          auditTrail
+        };
+        if (verificationToken) payload.verification_token = verificationToken;
+        const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Submission failed');
+        audit('submit_success', { submission_id: data.submission_id, audit_hash: data.audit_hash });
+        showSuccess(doc, data);
+      } catch (e) {
+        submit.disabled = false;
+        submit.textContent = 'Sign & Execute';
+        errorView('Submission Failed', e.message);
+      }
+    });
+
+    body.appendChild(submit);
+    card.appendChild(body);
+
+    appContainer.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'container';
+    const signer = document.createElement('div');
+    signer.className = 'signer';
+    signer.appendChild(card);
+    wrap.appendChild(signer);
+    appContainer.appendChild(wrap);
+  }
+
+  function verifyStep(doc, prefillEmail) {
+    setView(`
+      <div class="signer-card">
+        <div class="signer-head">
+          <div class="signer-eyebrow">Email Verification Required</div>
+          <h1 class="signer-title">Verify Your Email</h1>
+          <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">A one-time verification link is required before this document can be executed.</p>
+        </div>
+        <div class="signer-body">
+          <div class="form-group">
+            <label>Signer Email *</label>
+            <input type="email" class="form-control" id="verify-email" value="${esc(prefillEmail || '')}">
+          </div>
+          <button class="btn" id="verify-send" style="width: 100%; padding: 0.9rem 2rem;">Send Verification</button>
+        </div>
+      </div>`);
+
+    document.getElementById('verify-send').addEventListener('click', async () => {
+      const email = document.getElementById('verify-email').value.trim();
+      if (!email) return;
+      const btn = document.getElementById('verify-send');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      audit('email_verify_request', { email });
+      try {
+        const redirect_url = `${window.location.origin}${window.location.pathname}?slug=${encodeURIComponent(slug)}`;
+        const res = await fetch(`${API_BASE}/api/verify-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, email, redirect_url })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not send verification email');
+        setView(`
+          <div class="signer-card">
+            <div class="signer-head">
+              <div class="signer-eyebrow">Check Your Inbox</div>
+              <h1 class="signer-title">Verification Sent</h1>
+              <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">A verification link has been sent to <strong>${esc(email)}</strong>. It expires in one hour.</p>
+            </div>
+          </div>`);
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Send Verification';
+        errorView('Verification Failed', e.message);
+      }
+    });
+  }
+
+  loadingView();
+  audit('page_open');
+
+  const urlParams = new URLSearchParams(window.location.search);
   fetch(`${API_BASE}/api/doc/${slug}`)
-    .then(r => {
-      if (!r.ok) throw new Error('Document not found or expired. The link may have been revoked or completed.');
-      return r.json();
+    .then(async r => {
+      if (r.ok) return r.json();
+      let msg = 'Document not found or expired. The link may have been revoked or completed.';
+      try {
+        const j = await r.json();
+        if (j.error) msg = j.error;
+      } catch (e) {}
+      throw new Error(msg);
     })
     .then(doc => {
-      spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
-      
-      // Render Signer UI here (Keeping it simple for this redesign pass, as requested to focus on admin/home)
-      appContainer.innerHTML = `
-        <div class="container" style="max-width:800px; padding: 4rem 2rem;">
-          <div style="background:#fff; border-radius:4px; padding:4rem; color:#1a1a1a; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-            <div style="text-align:center; margin-bottom: 3rem;">
-              <h1 id="doc-title" style="font-family:'Playfair Display', serif; font-size:2rem; text-transform:uppercase; margin:0 0 1rem; letter-spacing:0.02em;">${spec.document?.title || 'Legal Document'}</h1>
-              <div id="doc-jurisdiction" style="font-size:0.85rem; color:#666; font-family:'Fira Code', monospace;">${spec.document?.jurisdiction ? `Jurisdiction: ${spec.document.jurisdiction}` : ''}</div>
-            </div>
-            
-            <div id="form-container" style="line-height:1.8; font-size:1rem; color:#333;">
-              <p style="text-align:center; color:#666;">Document content loaded successfully.<br>Signer flow rendering is maintained by external components.</p>
-            </div>
-          </div>
-        </div>
-      `;
+      const token = urlParams.get('token');
+      const emailParam = urlParams.get('email');
+      if (doc.require_verification && !token) {
+        verifyStep(doc, (doc.active_party && doc.active_party.email) || '');
+        return;
+      }
+      buildSigner(doc, token && emailParam ? { token, email: emailParam } : null);
     })
-    .catch(err => {
-      appContainer.innerHTML = `
-        <div class="container" style="display:flex; justify-content:center; padding: 4rem 2rem;">
-          <div style="background:var(--bg-surface); border:1px solid var(--error); border-radius:12px; padding:3rem; max-width:600px; width:100%; text-align:center;">
-            <h2 style="margin:0 0 0.5rem; color:var(--error);">Access Denied</h2>
-            <p style="color:var(--text-muted); margin:0;">${err.message}</p>
-          </div>
-        </div>
-      `;
-    });
+    .catch(err => errorView('Access Denied', err.message));
 }
 </script>
 </body>

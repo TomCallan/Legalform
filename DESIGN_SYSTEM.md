@@ -1,74 +1,66 @@
-# MONARCH Site Styleguide
+# Legalform Design System
 
-## Core Philosophy
-The site employs a retro, terminal-inspired, maximalist aesthetic with a distinct dark theme. It combines stark contrasts (black, white, and subtle greys) with technical, utilitarian typography to emulate early tech systems, trading terminals, and operational dashboards.
+Legalform follows the **MONARCH** design language: *Apple meets capital markets meets Anduril*.
 
-## Color Palette
-The color scheme relies entirely on high contrast defaults. Do not use Tailwind default colors without explicit mapping.
-- **Background:** `#000` (Defined as `--bg` in `globals.css`)
-- **Foreground:** `#fff` (Defined as `--fg` in `globals.css` - used for primary text and major borders)
-- **Lines/Borders:** `#2b2b2b` (Defined as `--line` in `globals.css` - used heavily for grid lines and panels)
-- **Accents:** 
-  - Grey text (`#777`, `#888`, `#999`, `#b9b9b9`, `#ccc`) for metadata, labels, and secondary reading.
-  - `#f1c48f` for specific status highlights (e.g. `desktopFeedPanelStatus`).
-  - Dark grey `#111` for repeating gradients or subtle backgrounds.
+- **Apple** — clean sans-serif type, generous whitespace, hairline separators, muted secondary text.
+- **Capital markets** — tabular numerals, small uppercase readouts with wide tracking, thin rule lines separating rows, precise information density.
+- **Anduril** — sharp (never rounded), high-contrast black/white, uppercase technical labels, no decoration that doesn't carry information.
+
+Hard rules:
+
+- **White background, black text.** Light theme only. There is no dark theme and no theme toggle.
+- **Text is left-aligned** throughout.
+- **One typeface:** Zen Kaku Gothic New (`400`, `500`, `600`, `700`, `900`), loaded from Google Fonts. There is no mono font and no serif font — the previous retro/dot-matrix aesthetic is retired.
+- **Remove what isn't used.** No dead code, no unused design constructs.
+
+## Design Tokens
+
+All colors come from these tokens — never invent new colors inline.
+
+| Token | Value | Usage |
+|---|---|---|
+| `--bg-base` | `#ffffff` | Page background |
+| `--bg-surface` | `#fafafa` | Expanded detail background, pane headers |
+| `--bg-surface-hover` | `#f5f5f5` | Row hover, form input resting background |
+| `--border-subtle` | `#e5e5e5` | Hairline separators, borders, inactive underlines |
+| `--border-active` | `#000000` | Focus / active border |
+| `--text-main` | `#000000` | Primary text, primary borders, primary buttons |
+| `--text-muted` | `#6e6e73` | Secondary text, labels, metadata |
+| `--accent-brand` | `#000000` | Link and primary-action color |
+| `--success` | `#0f7b3d` | Form status — success |
+| `--error` | `#c02424` | Form status — error |
 
 ## Typography
-The UI pairs two main fonts to separate human-readable prose from technical readouts.
 
-1. **Primary Font (Prose & Body text):** `Zen Kaku Gothic New`, `sans-serif`
-   Used for: Body copy, long-form reading, primary page titles (e.g. `heroTitle`).
-   
-2. **Technical Accent Font:** `var(--font-dot-gothic)`, `monospace`
-   Used for: System labels, timestamps, metadata, component boundaries, button text. Usually paired with `uppercase` and moderate-to-high letter spacing (`0.1em` to `0.14em`).
+| Role | Size | Weight | Tracking | Case | Color |
+|---|---|---|---|---|---|
+| Display title (`h1`) | `clamp(40px, 6.4vw, 104px)` | 900 | `-0.03em` | UPPERCASE | `--text-main` |
+| Eyebrow / section label | `clamp(10px, 0.75vw, 11px)` | 600 | `0.24em` | UPPERCASE | `--text-muted` |
+| Deck / body | `clamp(13px, 0.95vw, 15px)` | 400–500 | normal | sentence | `--text-muted` |
+| Wordmark | `1rem` | 700 | `0.22em` | UPPERCASE | `--text-main` |
+| Footer | `clamp(9px, 0.7vw, 11px)` | 600 | `0.2em` | UPPERCASE | `--text-muted` |
 
-## Layout Patterns
+Numerics and readouts use `font-variant-numeric: tabular-nums` so columns align (document ids, counts, audit hashes).
 
-### Project Dimensions & Gutter
-- **Max Width:** `1360px`
-- **Dynamic Gutter:** `var(--gutter)` -> `clamp(18px, 4vw, 56px)`
+## Components
 
-### The `retroPage` Wrapper
-Acts as the central scaffold, featuring a repeating linear gradient background to simulate scanlines/terminal grids:
-- Displays vertical dividing lines.
-- Horizontal repeating `#111` lines explicitly patterned every 38px/39px.
+- **Buttons** — primary: black background, white text, 1px black border, uppercase `0.14em` tracking, sharp corners; hover inverts to white bg / black text. Outline: transparent, black text, `--border-subtle` border; hover fills black border. Danger ghost: `--error` border/text, fills `--error` on hover. Disabled: `opacity: 0.4`.
+- **Text links** — hairline underline (`text-decoration-color: var(--border-subtle)`, offset 4px, thickness 1px); on hover the underline fills `--text-main`.
+- **Form controls** — inputs sit on `#f5f5f5` with a transparent border; on focus the border becomes `--border-active` and background `#fff`. Uppercase labels with wide tracking.
+- **Tables** — uppercase muted headers separated from the body by a 1px black rule; hairline row separators; `#f5f5f5` row hover; tabular numerals.
+- **Status badges** — 1px bordered pills; `--success` for active/completed, `--error` for closed/failed, muted for pending.
+- **Sidebar nav** — bordered rail; active item gets a black fill (`--text-main` background, white text).
+- **Modals** — white card, 1px `--border-subtle` border, `0 24px 60px rgba(0,0,0,0.12)` shadow, on a `rgba(0,0,0,0.4)` blurred backdrop.
+- **Spinner** — square (no radius), `--border-subtle` frame with `--text-main` top edge, linear spin.
 
-### Key Components
+## Layouts
 
-#### Desktop Ops Brief (`.desktopOpsBrief`)
-A 4-column compact data display at the header/sidebar area.
-- Uses strict borders (`var(--line)` and `#222`).
-- Relies heavily on the technical tracking font for labels and huge, prominent `<strong>` numbers.
+- **Landing page (`index.html`)** — sticky header with wordmark + actions; hero with uppercase display title, muted deck (`max-width: 46ch`); demo window and features as hairline-bordered panels. The page scrolls normally.
+- **Signer flow (`index.html?slug=…`)** — a document execution view (app page, scrolls normally). Bordered card: uppercase jurisdiction eyebrow, 900-weight uppercase title, tabular meta row (document id / expiry / signing role), static clause sections with uppercase section labels, form fields, signature pad (bordered square canvas), statutory `legal_footer` between the form and the signature, black `Sign & Execute` button, and a confirmation view showing the SHA-256 audit digest in tabular numerals.
+- **Workspace (`admin.html`)** — sidebar rail (black fill for the active item) + top bar + scrolling content area; ledger table and visual/YAML builder split panes.
 
-#### Desktop Feed Panel (`.desktopFeedPanel`)
-Horizontal data ticker look.
-- 3 columns, solid `#000` background.
-- Connect buttons with `cursor: pointer` and simple inverse hover states (white bg, black text).
+## Do / Don't
 
-#### Grid / Feed System (`.feedGrid`)
-- Dense grid layout (`grid-auto-flow: dense`).
-- Dynamic column spans (`data-col-span="2"`, `data-col-span="3"`) to build mosaic-like content walls.
-- Items are strictly boxed with `var(--line)`.
+**Do:** use tokens; use `clamp()`; left-align; use hairlines over solid fills; uppercase labels with wide tracking; tabular numerals; sharp corners; delete unused code.
 
-#### Hero Section (`.heroGrid`, `.heroCopy`)
-- Extreme typography: up to `74px` titles (`heroTitle`) and `170px` for giant nameplates.
-- Japanese characters (`.jp`) often used alongside English to emphasize a dystopian/cyberpunk tech influence. Writing mode `vertical-rl` is occasionally used for right rails (`.heroRail`).
-
-## Interaction Elements
-
-### Buttons and Tags
-- **Base Style:** Transparent background, `1px solid` border, uppercase, high letter spacing.
-- **Hover/Active:** Direct inversion—background becomes `#fff` or `#000`, text flips contrast.
-- Uses `transition: background 0.2s ease, color 0.2s ease` to ensure sharp but non-jarring feedback.
-
-### Modals (`.modalOverlay`)
-- Deep blur backdrop (`backdrop-filter: blur(4px)`) atop `rgba(0, 0, 0, 0.85)`.
-- Center-aligned floating panel with stark white borders and heavy drop shadow.
-
-### Forms
-- High-contrast inputs `.formInput` (`#111` background with `#333` border).
-- Status hints use semi-transparent distinct colors: Success (`#4ade80`), Error (`#f87171`).
-
-## Spacing & Responsive Behaviors
-- Use `clamp()` extensively to keep elements fluid matching viewport width/height seamlessly (e.g., `clamp(18px, 2.2vh, 32px)`).
-- Collapse large multi-column grids (like the Feed) into fewer columns via simple media queries: `@media (max-width: 1200px)` drops feed to 2 columns.
+**Don't:** reintroduce dark mode, the dot-matrix font, tickers/feeds, scanline/gradient backgrounds, decorative non-Latin text, serif or monospace type, or rounded corners.
