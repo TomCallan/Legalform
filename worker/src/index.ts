@@ -75,24 +75,53 @@ async function logAudit(
   ).run();
 }
 
+// ── Access resolution ─────────────────────────────────────
+// Admin keys see everything. Workspace keys (self-service, scoped
+// per-workspace via sha256) see only documents they deployed.
+type Access = { admin: boolean; scopeHash: string | null };
+
+async function resolveAccess(
+  db: D1Database,
+  key: string,
+  adminKey?: string
+): Promise<Access> {
+  if (!adminKey) return { admin: true, scopeHash: null };
+  if (key && key === adminKey) return { admin: true, scopeHash: null };
+
+  const hash = await sha256(key);
+  const ws = await db
+    .prepare('SELECT id FROM workspaces WHERE api_key_hash = ?')
+    .bind(hash)
+    .first<{ id: string }>();
+  if (ws) return { admin: false, scopeHash: hash };
+
+  return { admin: false, scopeHash: null };
+}
+
 // ── Admin: List All Documents ──────────────────────────────
 app.get('/api/documents/list', async (c) => {
   const authHeader = c.req.header('Authorization');
   const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const adminKey = c.env.ADMIN_API_KEY;
+  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
 
-  if (adminKey && apiKey !== adminKey) {
+  if (!access.admin && !access.scopeHash) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  const docs = await c.env.DB.prepare(
-    `SELECT d.id, d.slug, d.status, d.expires_at, d.created_at, 
-            COUNT(s.id) AS submission_count 
-     FROM documents d 
-     LEFT JOIN submissions s ON d.id = s.document_id 
-     GROUP BY d.id, d.slug, d.status, d.expires_at, d.created_at 
-     ORDER BY d.created_at DESC`
-  ).all();
+  const base = `
+    SELECT d.id, d.slug, d.status, d.expires_at, d.created_at, 
+           COUNT(s.id) AS submission_count 
+    FROM documents d 
+    LEFT JOIN submissions s ON d.id = s.document_id 
+    GROUP BY d.id, d.slug, d.status, d.expires_at, d.created_at 
+  `;
+  const sql = access.admin
+    ? `${base} ORDER BY d.created_at DESC`
+    : `${base} HAVING MAX(d.owner_api_key_hash) = ? ORDER BY d.created_at DESC`;
+
+  const docs = access.admin
+    ? await c.env.DB.prepare(sql).all()
+    : await c.env.DB.prepare(sql).bind(access.scopeHash).all();
 
   return c.json({ documents: docs.results });
 });
@@ -101,16 +130,19 @@ app.get('/api/documents/list', async (c) => {
 app.post('/api/doc/:slug/close', async (c) => {
   const authHeader = c.req.header('Authorization');
   const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const adminKey = c.env.ADMIN_API_KEY;
+  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
 
-  if (adminKey && apiKey !== adminKey) {
+  if (!access.admin && !access.scopeHash) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
   const slug = c.req.param('slug');
-  const result = await c.env.DB.prepare(
-    'UPDATE documents SET status = ? WHERE slug = ? OR id = ?'
-  ).bind('closed', slug, slug).run();
+  const sql = access.admin
+    ? 'UPDATE documents SET status = ? WHERE slug = ? OR id = ?'
+    : 'UPDATE documents SET status = ? WHERE (slug = ? OR id = ?) AND owner_api_key_hash = ?';
+  const result = access.admin
+    ? await c.env.DB.prepare(sql).bind('closed', slug, slug).run()
+    : await c.env.DB.prepare(sql).bind('closed', slug, slug, access.scopeHash).run();
 
   if (result.meta.changes === 0) {
     return c.json({ error: 'Document or slug not found' }, 404);
@@ -123,9 +155,9 @@ app.post('/api/doc/:slug/close', async (c) => {
 app.post('/api/doc/:slug/reopen', async (c) => {
   const authHeader = c.req.header('Authorization');
   const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const adminKey = c.env.ADMIN_API_KEY;
+  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
 
-  if (adminKey && apiKey !== adminKey) {
+  if (!access.admin && !access.scopeHash) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
@@ -134,9 +166,12 @@ app.post('/api/doc/:slug/reopen', async (c) => {
   const extendDays = body.extend_days || 30;
   const newExpiresAt = Math.floor(Date.now() / 1000) + (extendDays * 86400);
 
-  const result = await c.env.DB.prepare(
-    'UPDATE documents SET status = ?, expires_at = ? WHERE slug = ? OR id = ?'
-  ).bind('active', newExpiresAt, slug, slug).run();
+  const sql = access.admin
+    ? 'UPDATE documents SET status = ?, expires_at = ? WHERE slug = ? OR id = ?'
+    : 'UPDATE documents SET status = ?, expires_at = ? WHERE (slug = ? OR id = ?) AND owner_api_key_hash = ?';
+  const result = access.admin
+    ? await c.env.DB.prepare(sql).bind('active', newExpiresAt, slug, slug).run()
+    : await c.env.DB.prepare(sql).bind('active', newExpiresAt, slug, slug, access.scopeHash).run();
 
   if (result.meta.changes === 0) {
     return c.json({ error: 'Document or slug not found' }, 404);
@@ -145,26 +180,28 @@ app.post('/api/doc/:slug/reopen', async (c) => {
   return c.json({ success: true, message: `Document slug '${slug}' has been reopened and re-upped for ${extendDays} days.`, expires_at: newExpiresAt });
 });
 
-// ── Admin: Workspaces ──────────────────────
+// ── Workspaces (self-service creation) ──────────────────
 app.post('/api/workspaces', async (c) => {
   const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
+  const presentedKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
   const body = await c.req.json();
-  const effectiveKey = apiKey || body.api_key;
-
-  const adminKey = c.env.ADMIN_API_KEY;
-  if (adminKey && effectiveKey !== adminKey) {
-    return c.json({ error: 'Unauthorized: Invalid API Key' }, 401);
-  }
 
   const { id, name } = body;
   if (!id || !name) {
     return c.json({ error: 'Missing required fields: id, name' }, 400);
   }
 
+  // The workspace access key comes from the body (web UI) or the
+  // presented key (CLI). It grants scoped access to this workspace's docs.
+  const wsKey = (body.api_key || presentedKey || '').trim();
+  if (!wsKey) {
+    return c.json({ error: 'Missing required field: api_key' }, 400);
+  }
+
+  const wsHash = await sha256(wsKey);
   await c.env.DB.prepare(
-    `INSERT INTO workspaces (id, name) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name`
-  ).bind(id, name).run();
+    `INSERT INTO workspaces (id, name, api_key_hash) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, api_key_hash=excluded.api_key_hash`
+  ).bind(id, name, wsHash).run();
 
   return c.json({ success: true, workspace: { id, name } });
 });
@@ -176,8 +213,8 @@ app.post('/api/documents', async (c) => {
   const body = await c.req.json();
   const effectiveKey = apiKey || body.api_key;
 
-  const adminKey = c.env.ADMIN_API_KEY;
-  if (adminKey && effectiveKey !== adminKey) {
+  const access = await resolveAccess(c.env.DB, effectiveKey || '', c.env.ADMIN_API_KEY);
+  if (!access.admin && !access.scopeHash) {
     return c.json({ error: 'Unauthorized: Invalid API Key' }, 401);
   }
 
@@ -583,17 +620,22 @@ app.post('/api/submit/:slug', async (c) => {
 app.get('/api/export/:doc_id', async (c) => {
   const authHeader = c.req.header('Authorization');
   const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const adminKey = c.env.ADMIN_API_KEY;
+  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
 
-  if (adminKey && apiKey !== adminKey) {
+  if (!access.admin && !access.scopeHash) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
   const docId = c.req.param('doc_id');
 
-  const doc = await c.env.DB.prepare(
-    'SELECT * FROM documents WHERE id = ? OR slug = ?'
-  ).bind(docId, docId).first();
+  const docSql = access.admin
+    ? 'SELECT * FROM documents WHERE id = ? OR slug = ?'
+    : 'SELECT * FROM documents WHERE (id = ? OR slug = ?) AND owner_api_key_hash = ?';
+  const doc = access.admin
+    ? await c.env.DB.prepare(docSql).bind(docId, docId).first()
+    : await c.env.DB.prepare(docSql).bind(docId, docId, access.scopeHash).first();
+
+  if (!doc) return c.json({ error: 'Document not found' }, 404);
 
   const submissions = await c.env.DB.prepare(
     'SELECT * FROM submissions WHERE document_id = ? ORDER BY submitted_at DESC'
@@ -615,51 +657,40 @@ app.get('/api/export/:doc_id', async (c) => {
 app.delete('/api/doc/:id', async (c) => {
   const authHeader = c.req.header('Authorization');
   const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const adminKey = c.env.ADMIN_API_KEY;
+  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
 
-  if (adminKey && apiKey !== adminKey) {
+  if (!access.admin && !access.scopeHash) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
   const id = c.req.param('id');
 
+  // Ownership gate: resolve the real document id before purging
+  const docSql = access.admin
+    ? 'SELECT id FROM documents WHERE id = ? OR slug = ?'
+    : 'SELECT id FROM documents WHERE (id = ? OR slug = ?) AND owner_api_key_hash = ?';
+  const owned = access.admin
+    ? await c.env.DB.prepare(docSql).bind(id, id).first<{ id: string }>()
+    : await c.env.DB.prepare(docSql).bind(id, id, access.scopeHash).first<{ id: string }>();
+
+  if (!owned) return c.json({ error: 'Document or slug not found' }, 404);
+  const docId = owned.id;
+
   // Fetch submissions to purge from R2
   const subs = await c.env.DB.prepare(
     'SELECT id FROM submissions WHERE document_id = ?'
-  ).bind(id).all();
+  ).bind(docId).all();
 
   for (const sub of (subs.results || [])) {
-    const r2Key = `submissions/${id}/${sub.id}.json`;
+    const r2Key = `submissions/${docId}/${sub.id}.json`;
     try { await c.env.R2.delete(r2Key); } catch(e) {}
   }
 
-  await c.env.DB.prepare('DELETE FROM submissions WHERE document_id = ?').bind(id).run();
-  await c.env.DB.prepare('DELETE FROM audit_logs WHERE document_id = ?').bind(id).run();
-  await c.env.DB.prepare('DELETE FROM documents WHERE id = ? OR slug = ?').bind(id, id).run();
+  await c.env.DB.prepare('DELETE FROM submissions WHERE document_id = ?').bind(docId).run();
+  await c.env.DB.prepare('DELETE FROM audit_logs WHERE document_id = ?').bind(docId).run();
+  await c.env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(docId).run();
 
   return c.json({ success: true, message: `Document '${id}' and all R2 archived objects purged.` });
-});
-
-// ── Admin: Force Close Document / Slug ───────────────────────
-app.post('/api/doc/:slug/close', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const adminKey = c.env.ADMIN_API_KEY;
-
-  if (adminKey && apiKey !== adminKey) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  const slug = c.req.param('slug');
-  const result = await c.env.DB.prepare(
-    'UPDATE documents SET status = ? WHERE slug = ? OR id = ?'
-  ).bind('closed', slug, slug).run();
-
-  if (result.meta.changes === 0) {
-    return c.json({ error: 'Document or slug not found' }, 404);
-  }
-
-  return c.json({ success: true, message: `Document slug '${slug}' has been force closed.` });
 });
 
 // ── Public: Single Submission Audit Verification ───────────

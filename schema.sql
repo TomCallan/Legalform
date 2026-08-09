@@ -104,5 +104,6 @@ CREATE INDEX IF NOT EXISTS idx_doc_parties_seq ON document_parties(document_id, 
 CREATE TABLE IF NOT EXISTS workspaces (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    api_key_hash TEXT,            -- SHA-256 of the workspace access key
     created_at INTEGER DEFAULT (unixepoch())
 );

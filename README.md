@@ -160,10 +160,12 @@ Add the MCP server to your agent configuration (`mcp_servers` or `.claude.json`)
 ## Web Admin Portal (`/admin.html`)
 
 Access the web admin portal at **`https://your-app.pages.dev/admin.html`**:
-1. Authenticate using your secret `ADMIN_API_KEY`.
+1. Authenticate using your secret `ADMIN_API_KEY` — or create a self-service workspace key for scoped access.
 2. View all active and closed document slugs.
 3. Click **Export JSON** next to any document to download its submission records.
 4. Click **Revoke Slug** to immediately block access to an active signing link.
+
+**Workspaces:** The **Create New Workspace** flow is self-service. Anyone can create a workspace with its own access key; that key grants **scoped** access — it can list, export, revoke, reopen, and delete only the documents that were deployed using that same key. Documents deployed by one workspace key are isolated from all other workspaces. The `ADMIN_API_KEY` retains full access to everything.
 
 ---
 
