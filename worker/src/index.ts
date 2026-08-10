@@ -10,6 +10,13 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+// Always respond with JSON, even on unexpected errors, so clients
+// never receive a plain-text 500 body.
+app.onError((err, c) => {
+  console.error('Unhandled error:', err);
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
+
 // Enable CORS for all routes (for Pages dynamic form interactions)
 app.use('*', cors());
 
@@ -254,7 +261,7 @@ app.post('/api/documents', async (c) => {
       await c.env.DB.prepare(
         `INSERT INTO document_parties (id, document_id, party_id, role, email, sequence, party_token, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(document_id, party_token) DO UPDATE SET status=excluded.status`
+         ON CONFLICT(party_token) DO UPDATE SET status=excluded.status`
       ).bind(
         crypto.randomUUID(), id, pId, pRole, pEmail, pSeq, pToken, pInitialStatus
       ).run();
