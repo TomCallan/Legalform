@@ -204,6 +204,11 @@
       border-color: var(--border-active);
     }
     .form-control[readonly] { cursor: default; }
+    textarea.form-control {
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+    }
     
     .legal-footer {
       margin: 2rem 0;
@@ -772,7 +777,7 @@ async function renderDashboard() {
           subDataHtml = subs.map((s, idx) => {
             let fieldsObj = {};
             try { fieldsObj = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {}); } catch(e) {}
-            const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<span style="display:inline-block; margin-right:1rem;"><strong>${esc(k)}:</strong> ${esc(v)}</span>`).join('');
+            const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<div style="margin-bottom:0.5rem; white-space:pre-wrap; word-break:break-word;"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
             
             const subPayload = JSON.stringify({
               submission_id: s.id,

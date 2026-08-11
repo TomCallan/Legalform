@@ -245,7 +245,7 @@ def build_pdf_bytes(payload: dict) -> bytes:
                     fname = f.get("name")
                     flabel = f.get("label", fname)
                     val = str(fields.get(fname, f.get("value", "")))
-                    formatted_val = val.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br/>')
+                    formatted_val = val.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br/>').replace('  ', '&nbsp;&nbsp;')
                     ftable = Table([[Paragraph(str(flabel), header_label_style), Paragraph(formatted_val, cell_style)]], colWidths=[180, 350], splitByRow=1)
                     ftable.setStyle(TableStyle([
                         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
