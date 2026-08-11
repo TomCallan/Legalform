@@ -5,6 +5,8 @@
 (function () {
   'use strict';
 
+  var currentTemplateName = 'Tom Statement';
+
   /* Starting templates — mirror templates/*.yaml (keep in sync). */
   const TEMPLATES = {
     'Mutual NDA': `document:
@@ -418,7 +420,6 @@ sections:
 
   let state = blankState();
   let container = null;
-  let currentTemplateName = 'Tom Statement';
 
   /* spec <-> state */
   function cleanField(f) {
