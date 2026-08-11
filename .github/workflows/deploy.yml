@@ -20,6 +20,9 @@ jobs:
       - name: Install Worker Dependencies
         run: cd worker && npm ci
 
+      - name: Run Worker Tests
+        run: cd worker && npm test
+
       - name: Deploy Worker to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:

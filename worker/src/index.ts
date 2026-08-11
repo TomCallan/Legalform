@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import type { Color, PDFFont } from 'pdf-lib';
 
 type Bindings = {
   DB: D1Database;
@@ -31,6 +33,31 @@ async function sha256(message: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function safeParseJson(input: string): unknown {
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
+}
+
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 // ── Public: Deploy / Store Document Spec ──────────────────────
@@ -223,6 +250,96 @@ app.get('/api/export/:doc_id', async (c) => {
     document_id: doc.id,
     spec: typeof doc.spec === 'string' ? JSON.parse(doc.spec as string) : doc.spec,
     submissions: submissions.results
+  });
+});
+
+// ── Public: Render PDF Certificate / Compiled Agreement ────
+app.post('/api/render-pdf', async (c) => {
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const submissionId = String(body.submission_id ?? 'unknown');
+  const docId = String(body.document_id ?? body.slug ?? 'unknown');
+  const specRaw = typeof body.spec === 'string' ? safeParseJson(body.spec) : (body.spec ?? {});
+  const spec = (specRaw && typeof specRaw === 'object' ? specRaw : {}) as Record<string, any>;
+  const docTitle = String(spec.document?.title ?? docId);
+  const signerName = String(body.signer_name ?? body.name ?? 'Signer');
+  const signerEmail = String(body.signer_email ?? body.email ?? '');
+  const fields = (body.fields && typeof body.fields === 'object' ? body.fields : {}) as Record<string, unknown>;
+  const signatureData = String(body.signature_data ?? '');
+  const auditHash = String(body.audit_hash ?? '');
+  const submittedAt = typeof body.submitted_at === 'number' ? body.submitted_at : 0;
+
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([612, 792]); // US Letter portrait
+  const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const courier = await pdfDoc.embedFont(StandardFonts.Courier);
+
+  const margin = 56;
+  const maxWidth = 612 - margin * 2;
+  const ink = rgb(0.09, 0.1, 0.13);
+  const muted = rgb(0.45, 0.47, 0.52);
+  let y = 792 - margin;
+
+  const centered = (text: string, font: PDFFont, size: number, color: Color = ink) => {
+    page.drawText(text, { x: (612 - font.widthOfTextAtSize(text, size)) / 2, y, size, font, color });
+  };
+  const drawLine = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
+    page.drawText(text, { x: margin, y, size: opts.size ?? 11, font: opts.font ?? helv, color: opts.color ?? ink });
+    y -= opts.gap ?? 16;
+  };
+  const drawWrapped = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
+    for (const line of wrapText(text, opts.font ?? helv, opts.size ?? 11, maxWidth)) drawLine(line, opts);
+  };
+  const rule = () => {
+    page.drawLine({ start: { x: margin, y }, end: { x: 612 - margin, y }, thickness: 0.7, color: muted });
+    y -= 14;
+  };
+
+  centered('CERTIFICATE OF EXECUTION', helvBold, 19, ink);
+  y -= 6;
+  centered('LegalForm — Court-Enforceable Signature Infrastructure', helv, 8.5, muted);
+  y -= 14;
+  rule();
+
+  drawLine(docTitle.toUpperCase(), { font: helvBold, size: 12, gap: 20 });
+  drawLine(`Document ID: ${docId}`, { size: 10.5, gap: 8 });
+  drawLine(`Signer: ${signerName}${signerEmail ? ` <${signerEmail}>` : ''}`, { size: 10.5, gap: 8 });
+  drawLine(`Submitted: ${submittedAt ? new Date(submittedAt * 1000).toUTCString() : 'n/a'}`, { size: 10.5, gap: 16 });
+
+  const fieldEntries = Object.entries(fields);
+  if (fieldEntries.length > 0) {
+    drawLine('Executed Terms / Fields', { font: helvBold, size: 11, gap: 10 });
+    for (const [k, v] of fieldEntries) {
+      const val = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
+      drawWrapped(`${k}: ${val}`, { size: 10, gap: 13 });
+    }
+    y -= 6;
+  }
+
+  if (signatureData) {
+    drawLine('Signature: Captured (electronic) — see exported JSON payload for raw data', { size: 10, gap: 16 });
+  }
+
+  drawLine('Cryptographic Audit — SHA-256 Digest', { font: helvBold, size: 11, gap: 10 });
+  const hashChunks = auditHash.match(/.{1,76}/g) ?? [auditHash || 'n/a'];
+  for (const chunk of hashChunks) {
+    drawLine(chunk, { font: courier, size: 9, gap: 14 });
+  }
+
+  y = 40;
+  centered('Generated by LegalForm — verify this digest against the sender ledger export', helv, 8, muted);
+
+  const pdfBytes = new Uint8Array(await pdfDoc.save());
+  const subShortId = submissionId.slice(0, 8);
+  return c.body(pdfBytes, 200, {
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="executed-agreement-${subShortId}.pdf"`
   });
 });
 
