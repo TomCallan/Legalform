@@ -418,6 +418,7 @@ sections:
 
   let state = blankState();
   let container = null;
+  let currentTemplateName = 'Tom Statement';
 
   /* spec <-> state */
   function cleanField(f) {
