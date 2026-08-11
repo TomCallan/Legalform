@@ -305,7 +305,8 @@
 
 <script>
 const params = new URLSearchParams(window.location.search);
-const API_BASE = window.LEGALFORM_API_BASE || params.get('api_base') || localStorage.getItem('LEGALFORM_API_BASE') || '';
+const DEFAULT_API_BASE = window.location.hostname.includes('pages.dev') ? 'https://legalform-api.tomcallan0.workers.dev' : '';
+const API_BASE = window.LEGALFORM_API_BASE || params.get('api_base') || localStorage.getItem('LEGALFORM_API_BASE') || DEFAULT_API_BASE;
 const slug = params.get('slug') || 'my-nda';
 
 const queryPrefills = {};
@@ -374,7 +375,23 @@ async function loadDocument() {
   }
   
   try {
-    const doc = await safeFetchJson(`${API_BASE}/api/doc/${slug}`);
+    let targetSlug = slug;
+    let doc;
+    try {
+      doc = await safeFetchJson(`${API_BASE}/api/doc/${targetSlug}`);
+    } catch (firstErr) {
+      if (!params.has('slug')) {
+        const listData = await safeFetchJson(`${API_BASE}/api/documents/list`);
+        if (listData.documents && listData.documents.length > 0) {
+          targetSlug = listData.documents[0].slug;
+          doc = await safeFetchJson(`${API_BASE}/api/doc/${targetSlug}`);
+        } else {
+          throw firstErr;
+        }
+      } else {
+        throw firstErr;
+      }
+    }
     const spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
     renderSigner(doc, spec);
   } catch (err) {
@@ -384,6 +401,9 @@ async function loadDocument() {
       <div style="padding: 3rem;">
         <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">${esc(titleText)}</div>
         <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0; line-height: 1.5;">${esc(err.message)}</p>
+        <div style="margin-top: 1.5rem;">
+          <a href="/dashboard" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">View Sender Ledger Dashboard</a>
+        </div>
       </div>`;
   }
 }
