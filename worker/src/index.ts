@@ -491,11 +491,52 @@ app.post('/api/render-pdf', async (c) => {
   });
 });
 
-// ── Public: Close / Delete Document ─────────────────────────
+// ── Public: Close / Revoke Document ─────────────────────────
 app.post('/api/doc/:slug/close', async (c) => {
   const slug = c.req.param('slug');
   await c.env.DB.prepare('UPDATE documents SET status = ? WHERE slug = ? OR id = ?').bind('closed', slug, slug).run();
   return c.json({ success: true, message: `Document '${slug}' closed.` });
+});
+
+// ── Public: Restart / Reopen a Document for Signing ─────────
+app.post('/api/doc/:slug/restart', async (c) => {
+  const slug = c.req.param('slug');
+  await c.env.DB.prepare(
+    `UPDATE documents SET status = 'active',
+       expires_at = CASE WHEN expires_at IS NOT NULL AND expires_at < ? THEN NULL ELSE expires_at END
+     WHERE slug = ? OR id = ?`
+  ).bind(now(), slug, slug).run();
+  return c.json({ success: true, message: `Document '${slug}' reopened for signing.` });
+});
+
+// ── Public: Permanently Delete a Document Run ───────────────
+app.delete('/api/doc/:id', async (c) => {
+  const docId = c.req.param('id');
+
+  const doc = await c.env.DB.prepare(
+    'SELECT id, slug FROM documents WHERE id = ? OR slug = ?'
+  ).bind(docId, docId).first();
+
+  if (!doc) return c.json({ error: 'Document not found' }, 404);
+
+  // Purge archived submission payloads from R2
+  if (c.env.R2) {
+    try {
+      let cursor: string | undefined;
+      do {
+        const listed = await c.env.R2.list({ prefix: `submissions/${doc.id}/`, cursor });
+        for (const obj of listed.objects) await c.env.R2.delete(obj.key);
+        cursor = listed.truncated ? listed.cursor : undefined;
+      } while (cursor);
+    } catch (err) {
+      console.error('R2 purge error (continuing):', err);
+    }
+  }
+
+  await c.env.DB.prepare('DELETE FROM submissions WHERE document_id = ?').bind(doc.id).run();
+  await c.env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(doc.id).run();
+
+  return c.json({ success: true, deleted: doc.id });
 });
 
 export default app;

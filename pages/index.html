@@ -547,7 +547,7 @@ async function renderDashboard() {
         const subs = subResult.submissions || [];
         
         if (subs.length > 0) {
-          subDataHtml = subs.map(s => {
+          subDataHtml = subs.map((s, idx) => {
             let fieldsObj = {};
             try { fieldsObj = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {}); } catch(e) {}
             const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<span style="display:inline-block; margin-right:1rem;"><strong>${esc(k)}:</strong> ${esc(v)}</span>`).join('');
@@ -565,19 +565,19 @@ async function renderDashboard() {
             });
 
             return `
-              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1rem; margin-top: 0.75rem; font-size: 0.85rem;">
-                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                  <div><strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})</div>
-                  <div style="font-variant-numeric: tabular-nums; color: var(--text-muted);">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</div>
-                </div>
-                <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
-                <div>
+              <details style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 0.75rem 1rem; margin-top: 0.75rem; font-size: 0.85rem;" ${idx === 0 ? 'open' : ''}>
+                <summary style="cursor: pointer; user-select: none; display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; list-style:none;">
+                  <span><strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})</span>
+                  <span style="font-variant-numeric: tabular-nums; color: var(--text-muted);">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</span>
+                </summary>
+                <div style="margin-top: 0.75rem;">
+                  <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
                   <button onclick='downloadSubPdf(${esc(JSON.stringify(subPayload))}, "${esc(s.id.slice(0, 8))}")' class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
                     📄 Download Signed PDF
                   </button>
                 </div>
-              </div>`;
+              </details>`;
           }).join('');
         }
       } catch(e) {
@@ -591,9 +591,13 @@ async function renderDashboard() {
               <strong style="font-size: 1rem;">${esc(d.id)}</strong>
               <span style="margin-left: 0.5rem; color: ${d.status === 'active' ? 'var(--success)' : 'var(--error)'}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${esc(d.status)}</span>
             </div>
-            <div>
-              <a href="/?slug=${esc(d.slug)}" target="_blank" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; margin-right: 0.4rem;">Open Sign Link</a>
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+              ${d.status === 'active'
+                ? `<a href="/?slug=${esc(d.slug)}" target="_blank" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Open Sign Link</a>
+                   <button onclick="revokeDocument('${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--error);">Revoke Sharing</button>`
+                : `<button onclick="restartDocument('${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--success);">Restart Sharing</button>`}
               <button onclick="exportDocData('${esc(d.id)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Export JSON</button>
+              <button onclick="deleteDocument('${esc(d.id)}', '${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--error);">Delete</button>
             </div>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
@@ -641,6 +645,34 @@ async function exportDocData(docId) {
     URL.revokeObjectURL(url);
   } catch (err) {
     alert(`Export failed: ${err.message}`);
+  }
+}
+
+async function revokeDocument(slug) {
+  try {
+    await safeFetchJson(`${API_BASE}/api/doc/${slug}/close`, { method: 'POST' });
+    renderDashboard();
+  } catch (err) {
+    alert(`Revoke failed: ${err.message}`);
+  }
+}
+
+async function restartDocument(slug) {
+  try {
+    await safeFetchJson(`${API_BASE}/api/doc/${slug}/restart`, { method: 'POST' });
+    renderDashboard();
+  } catch (err) {
+    alert(`Restart failed: ${err.message}`);
+  }
+}
+
+async function deleteDocument(id, slug) {
+  if (!window.confirm(`Permanently delete document "${id}" and all of its submissions?\n\nThis cannot be undone.`)) return;
+  try {
+    await safeFetchJson(`${API_BASE}/api/doc/${slug}`, { method: 'DELETE' });
+    renderDashboard();
+  } catch (err) {
+    alert(`Delete failed: ${err.message}`);
   }
 }
 
