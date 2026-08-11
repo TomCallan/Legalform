@@ -167,4 +167,23 @@ test('render-pdf renders tom and madi spousal relationship statement templates l
   }
 });
 
+test('render-pdf normalizes smart apostrophes, quotes, and em dashes without question marks', async () => {
+  const textWithSmartChars = "Madison’s roommate’s puppy — “our journey”";
+  const res = await app.request('/api/render-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...fullPayload,
+      fields: { receiving_party: textWithSmartChars }
+    })
+  });
+
+  assert.equal(res.status, 200);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const pdfText = extractPdfTexts(bytes).join(' ').replace(/\s+/g, ' ');
+  assert.ok(pdfText.includes("Madison's roommate's puppy - \"our journey\""), 'smart characters normalized to ASCII');
+  assert.ok(!pdfText.includes('?'), 'no question mark placeholders in rendered text');
+});
+
+
 

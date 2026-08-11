@@ -48,7 +48,15 @@ function safeParseJson(input: string): unknown {
 const WIN_ANSI_SAFE = /[^\x20-\x7E\u00A0-\u00FF\u0152\u0153\u0178\u0192\u02C6\u02DC\u2013\u2014\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u20AC\u2122\u0160\u0161\u017D\u017E]/g;
 
 function winAnsiSafe(text: string): string {
-  return text.replace(WIN_ANSI_SAFE, '?');
+  if (!text) return '';
+  return String(text)
+    .replace(/[\u2018\u2019\u201A\u2032]/g, "'") // single quotes / apostrophes (e.g. ’ -> ')
+    .replace(/[\u201C\u201D\u201E\u2033]/g, '"') // double quotes (e.g. “ ” -> ")
+    .replace(/[\u2013\u2014]/g, '-')            // en/em dashes (e.g. — -> -)
+    .replace(/\u2026/g, '...')                 // horizontal ellipsis (…)
+    .replace(/\u2022/g, '*')                   // bullet (•)
+    .replace(/[\u00A0\u2000-\u200B]/g, ' ')     // non-breaking & special spaces
+    .replace(WIN_ANSI_SAFE, '?');
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
