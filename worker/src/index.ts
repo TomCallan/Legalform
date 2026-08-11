@@ -135,9 +135,32 @@ app.post('/api/submit/:slug', async (c) => {
     console.error('R2 save error (continuing):', err);
   }
 
+  const parsedSpec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
+
+  // Dispatch HTTP webhook callback if configured in document spec
+  if (parsedSpec.document?.webhook_url) {
+    try {
+      await fetch(parsedSpec.document.webhook_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'document.signed',
+          document_id: doc.id,
+          submission_id: submissionId,
+          signer_email: email,
+          signer_name: name,
+          fields: body.fields || {},
+          audit_hash: auditHash,
+          submitted_at: submittedAt
+        })
+      });
+    } catch (webhookErr) {
+      console.error('Webhook dispatch error:', webhookErr);
+    }
+  }
+
   // Send email notification to sender / admin if configured
   if (c.env.RESEND_API_KEY) {
-    const parsedSpec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
     const adminEmail = parsedSpec.document?.admin_notification_email || c.env.ADMIN_EMAIL;
     if (adminEmail) {
       try {

@@ -294,6 +294,49 @@ def build_pdf_bytes(payload: dict) -> bytes:
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#cbd5e1'), spaceBefore=10, spaceAfter=10))
     story.append(Paragraph("Rebuilt Losslessly from Cryptographically Verified Local Data", subtitle_style))
 
+    # Dedicated Certificate of Execution Page
+    from reportlab.platypus import PageBreak
+    story.append(PageBreak())
+    
+    cert_title = ParagraphStyle('CertTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=16, leading=20, alignment=1, textColor=colors.HexColor('#0f172a'))
+    cert_sub = ParagraphStyle('CertSub', parent=styles['Normal'], fontName='Helvetica-Oblique', fontSize=9, leading=13, alignment=1, textColor=colors.HexColor('#475569'))
+    
+    story.append(Paragraph("OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION", cert_title))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("Court-Enforceable Instrument (ESIGN Act 15 U.S.C. § 7001 & EU eIDAS Regulation Art. 25)", cert_sub))
+    story.append(Spacer(1, 10))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#0f172a'), spaceAfter=15))
+
+    cert_rows = [
+      [Paragraph("Document ID", header_label_style), Paragraph(str(doc_id), cell_style)],
+      [Paragraph("Submission ID", header_label_style), Paragraph(str(sub.get("submission_id", "N/A")), cell_style)],
+      [Paragraph("Signer Name", header_label_style), Paragraph(str(sub.get("signer_name", "N/A")), cell_style)],
+      [Paragraph("Signer Email", header_label_style), Paragraph(str(email), cell_style)],
+      [Paragraph("Execution UTC Timestamp", header_label_style), Paragraph(str(time_str), cell_style)],
+      [Paragraph("Cryptographic Audit SHA-256 Digest", header_label_style), Paragraph(str(audit_hash), hash_style)]
+    ]
+
+    cert_table = Table(cert_rows, colWidths=[180, 350])
+    cert_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(cert_table)
+    story.append(Spacer(1, 20))
+
+    if sig_data and ',' in sig_data:
+        try:
+            b64_str = sig_data.split(',', 1)[1]
+            img_bytes = base64.b64decode(b64_str)
+            img_buf = io.BytesIO(img_bytes)
+            sig_img = Image(img_buf, width=220, height=80)
+            story.append(Paragraph("DIGITAL SIGNATURE CANVAS RECORD", header_label_style))
+            story.append(Spacer(1, 6))
+            story.append(sig_img)
+        except Exception:
+            pass
+
     pdf_doc.build(story)
     return pdf_buffer.getvalue()
 

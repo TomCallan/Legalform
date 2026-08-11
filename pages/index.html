@@ -502,17 +502,56 @@ function renderSigner(doc, spec) {
         }
         formValues[f.name] = defaultVal;
 
-        const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
-        html += `
-          <div class="form-group">
-            <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
-            <input type="${f.type === 'email' ? 'email' : 'text'}" 
-                   class="form-control" 
-                   data-field="${esc(f.name)}" 
-                   value="${esc(defaultVal)}" 
-                   ${isReadOnly} 
-                   ${f.required ? 'required' : ''}>
-          </div>`;
+        if (f.type === 'checkbox') {
+          const isChecked = defaultVal === true || defaultVal === 'true' || defaultVal === 'on';
+          formValues[f.name] = isChecked ? 'Yes' : 'No';
+          html += `
+            <div class="form-group" style="display:flex; align-items:center; gap:0.75rem;">
+              <input type="checkbox" 
+                     id="field-${esc(f.name)}" 
+                     data-field="${esc(f.name)}" 
+                     ${isChecked ? 'checked' : ''} 
+                     style="width:20px; height:20px; cursor:pointer;" 
+                     ${f.required ? 'required' : ''}>
+              <label for="field-${esc(f.name)}" style="margin-bottom:0; cursor:pointer;">${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+            </div>`;
+        } else if (f.type === 'radio' && Array.isArray(f.options)) {
+          html += `<div class="form-group"><label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label><div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">`;
+          f.options.forEach((opt, oIdx) => {
+            const isSel = String(defaultVal) === String(opt);
+            html += `
+              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:normal; text-transform:none; letter-spacing:normal; cursor:pointer;">
+                <input type="radio" 
+                       name="field-${esc(f.name)}" 
+                       data-field="${esc(f.name)}" 
+                       value="${esc(opt)}" 
+                       ${isSel ? 'checked' : ''} 
+                       ${f.required ? 'required' : ''}>
+                ${esc(opt)}
+              </label>`;
+          });
+          html += `</div></div>`;
+        } else if (f.type === 'select' && Array.isArray(f.options)) {
+          html += `
+            <div class="form-group">
+              <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+              <select class="form-control" data-field="${esc(f.name)}" ${f.required ? 'required' : ''}>
+                ${f.options.map(o => `<option value="${esc(o)}" ${String(defaultVal) === String(o) ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+              </select>
+            </div>`;
+        } else {
+          const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
+          html += `
+            <div class="form-group">
+              <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+              <input type="${f.type === 'email' ? 'email' : 'text'}" 
+                     class="form-control" 
+                     data-field="${esc(f.name)}" 
+                     value="${esc(defaultVal)}" 
+                     ${isReadOnly} 
+                     ${f.required ? 'required' : ''}>
+            </div>`;
+        }
       });
 
       if (sec.type === 'signature') {
@@ -544,10 +583,17 @@ function renderSigner(doc, spec) {
 
   container.innerHTML = html;
 
-  container.querySelectorAll('input[data-field]').forEach(input => {
-    input.addEventListener('input', e => {
-      formValues[e.target.dataset.field] = e.target.value;
-    });
+  container.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
+    const fn = e => {
+      const fieldName = e.target.dataset.field;
+      if (e.target.type === 'checkbox') {
+        formValues[fieldName] = e.target.checked ? 'Yes' : 'No';
+      } else {
+        formValues[fieldName] = e.target.value;
+      }
+    };
+    input.addEventListener('input', fn);
+    input.addEventListener('change', fn);
   });
 
   const canvas = document.getElementById('signature-canvas');
