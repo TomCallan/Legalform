@@ -378,10 +378,22 @@
     .b-addrow { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
     .b-add { background:transparent; border:1px dashed var(--border-subtle); color:var(--text-muted); padding:0.4rem 0.9rem; font:inherit; font-size:0.7rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; border-radius:0; }
     .b-add:hover { border-color:var(--text-main); color:var(--text-main); }
+    .b-tpl { display:inline-flex; gap:0.25rem; align-items:center; }
+    .b-tpl .b-del { padding:0.4rem 0.5rem; }
+    .b-tpl .b-del:hover { border-color:var(--error); color:var(--error); }
     .b-hint { font-size:0.72rem; color:var(--text-muted); margin:0.25rem 0 0; }
     .b-preview { border:1px solid var(--border-subtle); background:var(--bg-surface); margin-top:1rem; }
     .b-preview-head { padding:0.5rem 0.7rem; border-bottom:1px solid var(--border-subtle); }
     .b-preview pre { margin:0; padding:0.7rem; font-size:0.72rem; line-height:1.5; max-height:260px; overflow:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--text-main); white-space:pre-wrap; word-break:break-word; }
+    .b-deployrow { display:flex; gap:0.75rem; margin-bottom:1rem; }
+    .b-preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .b-preview-modal { background:var(--bg-base); border:1px solid var(--border-active); border-radius:0; width:min(720px,100%); max-height:90vh; display:flex; flex-direction:column; }
+    .b-preview-toolbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:0.7rem 1rem; border-bottom:1px solid var(--border-subtle); }
+    .b-preview-foot { border-bottom:none; border-top:1px solid var(--border-subtle); }
+    .b-preview-scroll { overflow-y:auto; flex:1; }
+    .b-close { background:transparent; border:1px solid var(--border-subtle); color:var(--text-muted); width:26px;height:26px; display:inline-flex;align-items:center;justify-content:center; font-size:1.05rem; cursor:pointer; border-radius:0; transition:all .2s; }
+    .b-close:hover { border-color:var(--text-main); color:var(--text-main); }
+    .b-preview-empty { min-height:1em; }
 
     footer {
       margin-top: auto;
@@ -581,7 +593,7 @@ async function renderAuthGate() {
     </div>
     <div class="signer-body">
       <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0 0 1.25rem; line-height: 1.6;">Enter the sender passcode to view received submissions and document status.</p>
-      <input id="auth-passcode" type="password" placeholder="Passcode" autocomplete="current-password" style="width:100%; max-width:320px; padding:0.75rem 1rem; font-size:1rem; border:1px solid var(--border-subtle); border-radius:8px; background:var(--bg-surface); color:var(--text-main); outline:none;" />
+      <input id="auth-passcode" type="password" placeholder="Passcode" autocomplete="current-password" style="width:100%; max-width:320px; padding:0.75rem 1rem; font-size:1rem; border:1px solid var(--border-subtle); border-radius:0; background:var(--bg-surface); color:var(--text-main); outline:none;" />
       <div style="margin-top:1rem;">
         <button id="auth-submit" class="btn">Unlock Ledger</button>
       </div>
@@ -613,7 +625,7 @@ const deployPanelHtml = `
       <button type="button" id="tab-builder" class="deploy-tab">Builder</button>
     </div>
     <div id="deploy-yaml-pane">
-    <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:8px; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
+    <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:0; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
     <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
       <button id="deploy-btn" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
       <span id="deploy-status" style="font-size:0.8rem; color:var(--text-muted);"></span>
@@ -648,7 +660,7 @@ async function deploySpecObject(spec) {
   const result = document.getElementById('deploy-result');
   if (result) {
     result.innerHTML = `
-      <div style="border:1px solid var(--border-subtle); border-radius:8px; padding:0.85rem; background:var(--bg-base); font-size:0.8rem;">
+      <div style="border:1px solid var(--border-subtle); border-radius:0; padding:0.85rem; background:var(--bg-base); font-size:0.8rem;">
         <div style="color: var(--success); font-weight:600; margin-bottom:0.5rem;">✓ Deployed — Document ID: ${esc(data.id)}</div>
         <div style="color:var(--text-muted); margin-bottom:0.25rem;">Shareable signing link:</div>
         <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
@@ -801,6 +813,7 @@ async function renderDashboard() {
                    <button onclick="revokeDocument('${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--error);">Revoke Sharing</button>`
                 : `<button onclick="restartDocument('${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--success);">Restart Sharing</button>`}
               <button onclick="exportDocData('${esc(d.id)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Export JSON</button>
+              <button onclick="editDocument('${esc(d.id)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Edit / Copy</button>
               <button onclick="deleteDocument('${esc(d.id)}', '${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--error);">Delete</button>
             </div>
           </div>
@@ -872,15 +885,70 @@ async function restartDocument(slug) {
   }
 }
 
-async function deleteDocument(id, slug) {
-  if (!window.confirm(`Permanently delete document "${id}" and all of its submissions?\n\nThis cannot be undone.`)) return;
+function confirmMonarch({ title, message, confirmLabel, danger, onConfirm }) {
+  const overlay = document.createElement('div');
+  overlay.className = 'b-preview-overlay';
+  overlay.innerHTML = `
+    <div class="b-preview-modal" style="max-width:420px;">
+      <div class="b-preview-toolbar">
+        <span class="b-lbl" style="margin:0;">${esc(title)}</span>
+        <button type="button" class="b-close" data-c="cancel" aria-label="Cancel">&#215;</button>
+      </div>
+      <div style="padding:1rem 1rem 1.5rem; font-size:0.85rem; line-height:1.6; color:var(--text-main);">${esc(message)}</div>
+      <div class="b-preview-toolbar b-preview-foot" style="justify-content:flex-end;">
+        <button type="button" data-c="confirm" class="btn${danger ? ' btn-danger-ghost' : ''}" style="padding:0.5rem 1rem; font-size:0.75rem;">${esc(confirmLabel || 'Confirm')}</button>
+        <button type="button" data-c="cancel" class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem;">Cancel</button>
+      </div>
+    </div>`;
+  const close = () => overlay.remove();
+  overlay.querySelectorAll('[data-c="cancel"]').forEach(b => b.addEventListener('click', close));
+  overlay.querySelector('[data-c="confirm"]').addEventListener('click', () => { close(); if (onConfirm) onConfirm(); });
+  document.body.appendChild(overlay);
+}
+
+function deleteDocument(id, slug) {
+  confirmMonarch({
+    title: 'Delete Document',
+    message: `Permanently delete document "${id}" and all of its submissions? This cannot be undone.`,
+    confirmLabel: 'Delete',
+    danger: true,
+    onConfirm: async () => {
+      try {
+        await safeFetchJson(`${API_BASE}/api/doc/${slug}`, { method: 'DELETE' });
+        renderDashboard();
+        showToast(`Document "${id}" permanently deleted.`, 'success');
+      } catch (err) {
+        showToast(`Delete failed: ${err.message}`, 'error');
+      }
+    }
+  });
+}
+
+async function editDocument(docId) {
+  let data;
   try {
-    await safeFetchJson(`${API_BASE}/api/doc/${slug}`, { method: 'DELETE' });
-    renderDashboard();
-    showToast(`Document "${id}" permanently deleted.`, 'success');
+    data = await safeFetchJson(`${API_BASE}/api/export/${docId}`);
   } catch (err) {
-    showToast(`Delete failed: ${err.message}`, 'error');
+    showToast(`Could not load document: ${err.message}`, 'error');
+    return;
   }
+  const spec = typeof data.spec === 'string' ? JSON.parse(data.spec) : data.spec;
+  openBuilderWithSpec(spec);
+}
+
+function openBuilderWithSpec(spec) {
+  const tabYaml = document.getElementById('tab-yaml');
+  const tabBuilder = document.getElementById('tab-builder');
+  const yp = document.getElementById('deploy-yaml-pane');
+  const bp = document.getElementById('deploy-builder-pane');
+  if (tabYaml) tabYaml.classList.remove('active');
+  if (tabBuilder) tabBuilder.classList.add('active');
+  if (yp) yp.style.display = 'none';
+  if (!bp) return;
+  bp.style.display = '';
+  if (!bp.dataset.init && window.renderBuilderPanel) { bp.dataset.init = '1'; window.renderBuilderPanel(bp); }
+  if (window.loadSpecIntoBuilder) window.loadSpecIntoBuilder(spec);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderStaticBody(content) {

@@ -350,9 +350,83 @@ sections:
   }
 
   function loadTemplate(name) {
-    state = specToState(window.jsyaml.load(TEMPLATES[name]));
+    state = specToState(window.jsyaml.load(getTemplate(name)));
     renderPanel();
     updatePreview();
+  }
+
+  /* custom templates — persisted in localStorage */
+  const SAVED_KEY = 'legalform_builder_templates';
+
+  function getSavedTemplates() {
+    try {
+      const raw = localStorage.getItem(SAVED_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveSavedTemplates(map) {
+    try { localStorage.setItem(SAVED_KEY, JSON.stringify(map)); } catch (e) {}
+  }
+
+  function getTemplate(name) {
+    const saved = getSavedTemplates();
+    return saved[name] ? saved[name] : TEMPLATES[name];
+  }
+
+  function saveTemplate(name) {
+    const spec = toSpec();
+    if (!spec.document.title && !(spec.sections && spec.sections.length)) {
+      if (window.showToast) window.showToast('Nothing to save — build a document first.', 'error');
+      return;
+    }
+    const yaml = window.jsyaml.dump(spec);
+    const saved = getSavedTemplates();
+    saved[name] = yaml;
+    saveSavedTemplates(saved);
+    renderPanel();
+    updatePreview();
+    if (window.showToast) window.showToast(`Template "${name}" saved.`, 'success');
+  }
+
+  function deleteSavedTemplate(name) {
+    const saved = getSavedTemplates();
+    if (saved[name]) { delete saved[name]; saveSavedTemplates(saved); }
+    renderPanel();
+    updatePreview();
+    if (window.showToast) window.showToast(`Template "${name}" deleted.`, 'success');
+  }
+
+  function promptTemplateName() {
+    const overlay = document.createElement('div');
+    overlay.className = 'b-preview-overlay';
+    overlay.innerHTML = `
+      <div class="b-preview-modal" style="max-width:420px;">
+        <div class="b-preview-toolbar">
+          <span class="b-lbl" style="margin:0;">Save Current As Template</span>
+          <button type="button" class="b-close" data-st="cancel" aria-label="Cancel">&#215;</button>
+        </div>
+        <div style="padding:1rem 1rem 1.5rem;">
+          <label class="b-lbl">Template name</label>
+          <input id="template-name-input" class="b-input" placeholder="My I-130 Statement v2" />
+        </div>
+        <div class="b-preview-toolbar b-preview-foot" style="justify-content:flex-end;">
+          <button type="button" data-st="save" class="btn" style="padding:0.5rem 1rem; font-size:0.75rem;">Save Template</button>
+          <button type="button" data-st="cancel" class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.75rem;">Cancel</button>
+        </div>
+      </div>`;
+    overlay.querySelectorAll('[data-st="cancel"]').forEach(b => b.addEventListener('click', () => overlay.remove()));
+    overlay.querySelector('[data-st="save"]').addEventListener('click', () => {
+      const name = overlay.querySelector('#template-name-input').value.trim();
+      overlay.remove();
+      if (name) saveTemplate(name);
+      else if (window.showToast) window.showToast('Template name is required.', 'error');
+    });
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#template-name-input');
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') overlay.querySelector('[data-st="save"]').click(); });
+    input.focus();
   }
 
   /* rendering */
@@ -461,10 +535,17 @@ sections:
   }
 
   function panelHtml() {
+    const builtinBtns = Object.keys(TEMPLATES).map(n =>
+      `<button type="button" class="b-add" data-act="template" data-template="${esc(n)}">${esc(n)}</button>`).join('');
+    const saved = getSavedTemplates();
+    const savedBtns = Object.keys(saved).map(n =>
+      `<span class="b-tpl"><button type="button" class="b-add" data-act="template" data-template="${esc(n)}">${esc(n)}</button>` +
+      `<button type="button" class="b-add b-del" data-act="template-delete" data-template="${esc(n)}" title="Delete template">&#215;</button></span>`).join('');
     return `
       <div class="b-templates">
         <span class="b-lbl" style="margin:0;">Start from:</span>
-        ${Object.keys(TEMPLATES).map(n => `<button type="button" class="b-add" data-act="template" data-template="${esc(n)}">${esc(n)}</button>`).join('')}
+        ${builtinBtns}${savedBtns}
+        <button type="button" class="b-add" data-act="template-save" title="Save the current document as a reusable template">+ Save Current</button>
       </div>
       <div class="b-meta">
         <div><label class="b-lbl">Document id</label><input data-bind="document.id" class="b-input" value="${esc(state.document.id)}" placeholder="my-agreement" /></div>
@@ -484,7 +565,10 @@ sections:
         <button type="button" class="b-add" data-act="add-form">+ Form</button>
         <button type="button" class="b-add" data-act="add-signature">+ Signature</button>
       </div>
-      <button type="button" class="btn" data-act="deploy" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
+      <div class="b-deployrow">
+        <button type="button" class="btn btn-outline" data-act="preview" style="padding:0.5rem 1rem; font-size:0.8rem;">Preview</button>
+        <button type="button" class="btn" data-act="deploy" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
+      </div>
       <div class="b-preview">
         <div class="b-preview-head"><span class="b-lbl" style="margin:0;">Live YAML preview</span></div>
         <pre id="builder-preview"></pre>
@@ -530,6 +614,20 @@ sections:
       case 'add-form': state.sections.push(newSection('form')); break;
       case 'add-signature': state.sections.push(newSection('signature')); break;
       case 'template': loadTemplate(btn.dataset.template); return;
+      case 'template-save': promptTemplateName(); return;
+      case 'template-delete':
+        if (window.confirmMonarch) {
+          window.confirmMonarch({
+            title: 'Delete Template',
+            message: `Delete saved template "${btn.dataset.template}"?`,
+            confirmLabel: 'Delete', danger: true,
+            onConfirm: () => deleteSavedTemplate(btn.dataset.template)
+          });
+        } else {
+          deleteSavedTemplate(btn.dataset.template);
+        }
+        return;
+      case 'preview': showPreview(); return;
       case 'deploy': deployBuilder(); return;
       default: return;
     }
@@ -612,6 +710,83 @@ sections:
     if (container) container.querySelectorAll('.b-dragover').forEach(el => el.classList.remove('b-dragover'));
   }
 
+  /* preview */
+  function previewFieldHtml(f) {
+    const req = f.required ? ' *' : '';
+    const label = `<label>${esc(f.label || f.name)}${req}</label>`;
+    if (f.type === 'checkbox') {
+      return `<div class="form-group"><label>${esc(f.label || f.name)}${req}</label><input type="checkbox" checked style="width:20px;height:20px;cursor:pointer;" disabled></div>`;
+    }
+    if (f.type === 'radio' && Array.isArray(f.options)) {
+      return `<div class="form-group">${label}<div style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.4rem;">` +
+        f.options.map(o => `<label style="display:flex;align-items:center;gap:0.5rem;"><input type="radio" disabled>${esc(o)}</label>`).join('') + `</div></div>`;
+    }
+    if (f.type === 'select' && Array.isArray(f.options)) {
+      return `<div class="form-group">${label}<div class="form-control b-preview-empty">${esc(f.options[0] || '—')}</div></div>`;
+    }
+    if (f.type === 'textarea') {
+      return `<div class="form-group">${label}<div class="form-control b-preview-empty" style="min-height:${Math.max(2, f.rows || 4) * 1.7}em;"></div></div>`;
+    }
+    if (f.type === 'datetime-auto') {
+      return `<div class="form-group">${label}<div class="form-control">${esc(new Date().toLocaleString())}</div></div>`;
+    }
+    return `<div class="form-group">${label}<div class="form-control b-preview-empty"></div></div>`;
+  }
+
+  function buildPreviewHtml(spec) {
+    const d = spec.document || {};
+    const parts = [];
+    parts.push(`
+      <div class="signer-head" style="padding:1.5rem;">
+        <div class="signer-eyebrow">${esc(d.jurisdiction || 'Electronic Execution')}</div>
+        <h1 class="signer-title">${esc(d.title || 'Legal Document')}</h1>
+      </div>
+      <div class="signer-body">`);
+    for (const sec of spec.sections || []) {
+      if (sec.type === 'static') {
+        const body = window.renderStaticBody
+          ? window.renderStaticBody(sec.content)
+          : esc(sec.content).replace(/\n/g, '<br>');
+        parts.push(`<div class="signer-section"><div class="static-body">${body}</div></div>`);
+      } else if (sec.type === 'form' || sec.type === 'signature') {
+        parts.push(`<div class="signer-section">`);
+        if (sec.signer_label) parts.push(`<div class="section-label">${esc(sec.signer_label)}</div>`);
+        (sec.fields || []).forEach(f => parts.push(previewFieldHtml(f)));
+        if (sec.type === 'signature') {
+          if (d.legal_footer) parts.push(`<p class="legal-footer">${esc(d.legal_footer)}</p>`);
+          parts.push(`<div class="form-group"><label>Signature Pad</label><div class="sig-pad"></div></div>`);
+        }
+        parts.push(`</div>`);
+      }
+    }
+    parts.push(`</div>`);
+    return parts.join('');
+  }
+
+  function showPreview() {
+    const spec = toSpec();
+    const overlay = document.createElement('div');
+    overlay.className = 'b-preview-overlay';
+    overlay.innerHTML = `
+      <div class="b-preview-modal">
+        <div class="b-preview-toolbar">
+          <span class="b-lbl" style="margin:0;">Document Preview</span>
+          <button type="button" class="b-close" data-act="preview-close" aria-label="Close preview">&#215;</button>
+        </div>
+        <div class="b-preview-scroll">${buildPreviewHtml(spec)}</div>
+        <div class="b-preview-toolbar b-preview-foot">
+          <button type="button" data-act="preview-deploy" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
+          <button type="button" data-act="preview-close" class="btn btn-outline" style="padding:0.5rem 1rem; font-size:0.8rem;">Back to Edit</button>
+        </div>
+      </div>`;
+    overlay.querySelectorAll('[data-act="preview-close"]').forEach(b => b.addEventListener('click', () => overlay.remove()));
+    overlay.querySelector('[data-act="preview-deploy"]').addEventListener('click', () => {
+      overlay.remove();
+      deployBuilder();
+    });
+    document.body.appendChild(overlay);
+  }
+
   function deployBuilder() {
     const spec = toSpec();
     if (!spec.document.id) { window.showToast('Document id is required.', 'error'); return; }
@@ -641,4 +816,12 @@ sections:
 
   window.renderBuilderPanel = renderBuilderPanel;
   window.getBuilderSpec = toSpec;
+  window.loadSpecIntoBuilder = loadSpecIntoBuilder;
+
+  function loadSpecIntoBuilder(spec) {
+    state = specToState(spec || { document: {}, sections: [] });
+    renderPanel();
+    updatePreview();
+    if (window.showToast) window.showToast('Document loaded into builder — deploy creates a fresh copy.', 'success');
+  }
 })();
