@@ -475,10 +475,40 @@ sections:
     return s;
   }
 
+  function getYamlLib() {
+    if (typeof window.jsyaml !== 'undefined') return window.jsyaml;
+    if (typeof jsyaml !== 'undefined') return jsyaml;
+    return null;
+  }
+  function parseYaml(str) {
+    const lib = getYamlLib();
+    if (lib && lib.load) return lib.load(str);
+    return JSON.parse(str);
+  }
+  function dumpYaml(obj) {
+    const lib = getYamlLib();
+    if (lib && lib.dump) return lib.dump(obj);
+    return JSON.stringify(obj, null, 2);
+  }
+
   function loadTemplate(name) {
-    state = specToState(window.jsyaml.load(getTemplate(name)));
-    renderPanel();
-    updatePreview();
+    if (!name) return;
+    currentTemplateName = name;
+    try {
+      const raw = getTemplate(name);
+      if (!raw) {
+        if (window.showToast) window.showToast(`Template "${name}" not found.`, 'error');
+        return;
+      }
+      const parsed = parseYaml(raw);
+      state = specToState(parsed);
+      renderPanel();
+      updatePreview();
+      if (window.showToast) window.showToast(`Loaded template "${name}".`, 'success');
+    } catch (err) {
+      console.error('Failed to load template', name, err);
+      if (window.showToast) window.showToast(`Error loading template "${name}": ${err.message}`, 'error');
+    }
   }
 
   /* custom templates — persisted in localStorage */
@@ -507,7 +537,7 @@ sections:
       if (window.showToast) window.showToast('Nothing to save — build a document first.', 'error');
       return;
     }
-    const yaml = window.jsyaml.dump(spec);
+    const yaml = dumpYaml(spec);
     const saved = getSavedTemplates();
     saved[name] = yaml;
     saveSavedTemplates(saved);
@@ -563,13 +593,6 @@ sections:
     const input = overlay.querySelector('#template-name-input');
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') overlay.querySelector('[data-st="save"]').click(); });
     input.focus();
-  }
-
-  function loadTemplate(name) {
-    currentTemplateName = name;
-    state = specToState(window.jsyaml.load(getTemplate(name)));
-    renderPanel();
-    updatePreview();
   }
 
   /* rendering */
@@ -634,17 +657,16 @@ sections:
   }
 
   function renderSection(s, idx) {
-    const open = !!s._ui.open;
-    const badge = s.type.toUpperCase();
-    const label = s.type === 'static' ? 'Static text' : (s.signer_label || s.type);
+    const open = !!(s._ui && s._ui.open);
+    const badge = s.type === 'static' ? 'STATIC' : s.type === 'signature' ? 'SIGNATURE' : 'FORM';
+    let label = s.signer_label || (s.type === 'static' ? 'Static Text Block' : 'Form Section');
     let body = '';
     if (open) {
       if (s.type === 'static') {
         body = `
           <div class="b-field-edit">
-            <label class="b-lbl">Content</label>
-            <textarea data-bind="sections.${idx}.content" class="b-input b-ta" rows="6">${esc(s.content)}</textarea>
-            <p class="b-hint">Lines starting with <code>##</code> render as section headings.</p>
+            <label class="b-lbl">Markdown Content</label>
+            <textarea data-bind="sections.${idx}.content" class="b-input b-ta" rows="8" placeholder="## Section Title&#10;Plain text...">${esc(s.content || '')}</textarea>
           </div>`;
       } else {
         body = `
@@ -677,16 +699,43 @@ sections:
 
   function panelHtml() {
     const builtinBtns = Object.keys(TEMPLATES).map(n =>
-      `<button type="button" class="b-add" data-act="template" data-template="${esc(n)}">${esc(n)}</button>`).join('');
+      `<button type="button" class="b-add ${currentTemplateName === n ? 'active' : ''}" data-act="template" data-template="${esc(n)}">${esc(n)}</button>`
+    ).join('');
     const saved = getSavedTemplates();
-    const savedBtns = Object.keys(saved).map(n =>
-      `<span class="b-tpl"><button type="button" class="b-add" data-act="template" data-template="${esc(n)}">${esc(n)}</button>` +
-      `<button type="button" class="b-add b-del" data-act="template-delete" data-template="${esc(n)}" title="Delete template">&#215;</button></span>`).join('');
+    const savedNames = Object.keys(saved);
+    const savedBtns = savedNames.map(n =>
+      `<span class="b-tpl"><button type="button" class="b-add ${currentTemplateName === n ? 'active' : ''}" data-act="template" data-template="${esc(n)}">${esc(n)}</button>` +
+      `<button type="button" class="b-add b-del" data-act="template-delete" data-template="${esc(n)}" title="Delete template">&#215;</button></span>`
+    ).join('');
+
+    const isSel = (n) => currentTemplateName === n ? 'selected' : '';
+
     return `
-      <div class="b-templates">
-        <span class="b-lbl" style="margin:0;">Start from:</span>
+      <div class="b-templates-bar" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem; padding:0.85rem 1rem; background:var(--bg-base); border:1px solid var(--border-subtle);">
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; flex:1; min-width:280px;">
+          <label class="b-lbl" style="margin:0; font-weight:700; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted);">Template:</label>
+          <select id="builder-template-select" class="b-input" style="max-width:320px; padding:0.4rem 0.6rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
+            <option value="" disabled ${!currentTemplateName ? 'selected' : ''}>-- Select a Template --</option>
+            <optgroup label="Spousal Statements">
+              <option value="Tom Statement" ${isSel('Tom Statement')}>Tom Statement (Thomas)</option>
+              <option value="Madi Statement" ${isSel('Madi Statement')}>Madi Statement (Madison)</option>
+              <option value="I-130 Personal Statement" ${isSel('I-130 Personal Statement')}>I-130 Personal Statement</option>
+              <option value="I-130 Affidavit" ${isSel('I-130 Affidavit')}>I-130 Sworn Affidavit</option>
+            </optgroup>
+            <optgroup label="Agreements">
+              <option value="Mutual NDA" ${isSel('Mutual NDA')}>Mutual NDA</option>
+            </optgroup>
+            ${savedNames.length ? `<optgroup label="Custom Saved Templates">${savedNames.map(n => `<option value="${esc(n)}" ${isSel(n)}>${esc(n)} (Saved)</option>`).join('')}</optgroup>` : ''}
+          </select>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" data-act="template-save-current" style="padding:0.4rem 0.85rem; font-size:0.75rem;">Save Changes</button>
+          <button type="button" class="btn btn-outline" data-act="template-save-as" style="padding:0.4rem 0.85rem; font-size:0.75rem;">Save As New...</button>
+        </div>
+      </div>
+      <div class="b-templates" style="margin-bottom:1rem;">
+        <span class="b-lbl" style="margin:0;">Quick Load:</span>
         ${builtinBtns}${savedBtns}
-        <button type="button" class="b-add" data-act="template-save" title="Save the current document as a reusable template">+ Save Current</button>
       </div>
       <div class="b-meta">
         <div><label class="b-lbl">Document id</label><input data-bind="document.id" class="b-input" value="${esc(state.document.id)}" placeholder="my-agreement" /></div>
@@ -719,11 +768,17 @@ sections:
   function renderPanel() {
     if (!container) return;
     container.innerHTML = panelHtml();
+    const select = container.querySelector('#builder-template-select');
+    if (select) {
+      select.addEventListener('change', (e) => {
+        if (e.target.value) loadTemplate(e.target.value);
+      });
+    }
   }
 
   function updatePreview() {
     const pre = container && container.querySelector('#builder-preview');
-    if (pre) pre.textContent = window.jsyaml.dump(toSpec());
+    if (pre) pre.textContent = dumpYaml(toSpec());
   }
 
   /* events */
@@ -754,8 +809,10 @@ sections:
       case 'add-static': state.sections.push(newSection('static')); break;
       case 'add-form': state.sections.push(newSection('form')); break;
       case 'add-signature': state.sections.push(newSection('signature')); break;
-      case 'template': loadTemplate(btn.dataset.template); return;
+      case 'template-save-current': saveCurrentTemplate(); return;
+      case 'template-save-as': promptTemplateName(); return;
       case 'template-save': promptTemplateName(); return;
+      case 'template': loadTemplate(btn.dataset.template); return;
       case 'template-delete':
         if (window.confirmMonarch) {
           window.confirmMonarch({
