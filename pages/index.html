@@ -260,6 +260,120 @@
       margin-top: 0.5rem;
     }
 
+    /* Toasts */
+    #toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: min(360px, calc(100vw - 2rem));
+    }
+    .toast {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-left: 2px solid var(--text-muted);
+      border-radius: 0;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+      padding: 0.75rem 0.85rem;
+      text-align: left;
+      animation: toast-in 0.2s ease both;
+    }
+    .toast-success { border-left-color: var(--success); }
+    .toast-error { border-left-color: var(--error); }
+    .toast-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .toast-label {
+      font-size: clamp(10px, 0.75vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+    .toast-success .toast-label { color: var(--success); }
+    .toast-error .toast-label { color: var(--error); }
+    .toast-msg {
+      font-size: clamp(13px, 0.95vw, 14px);
+      line-height: 1.5;
+      color: var(--text-main);
+      word-break: break-word;
+    }
+    .toast-close {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      line-height: 1;
+      cursor: pointer;
+      border-radius: 0;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .toast-close:hover { border-color: var(--text-main); color: var(--text-main); }
+    .toast-leave { opacity: 0; transform: translateX(16px); transition: all 0.24s ease; }
+    @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } }
+
+    /* Visual Builder */
+    .deploy-tabs { display:flex; margin-bottom:1rem; }
+    .deploy-tab {
+      background:transparent; border:1px solid var(--border-subtle); border-bottom:none;
+      padding:0.5rem 1.25rem; font:inherit; font-size:0.75rem; font-weight:600;
+      letter-spacing:0.14em; text-transform:uppercase; color:var(--text-muted); cursor:pointer; border-radius:0;
+    }
+    .deploy-tab.active { background:var(--text-main); color:var(--bg-base); border-color:var(--text-main); }
+    .b-templates { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .b-meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.75rem; margin-bottom:1rem; }
+    .b-lbl { display:block; font-size:clamp(10px,0.75vw,11px); font-weight:600; letter-spacing:0.24em; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.4rem; }
+    .b-input { width:100%; background:var(--bg-surface-hover); border:1px solid transparent; padding:0.55rem 0.7rem; font:inherit; font-size:0.85rem; color:var(--text-main); outline:none; border-radius:0; transition:all .2s; }
+    .b-input:focus { background:var(--bg-base); border-color:var(--border-active); }
+    .b-ta { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; line-height:1.5; resize:vertical; }
+    .b-num { max-width:110px; }
+    .b-check { display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; color:var(--text-main); }
+    .b-check input { width:16px; height:16px; }
+    .b-sections { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
+    .b-section { border:1px solid var(--border-subtle); background:var(--bg-base); }
+    .b-section.b-dragover, .b-field.b-dragover, .b-sections.b-dragover, .b-fields.b-dragover { border-color:var(--border-active); }
+    .b-row { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0.7rem; }
+    .b-section > .b-row { border-bottom:1px solid var(--border-subtle); background:var(--bg-surface); }
+    .b-handle { cursor:grab; color:var(--text-muted); font-size:1.05rem; user-select:none; }
+    .b-handle:active { cursor:grabbing; }
+    .b-type { font-size:clamp(10px,0.75vw,11px); font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--text-muted); border:1px solid var(--border-subtle); padding:0.15rem 0.4rem; white-space:nowrap; }
+    .b-fname { font-size:0.85rem; font-weight:600; color:var(--text-main); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .b-req { font-size:clamp(9px,0.7vw,10px); font-weight:600; letter-spacing:0.14em; color:var(--error); }
+    .b-actions { display:flex; gap:0.35rem; margin-left:auto; }
+    .b-actions button { background:transparent; border:1px solid var(--border-subtle); color:var(--text-muted); padding:0.2rem 0.5rem; font:inherit; font-size:0.68rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; border-radius:0; line-height:1.2; }
+    .b-actions button:hover { border-color:var(--text-main); color:var(--text-main); }
+    .b-actions .b-danger:hover { border-color:var(--error); color:var(--error); }
+    .b-section-body { padding:0.85rem 0.7rem; }
+    .b-fields { display:flex; flex-direction:column; gap:0.5rem; margin:0.6rem 0; }
+    .b-field { border:1px solid var(--border-subtle); background:var(--bg-surface); }
+    .b-field-edit { padding:0.7rem; border-top:1px solid var(--border-subtle); background:var(--bg-base); display:flex; flex-direction:column; gap:0.6rem; }
+    .b-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
+    @media (max-width:640px){ .b-grid{grid-template-columns:1fr;} }
+    .b-add-field { align-self:flex-start; background:transparent; border:1px dashed var(--border-subtle); color:var(--text-muted); padding:0.35rem 0.8rem; font:inherit; font-size:0.7rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; border-radius:0; margin-top:0.4rem; }
+    .b-add-field:hover { border-color:var(--text-main); color:var(--text-main); }
+    .b-addrow { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .b-add { background:transparent; border:1px dashed var(--border-subtle); color:var(--text-muted); padding:0.4rem 0.9rem; font:inherit; font-size:0.7rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; border-radius:0; }
+    .b-add:hover { border-color:var(--text-main); color:var(--text-main); }
+    .b-hint { font-size:0.72rem; color:var(--text-muted); margin:0.25rem 0 0; }
+    .b-preview { border:1px solid var(--border-subtle); background:var(--bg-surface); margin-top:1rem; }
+    .b-preview-head { padding:0.5rem 0.7rem; border-bottom:1px solid var(--border-subtle); }
+    .b-preview pre { margin:0; padding:0.7rem; font-size:0.72rem; line-height:1.5; max-height:260px; overflow:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--text-main); white-space:pre-wrap; word-break:break-word; }
+
     footer {
       margin-top: auto;
       border-top: 1px solid var(--border-subtle);
@@ -304,6 +418,7 @@
     </div>
   </footer>
 
+<script src="builder.js"></script>
 <script>
 const params = new URLSearchParams(window.location.search);
 const DEFAULT_API_BASE = window.location.hostname.includes('pages.dev') ? 'https://legalform-api.tomcallan0.workers.dev' : '';
@@ -366,6 +481,52 @@ async function safeFetchJson(url, options) {
   }
 
   return data;
+}
+
+function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+
+  const label = document.createElement('div');
+  label.className = 'toast-label';
+  label.textContent = type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Notice';
+
+  const close = document.createElement('button');
+  close.className = 'toast-close';
+  close.setAttribute('aria-label', 'Dismiss notification');
+  close.textContent = '\u00d7';
+  close.addEventListener('click', () => dismissToast(el));
+
+  const head = document.createElement('div');
+  head.className = 'toast-head';
+  head.appendChild(label);
+  head.appendChild(close);
+
+  const msg = document.createElement('div');
+  msg.className = 'toast-msg';
+  msg.textContent = message;
+
+  el.appendChild(head);
+  el.appendChild(msg);
+  container.appendChild(el);
+
+  setTimeout(() => dismissToast(el), type === 'error' ? 7000 : 4000);
+}
+
+function dismissToast(el) {
+  if (!el || el.dataset.dismissed) return;
+  el.dataset.dismissed = '1';
+  el.classList.add('toast-leave');
+  setTimeout(() => el.remove(), 240);
 }
 
 async function loadDocument() {
@@ -437,57 +598,46 @@ async function renderAuthGate() {
 const deployPanelHtml = `
   <div style="border:1px solid var(--border-active); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; background:var(--bg-surface);">
     <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.25rem;">Deploy New Document</div>
-    <div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:0.75rem;">Paste a YAML spec (same format as <code>templates/*.yaml</code>) and get a shareable signing link.</div>
+    <div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:0.75rem;">Build with the visual builder or paste a YAML spec — both produce the same format as <code>templates/*.yaml</code>.</div>
+    <div class="deploy-tabs">
+      <button type="button" id="tab-yaml" class="deploy-tab active">YAML</button>
+      <button type="button" id="tab-builder" class="deploy-tab">Builder</button>
+    </div>
+    <div id="deploy-yaml-pane">
     <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:8px; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
     <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
       <button id="deploy-btn" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
       <span id="deploy-status" style="font-size:0.8rem; color:var(--text-muted);"></span>
     </div>
+    </div>
+    <div id="deploy-builder-pane" style="display:none; margin-top:1rem;"></div>
     <div id="deploy-result" style="margin-top:0.75rem;"></div>
   </div>`;
 
-async function deployDocumentFromPanel() {
-  const textarea = document.getElementById('deploy-spec');
-  const btn = document.getElementById('deploy-btn');
-  const status = document.getElementById('deploy-status');
-  const result = document.getElementById('deploy-result');
-  result.innerHTML = '';
-
-  let spec;
-  try {
-    spec = (typeof window.jsyaml !== 'undefined')
-      ? window.jsyaml.load(textarea.value)
-      : JSON.parse(textarea.value); // YAML is a superset of JSON — degrade gracefully
-  } catch (err) {
-    result.innerHTML = `<span style="color: var(--error); font-size: 0.8rem;">YAML parse error: ${esc(err.message)}</span>`;
-    return;
-  }
-
+async function deploySpecObject(spec) {
   if (!spec || typeof spec !== 'object' || !spec.document || !spec.document.id) {
-    result.innerHTML = `<span style="color: var(--error); font-size: 0.8rem;">Spec must include a top-level <code>document</code> key with an <code>id</code>.</span>`;
-    return;
+    throw new Error('Spec must include a top-level document key with an id.');
   }
+  const docId = String(spec.document.id);
+  const slug = (await sha256Hex(`${docId}-${new Date().toISOString()}`)).slice(0, 12);
+  const expiresDays = Number(spec.document.expires_in_days || 30);
+  const expiresAt = Math.floor(Date.now() / 1000) + expiresDays * 86400;
 
-  btn.disabled = true;
-  status.textContent = 'Deploying…';
-  try {
-    const docId = String(spec.document.id);
-    const slug = (await sha256Hex(`${docId}-${new Date().toISOString()}`)).slice(0, 12);
-    const expiresDays = Number(spec.document.expires_in_days || 30);
-    const expiresAt = Math.floor(Date.now() / 1000) + expiresDays * 86400;
+  const res = await fetch(`${API_BASE}/api/documents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: docId, slug, spec, expires_at: expiresAt })
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Deploy failed (HTTP ${res.status})`);
+  }
+  const data = await res.json();
+  const signLink = `${window.location.origin}/?slug=${data.slug}`;
 
-    const res = await fetch(`${API_BASE}/api/documents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: docId, slug, spec, expires_at: expiresAt })
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Deploy failed (HTTP ${res.status})`);
-    }
-    const data = await res.json();
-    const signLink = `${window.location.origin}/?slug=${data.slug}`;
-
+  await renderDashboard(); // refresh the ledger below (re-renders both deploy panes)
+  const result = document.getElementById('deploy-result');
+  if (result) {
     result.innerHTML = `
       <div style="border:1px solid var(--border-subtle); border-radius:8px; padding:0.85rem; background:var(--bg-base); font-size:0.8rem;">
         <div style="color: var(--success); font-weight:600; margin-bottom:0.5rem;">✓ Deployed — Document ID: ${esc(data.id)}</div>
@@ -497,10 +647,33 @@ async function deployDocumentFromPanel() {
           <button class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.7rem;" onclick="navigator.clipboard.writeText('${esc(signLink)}')">Copy</button>
         </div>
       </div>`;
-    textarea.value = '';
-    renderDashboard(); // refresh the ledger below
+  }
+  showToast(`Document "${data.id}" deployed.`, 'success');
+  return data;
+}
+
+async function deployDocumentFromPanel() {
+  const textarea = document.getElementById('deploy-spec');
+  const btn = document.getElementById('deploy-btn');
+  const status = document.getElementById('deploy-status');
+
+  let spec;
+  try {
+    spec = (typeof window.jsyaml !== 'undefined')
+      ? window.jsyaml.load(textarea.value)
+      : JSON.parse(textarea.value); // YAML is a superset of JSON — degrade gracefully
   } catch (err) {
-    result.innerHTML = `<span style="color: var(--error); font-size: 0.8rem;">${esc(err.message)}</span>`;
+    showToast(`YAML parse error: ${err.message}`, 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = 'Deploying…';
+  try {
+    await deploySpecObject(spec);
+    textarea.value = '';
+  } catch (err) {
+    showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
     status.textContent = '';
@@ -527,6 +700,28 @@ async function renderDashboard() {
 
   const deployBtn = document.getElementById('deploy-btn');
   if (deployBtn) deployBtn.addEventListener('click', deployDocumentFromPanel);
+
+  const tabYaml = document.getElementById('tab-yaml');
+  const tabBuilder = document.getElementById('tab-builder');
+  if (tabYaml && tabBuilder) {
+    tabYaml.addEventListener('click', () => {
+      tabYaml.classList.add('active'); tabBuilder.classList.remove('active');
+      const yp = document.getElementById('deploy-yaml-pane');
+      const bp = document.getElementById('deploy-builder-pane');
+      if (yp) yp.style.display = '';
+      if (bp) bp.style.display = 'none';
+    });
+    tabBuilder.addEventListener('click', () => {
+      tabBuilder.classList.add('active'); tabYaml.classList.remove('active');
+      const yp = document.getElementById('deploy-yaml-pane');
+      if (yp) yp.style.display = 'none';
+      const bp = document.getElementById('deploy-builder-pane');
+      if (bp) {
+        bp.style.display = '';
+        if (!bp.dataset.init) { bp.dataset.init = '1'; window.renderBuilderPanel(bp); }
+      }
+    });
+  }
 
   try {
     const data = await safeFetchJson(`${API_BASE}/api/documents/list`);
@@ -629,7 +824,7 @@ async function downloadSubPdf(payloadStr, subShortId) {
     a.click();
     URL.revokeObjectURL(url);
   } catch(err) {
-    alert(`PDF download error: ${err.message}`);
+    showToast(`PDF download error: ${err.message}`, 'error');
   }
 }
 
@@ -644,7 +839,7 @@ async function exportDocData(docId) {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert(`Export failed: ${err.message}`);
+    showToast(`Export failed: ${err.message}`, 'error');
   }
 }
 
@@ -652,8 +847,9 @@ async function revokeDocument(slug) {
   try {
     await safeFetchJson(`${API_BASE}/api/doc/${slug}/close`, { method: 'POST' });
     renderDashboard();
+    showToast('Sharing revoked — sign link is now closed.', 'success');
   } catch (err) {
-    alert(`Revoke failed: ${err.message}`);
+    showToast(`Revoke failed: ${err.message}`, 'error');
   }
 }
 
@@ -661,8 +857,9 @@ async function restartDocument(slug) {
   try {
     await safeFetchJson(`${API_BASE}/api/doc/${slug}/restart`, { method: 'POST' });
     renderDashboard();
+    showToast('Document reopened for signing.', 'success');
   } catch (err) {
-    alert(`Restart failed: ${err.message}`);
+    showToast(`Restart failed: ${err.message}`, 'error');
   }
 }
 
@@ -671,8 +868,9 @@ async function deleteDocument(id, slug) {
   try {
     await safeFetchJson(`${API_BASE}/api/doc/${slug}`, { method: 'DELETE' });
     renderDashboard();
+    showToast(`Document "${id}" permanently deleted.`, 'success');
   } catch (err) {
-    alert(`Delete failed: ${err.message}`);
+    showToast(`Delete failed: ${err.message}`, 'error');
   }
 }
 
@@ -888,7 +1086,7 @@ function renderSigner(doc, spec) {
 
       renderSuccess(doc, result);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
       btn.disabled = false;
       btn.textContent = 'Sign & Execute';
     }
@@ -944,7 +1142,7 @@ function renderSuccess(doc, result) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '📄 Download Compiled PDF Agreement';
