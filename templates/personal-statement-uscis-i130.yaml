@@ -1,0 +1,138 @@
+document:
+  id: "personal-statement-uscis-i130"
+  title: "USCIS PERSONAL STATEMENT IN SUPPORT OF FORM I-130 PETITION FOR ALIEN RELATIVE"
+  jurisdiction: "United States Citizenship and Immigration Services (USCIS)"
+  expires_in_days: 60
+  signing_order: "sequential"
+  legal_footer: "I DECLARE UNDER PENALTY OF PERJURY UNDER THE LAWS OF THE UNITED STATES OF AMERICA THAT THE FOREGOING IS TRUE AND CORRECT."
+
+parties:
+  - id: "author"
+    role: "Statement Author (USCIS Petitioner or Beneficiary)"
+    sequence: 1
+
+sections:
+  - type: "static"
+    content: |
+      ## PERSONAL STATEMENT IN SUPPORT OF FORM I-130 PETITION FOR ALIEN RELATIVE
+      This personal statement is submitted to the United States Citizenship and Immigration Services (USCIS) in support of a Form I-130 Petition for Alien Relative. It describes, in my own words, the history and development of my relationship with my spouse. I understand that this statement is subject to verification and that knowingly false statements may be prosecuted under federal law.
+
+  - type: "form"
+    signer_label: "ABOUT THE AUTHOR OF THIS STATEMENT"
+    fields:
+      - name: "statement_author_name"
+        label: "Full Legal Name of the Author of this Statement"
+        type: "text"
+        required: true
+
+      - name: "author_role"
+        label: "I am the"
+        type: "select"
+        options: ["USCIS Petitioner", "USCIS Beneficiary"]
+        required: true
+
+      - name: "author_dob"
+        label: "Date of Birth"
+        type: "text"
+        required: true
+
+      - name: "author_pob"
+        label: "Place of Birth (City, State, Country)"
+        type: "text"
+
+      - name: "author_address"
+        label: "Current Residential Address"
+        type: "textarea"
+        rows: 3
+
+      - name: "author_a_number"
+        label: "A-Number / USCIS Number (if applicable)"
+        type: "text"
+
+  - type: "form"
+    signer_label: "1. HOW WE MET"
+    fields:
+      - name: "how_we_met"
+        label: "Describe how, when, and where you and your spouse first met, and your first impressions."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "2. DEVELOPMENT OF THE RELATIONSHIP"
+    fields:
+      - name: "relationship_development"
+        label: "Describe how the relationship developed: early dates, milestones, trips, and the growth of your commitment."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "3. COHABITATION & SHARED HOUSEHOLD"
+    fields:
+      - name: "cohabitation"
+        label: "Describe where you have lived together, how long, and how you shared everyday household life."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "4. RELATIONSHIP WITH FAMILY & FRIENDS"
+    fields:
+      - name: "family_relationships"
+        label: "Describe each other's relationships with family and friends, introductions, and any family events attended together."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "5. PERIODS OF SEPARATION & STAYING CONNECTED"
+    fields:
+      - name: "periods_of_separation"
+        label: "Describe any time you spent apart, how you communicated, and how you maintained the relationship."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "6. ENGAGEMENT & MARRIAGE"
+    fields:
+      - name: "marriage_details"
+        label: "Describe your engagement, wedding or marriage ceremony, and any administrative details (license, witnesses, officiant)."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "7. FINANCIAL SUPPORT & SHARED RESPONSIBILITIES"
+    fields:
+      - name: "financial_support"
+        label: "Describe how you have supported each other financially, shared expenses, and divided household responsibilities."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "8. FUTURE PLANS"
+    fields:
+      - name: "future_plans"
+        label: "Describe your plans together: career, residence, children, and long-term goals."
+        type: "textarea"
+        rows: 8
+        required: true
+
+  - type: "form"
+    signer_label: "9. ADDITIONAL EVIDENCE / OTHER DETAILS"
+    fields:
+      - name: "additional_evidence"
+        label: "Add any other details that demonstrate the bona fide nature of your marriage (optional)."
+        type: "textarea"
+        rows: 6
+
+  - type: "signature"
+    signer_label: "AUTHOR SWORN SIGNATURE"
+    fields:
+      - name: "execution_date"
+        label: "Date of Statement Execution"
+        type: "datetime-auto"
+        required: true

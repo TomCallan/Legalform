@@ -751,6 +751,13 @@ function renderSigner(doc, spec) {
                 ${f.options.map(o => `<option value="${esc(o)}" ${String(defaultVal) === String(o) ? 'selected' : ''}>${esc(o)}</option>`).join('')}
               </select>
             </div>`;
+        } else if (f.type === 'textarea') {
+          const textRows = f.rows || 6;
+          html += `
+            <div class="form-group">
+              <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+              <textarea class="form-control" data-field="${esc(f.name)}" rows="${textRows}" style="min-height:${textRows * 1.7}em; resize:vertical;" ${f.required ? 'required' : ''}>${esc(defaultVal)}</textarea>
+            </div>`;
         } else {
           const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
           html += `
@@ -795,7 +802,7 @@ function renderSigner(doc, spec) {
 
   container.innerHTML = html;
 
-  container.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
+  container.querySelectorAll('input[data-field], select[data-field], textarea[data-field]').forEach(input => {
     const fn = e => {
       const fieldName = e.target.dataset.field;
       if (e.target.type === 'checkbox') {
