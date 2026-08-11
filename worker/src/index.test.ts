@@ -119,3 +119,28 @@ test('render-pdf renders a typed (plain-text) signature on the agreement page', 
   const pdfText = extractPdfTexts(bytes).join(' ').replace(/\s+/g, ' ');
   assert.ok(pdfText.includes('Aloysius T. Widget'), 'typed signature text present in PDF');
 });
+
+test('render-pdf handles multi-page box content without clipping or overlap', async () => {
+  const multiPageText = Array.from({ length: 100 }, (_, i) => `Paragraph line ${i + 1}: legal text expanding across pages inside a box container.`).join('\n');
+  const payload = {
+    ...fullPayload,
+    fields: {
+      ...fullPayload.fields,
+      receiving_party: multiPageText
+    }
+  };
+
+  const res = await app.request('/api/render-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  assert.equal(res.status, 200);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  assert.ok(bytes.length > 1000, 'PDF body should be generated cleanly');
+  const pdfText = extractPdfTexts(bytes).join(' ').replace(/\s+/g, ' ');
+  assert.ok(pdfText.includes('Paragraph line 1:'), 'first line present');
+  assert.ok(pdfText.includes('Paragraph line 100:'), '100th line present (not clipped)');
+});
+

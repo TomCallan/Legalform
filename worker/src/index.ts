@@ -52,19 +52,28 @@ function winAnsiSafe(text: string): string {
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = winAnsiSafe(text).split(/\s+/);
+  const safeText = winAnsiSafe(String(text ?? ''));
+  const rawLines = safeText.replace(/\r\n/g, '\n').split('\n');
   const lines: string[] = [];
-  let line = '';
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
+  for (const rawLine of rawLines) {
+    if (!rawLine.trim()) {
+      lines.push('');
+      continue;
     }
+    const words = rawLine.split(/\s+/);
+    let line = '';
+    for (const word of words) {
+      if (!word) continue;
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) lines.push(line);
   }
-  if (line) lines.push(line);
   return lines;
 }
 
@@ -318,22 +327,35 @@ app.post('/api/render-pdf', async (c) => {
   };
 
   const centered = (text: string, font: PDFFont, size: number, color: Color = ink) => {
+    const gap = size + 6;
     for (const line of wrapText(text, font, size, maxWidth)) {
+      if (!line) {
+        y -= gap;
+        continue;
+      }
+      newPageIfNeeded(gap);
       page.drawText(line, { x: (pageW - font.widthOfTextAtSize(line, size)) / 2, y, size, font, color });
-      y -= size + 6;
+      y -= gap;
     }
   };
 
   const drawWrapped = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
     const font = opts.font ?? helv;
     const size = opts.size ?? 11;
+    const gap = opts.gap ?? size + 4.5;
     for (const line of wrapText(text, font, size, maxWidth)) {
+      if (!line) {
+        y -= gap;
+        continue;
+      }
+      newPageIfNeeded(gap);
       page.drawText(line, { x: margin, y, size, font, color: opts.color ?? ink });
-      y -= opts.gap ?? size + 4.5;
+      y -= gap;
     }
   };
 
   const rule = (thickness: number, color: Color, spaceAfter: number) => {
+    newPageIfNeeded(thickness + spaceAfter);
     page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness, color });
     y -= spaceAfter;
   };
@@ -352,24 +374,53 @@ app.post('/api/render-pdf', async (c) => {
       const valueFont = row.valueFont ?? helv;
       const valueSize = row.valueSize ?? 10;
       const valueLines = wrapText(row.value, valueFont, valueSize, valueCol - pad * 2);
-      const rowHeight = Math.max(labelLines.length, valueLines.length) * lineHeight + pad * 2;
-      newPageIfNeeded(rowHeight + 8);
-      const top = y;
-      const bottom = y - rowHeight;
-      page.drawRectangle({ x: margin, y: bottom, width: labelCol, height: rowHeight, color: tableBg });
-      page.drawRectangle({ x: margin, y: bottom, width: labelCol + valueCol, height: rowHeight, borderColor: grid, borderWidth: 0.5 });
-      page.drawLine({ start: { x: margin + labelCol, y: top }, end: { x: margin + labelCol, y: bottom }, thickness: 0.5, color: grid });
-      let ty = top - pad;
-      for (const line of labelLines) {
-        page.drawText(line, { x: margin + pad, y: ty - 10, size: 10, font: helvBold, color: ink });
-        ty -= lineHeight;
+      
+      let labelIdx = 0;
+      let valueIdx = 0;
+      const totalLabelLines = labelLines.length;
+      const totalValueLines = valueLines.length;
+
+      if (totalLabelLines === 0 && totalValueLines === 0) continue;
+
+      while (labelIdx < totalLabelLines || valueIdx < totalValueLines) {
+        const minHeightNeeded = lineHeight + pad * 2;
+        if (y - minHeightNeeded < margin) {
+          page = pdfDoc.addPage([pageW, pageH]);
+          y = pageH - margin;
+        }
+
+        const availHeight = y - margin;
+        const maxLinesFit = Math.max(1, Math.floor((availHeight - pad * 2) / lineHeight));
+        const remLabel = totalLabelLines - labelIdx;
+        const remValue = totalValueLines - valueIdx;
+        const linesToDraw = Math.min(maxLinesFit, Math.max(remLabel, remValue));
+
+        const chunkHeight = linesToDraw * lineHeight + pad * 2;
+        const top = y;
+        const bottom = y - chunkHeight;
+
+        page.drawRectangle({ x: margin, y: bottom, width: labelCol, height: chunkHeight, color: tableBg });
+        page.drawRectangle({ x: margin, y: bottom, width: labelCol + valueCol, height: chunkHeight, borderColor: grid, borderWidth: 0.5 });
+        page.drawLine({ start: { x: margin + labelCol, y: top }, end: { x: margin + labelCol, y: bottom }, thickness: 0.5, color: grid });
+
+        let ty = top - pad;
+        const labelEnd = Math.min(labelIdx + linesToDraw, totalLabelLines);
+        while (labelIdx < labelEnd) {
+          const l = labelLines[labelIdx++];
+          if (l) page.drawText(l, { x: margin + pad, y: ty - 10, size: 10, font: helvBold, color: ink });
+          ty -= lineHeight;
+        }
+
+        let vy = top - pad;
+        const valueEnd = Math.min(valueIdx + linesToDraw, totalValueLines);
+        while (valueIdx < valueEnd) {
+          const l = valueLines[valueIdx++];
+          if (l) page.drawText(l, { x: margin + labelCol + pad, y: vy - valueSize, size: valueSize, font: valueFont, color: row.valueColor ?? cell });
+          vy -= lineHeight;
+        }
+
+        y = bottom;
       }
-      let vy = top - pad;
-      for (const line of valueLines) {
-        page.drawText(line, { x: margin + labelCol + pad, y: vy - valueSize, size: valueSize, font: valueFont, color: row.valueColor ?? cell });
-        vy -= lineHeight;
-      }
-      y = bottom;
     }
   };
 
