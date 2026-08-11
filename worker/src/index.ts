@@ -5,22 +5,20 @@ type Bindings = {
   DB: D1Database;
   R2: R2Bucket;
   RESEND_API_KEY?: string;
-  ADMIN_API_KEY?: string;
+  ADMIN_EMAIL?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-// Always respond with JSON, even on unexpected errors, so clients
-// never receive a plain-text 500 body.
 app.onError((err, c) => {
   console.error('Unhandled error:', err);
   return c.json({ error: 'Internal Server Error' }, 500);
 });
 
-// Enable CORS for all routes (for Pages dynamic form interactions)
 app.use('*', cors());
 
-// Helper utilities
+const now = () => Math.floor(Date.now() / 1000);
+
 async function sha256(message: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -28,270 +26,47 @@ async function sha256(message: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-const now = () => Math.floor(Date.now() / 1000);
-
-async function checkRateLimit(
-  db: D1Database,
-  type: 'ip' | 'email',
-  value: string,
-  docId: string,
-  max: number
-): Promise<boolean> {
-  const hour = Math.floor(now() / 3600);
-  await db.prepare(
-    `INSERT INTO rate_limits (resource_type, resource_value, document_id, window_hour, count)
-     VALUES (?, ?, ?, ?, 1)
-     ON CONFLICT(resource_type, resource_value, document_id, window_hour) 
-     DO UPDATE SET count = count + 1`
-  ).bind(type, value, docId, hour).run();
-
-  const row = await db.prepare(
-    `SELECT count FROM rate_limits 
-     WHERE resource_type=? AND resource_value=? AND document_id=? AND window_hour=?`
-  ).bind(type, value, docId, hour).first<{ count: number }>();
-
-  return (row?.count ?? 0) <= max;
-}
-
-async function logAudit(
-  db: D1Database,
-  event: {
-    submissionId?: string;
-    documentId: string;
-    type: string;
-    data?: object;
-    ip: string;
-    ua: string;
-    session: string;
-  }
-) {
-  const ipHash = await sha256(event.ip);
-  await db.prepare(
-    `INSERT INTO audit_logs 
-     (submission_id, document_id, event_type, event_data, ip_hash, user_agent, session_id, server_timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(
-    event.submissionId ?? null,
-    event.documentId,
-    event.type,
-    JSON.stringify(event.data ?? {}),
-    ipHash,
-    event.ua,
-    event.session,
-    now()
-  ).run();
-}
-
-// ── Access resolution ─────────────────────────────────────
-// Admin keys see everything. Workspace keys (self-service, scoped
-// per-workspace via sha256) see only documents they deployed.
-type Access = { admin: boolean; scopeHash: string | null };
-
-async function resolveAccess(
-  db: D1Database,
-  key: string,
-  adminKey?: string
-): Promise<Access> {
-  if (!adminKey) return { admin: true, scopeHash: null };
-  if (key && key === adminKey) return { admin: true, scopeHash: null };
-
-  const hash = await sha256(key);
-  const ws = await db
-    .prepare('SELECT id FROM workspaces WHERE api_key_hash = ?')
-    .bind(hash)
-    .first<{ id: string }>();
-  if (ws) return { admin: false, scopeHash: hash };
-
-  return { admin: false, scopeHash: null };
-}
-
-// ── Admin: List All Documents ──────────────────────────────
-app.get('/api/documents/list', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
-
-  if (!access.admin && !access.scopeHash) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  const base = `
-    SELECT d.id, d.slug, d.status, d.expires_at, d.created_at, 
-           COUNT(s.id) AS submission_count 
-    FROM documents d 
-    LEFT JOIN submissions s ON d.id = s.document_id 
-    GROUP BY d.id, d.slug, d.status, d.expires_at, d.created_at 
-  `;
-  const sql = access.admin
-    ? `${base} ORDER BY d.created_at DESC`
-    : `${base} HAVING MAX(d.owner_api_key_hash) = ? ORDER BY d.created_at DESC`;
-
-  const docs = access.admin
-    ? await c.env.DB.prepare(sql).all()
-    : await c.env.DB.prepare(sql).bind(access.scopeHash).all();
-
-  return c.json({ documents: docs.results });
-});
-
-// ── Admin: Force Close Document / Slug ───────────────────────
-app.post('/api/doc/:slug/close', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
-
-  if (!access.admin && !access.scopeHash) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  const slug = c.req.param('slug');
-  const sql = access.admin
-    ? 'UPDATE documents SET status = ? WHERE slug = ? OR id = ?'
-    : 'UPDATE documents SET status = ? WHERE (slug = ? OR id = ?) AND owner_api_key_hash = ?';
-  const result = access.admin
-    ? await c.env.DB.prepare(sql).bind('closed', slug, slug).run()
-    : await c.env.DB.prepare(sql).bind('closed', slug, slug, access.scopeHash).run();
-
-  if (result.meta.changes === 0) {
-    return c.json({ error: 'Document or slug not found' }, 404);
-  }
-
-  return c.json({ success: true, message: `Document slug '${slug}' has been force closed.` });
-});
-
-// ── Admin: Reopen / Re-up Document Slug ─────────────────────
-app.post('/api/doc/:slug/reopen', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
-
-  if (!access.admin && !access.scopeHash) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  const slug = c.req.param('slug');
-  const body = await c.req.json().catch(() => ({}));
-  const extendDays = body.extend_days || 30;
-  const newExpiresAt = Math.floor(Date.now() / 1000) + (extendDays * 86400);
-
-  const sql = access.admin
-    ? 'UPDATE documents SET status = ?, expires_at = ? WHERE slug = ? OR id = ?'
-    : 'UPDATE documents SET status = ?, expires_at = ? WHERE (slug = ? OR id = ?) AND owner_api_key_hash = ?';
-  const result = access.admin
-    ? await c.env.DB.prepare(sql).bind('active', newExpiresAt, slug, slug).run()
-    : await c.env.DB.prepare(sql).bind('active', newExpiresAt, slug, slug, access.scopeHash).run();
-
-  if (result.meta.changes === 0) {
-    return c.json({ error: 'Document or slug not found' }, 404);
-  }
-
-  return c.json({ success: true, message: `Document slug '${slug}' has been reopened and re-upped for ${extendDays} days.`, expires_at: newExpiresAt });
-});
-
-// ── Workspaces (self-service creation) ──────────────────
-app.post('/api/workspaces', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const presentedKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
-  const body = await c.req.json();
-
-  const { id, name } = body;
-  if (!id || !name) {
-    return c.json({ error: 'Missing required fields: id, name' }, 400);
-  }
-
-  // The workspace access key comes from the body (web UI) or the
-  // presented key (CLI). It grants scoped access to this workspace's docs.
-  const wsKey = (body.api_key || presentedKey || '').trim();
-  if (!wsKey) {
-    return c.json({ error: 'Missing required field: api_key' }, 400);
-  }
-
-  const wsHash = await sha256(wsKey);
-  await c.env.DB.prepare(
-    `INSERT INTO workspaces (id, name, api_key_hash) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, api_key_hash=excluded.api_key_hash`
-  ).bind(id, name, wsHash).run();
-
-  return c.json({ success: true, workspace: { id, name } });
-});
-
-// ── Admin: Deploy Document (from CLI) ──────────────────────
+// ── Public: Deploy / Store Document Spec ──────────────────────
 app.post('/api/documents', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
   const body = await c.req.json();
-  const effectiveKey = apiKey || body.api_key;
+  const { id, slug, spec, expires_at } = body;
 
-  const access = await resolveAccess(c.env.DB, effectiveKey || '', c.env.ADMIN_API_KEY);
-  if (!access.admin && !access.scopeHash) {
-    return c.json({ error: 'Unauthorized: Invalid API Key' }, 401);
-  }
-
-  const { id, slug, spec, expires_at, max_per_email, max_per_ip, require_verification } = body;
   if (!id || !slug || !spec) {
     return c.json({ error: 'Missing required fields: id, slug, spec' }, 400);
   }
 
-  const apiKeyHash = effectiveKey ? await sha256(effectiveKey) : 'unauthenticated';
+  const specString = typeof spec === 'string' ? spec : JSON.stringify(spec);
 
   await c.env.DB.prepare(
-    `INSERT INTO documents (id, slug, spec, expires_at, max_per_email, max_per_ip, require_verification, owner_api_key_hash)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET spec=excluded.spec, expires_at=excluded.expires_at`
-  ).bind(
-    id, slug, spec, expires_at ?? null,
-    max_per_email ?? 1, max_per_ip ?? 3,
-    require_verification ? 1 : 0, apiKeyHash
-  ).run();
+    `INSERT INTO documents (id, slug, spec, status, expires_at)
+     VALUES (?, ?, ?, 'active', ?)
+     ON CONFLICT(id) DO UPDATE SET slug=excluded.slug, spec=excluded.spec, status='active', expires_at=excluded.expires_at`
+  ).bind(id, slug, specString, expires_at ?? null).run();
 
-  // Process multi-party configuration if present in spec
-  const parsedSpec = typeof spec === 'string' ? JSON.parse(spec) : spec;
-  const partyLinks: Record<string, string> = {};
-
-  if (Array.isArray(parsedSpec.parties) && parsedSpec.parties.length > 0) {
-    const isSequential = parsedSpec.document?.signing_order === 'sequential';
-
-    for (let i = 0; i < parsedSpec.parties.length; i++) {
-      const p = parsedSpec.parties[i];
-      const pId = p.id || `party_${i+1}`;
-      const pRole = p.role || p.name || `Party ${i+1}`;
-      const pEmail = p.email || null;
-      const pSeq = p.sequence ?? (i + 1);
-      const pToken = `${slug}_${pId}_${crypto.randomUUID().slice(0, 8)}`;
-      const pInitialStatus = (isSequential && i > 0) ? 'pending' : 'unlocked';
-
-      await c.env.DB.prepare(
-        `INSERT INTO document_parties (id, document_id, party_id, role, email, sequence, party_token, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(party_token) DO UPDATE SET status=excluded.status`
-      ).bind(
-        crypto.randomUUID(), id, pId, pRole, pEmail, pSeq, pToken, pInitialStatus
-      ).run();
-
-      partyLinks[pId] = pToken;
-    }
-  }
-
-  return c.json({ success: true, id, slug, party_tokens: partyLinks });
+  return c.json({ success: true, id, slug });
 });
 
-// ── Public: Get Document Spec ──────────────────────────────
-app.get('/api/doc/:slug', async (c) => {
-  const slugOrToken = c.req.param('slug');
-  
-  // Try looking up by party token first, then primary document slug
-  let partyRow = await c.env.DB.prepare(
-    'SELECT * FROM document_parties WHERE party_token = ?'
-  ).bind(slugOrToken).first();
+// ── Public: List All Documents ────────────────────────────────
+app.get('/api/documents/list', async (c) => {
+  const docs = await c.env.DB.prepare(
+    `SELECT d.id, d.slug, d.status, d.expires_at, d.created_at, 
+            COUNT(s.id) AS submission_count 
+     FROM documents d 
+     LEFT JOIN submissions s ON d.id = s.document_id 
+     GROUP BY d.id, d.slug, d.status, d.expires_at, d.created_at 
+     ORDER BY d.created_at DESC`
+  ).all();
 
-  let doc = null;
-  if (partyRow) {
-    doc = await c.env.DB.prepare(
-      'SELECT * FROM documents WHERE id = ? AND status = ?'
-    ).bind(partyRow.document_id, 'active').first();
-  } else {
-    doc = await c.env.DB.prepare(
-      'SELECT * FROM documents WHERE slug = ? AND status = ?'
-    ).bind(slugOrToken, 'active').first();
-  }
+  return c.json({ documents: docs.results });
+});
+
+// ── Public: Get Document Spec by Slug ────────────────────────
+app.get('/api/doc/:slug', async (c) => {
+  const slug = c.req.param('slug');
+  
+  const doc = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE (slug = ? OR id = ?) AND status = ?'
+  ).bind(slug, slug, 'active').first();
 
   if (!doc) return c.json({ error: 'Document not found or inactive' }, 404);
 
@@ -300,301 +75,71 @@ app.get('/api/doc/:slug', async (c) => {
     await c.env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind('expired', doc.id).run();
     return c.json({ error: 'Document expired' }, 410);
   }
-
-  // Enforce sequential signing locking if party lookup
-  let activePartyInfo = null;
-  if (partyRow) {
-    const parsedSpec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
-    const isSequential = parsedSpec.document?.signing_order === 'sequential';
-
-    if (isSequential && partyRow.sequence > 1) {
-      // Check if any prior sequence party is incomplete
-      const priorIncomplete = await c.env.DB.prepare(
-        'SELECT * FROM document_parties WHERE document_id = ? AND sequence < ? AND status != ?'
-      ).bind(doc.id, partyRow.sequence, 'completed').first();
-
-      if (priorIncomplete) {
-        return c.json({
-          error: 'Document Locked: Waiting for prior party to complete execution.',
-          locked: true,
-          required_prior_role: priorIncomplete.role
-        }, 403);
-      }
-    }
-
-    activePartyInfo = {
-      party_id: partyRow.party_id,
-      role: partyRow.role,
-      email: partyRow.email,
-      sequence: partyRow.sequence,
-      status: partyRow.status
-    };
-  }
-
-  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
-  const session = c.req.header('CF-Ray') ?? crypto.randomUUID();
-
-  await logAudit(c.env.DB, {
-    documentId: doc.id as string,
-    type: 'page_open',
-    data: activePartyInfo ? { active_party: activePartyInfo.party_id } : {},
-    ip,
-    ua: c.req.header('User-Agent') ?? '',
-    session
-  });
 
   return c.json({
     id: doc.id,
     slug: doc.slug,
     spec: doc.spec,
-    require_verification: doc.require_verification === 1,
-    expires_at: doc.expires_at,
-    active_party: activePartyInfo
+    expires_at: doc.expires_at
   });
 });
 
-// ── Public: Send Verification Email ────────────────────────
-app.post('/api/verify-email', async (c) => {
-  const { slug, email, redirect_url } = await c.req.json();
-  const doc = await c.env.DB.prepare('SELECT * FROM documents WHERE slug = ?').bind(slug).first();
-  if (!doc) return c.json({ error: 'Document not found' }, 404);
-
-  const token = crypto.randomUUID();
-  const expires = now() + 3600; // 1 hour
-
-  await c.env.DB.prepare(
-    'INSERT INTO email_tokens (token, email, document_id, expires_at) VALUES (?, ?, ?, ?)'
-  ).bind(token, email, doc.id, expires).run();
-
-  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
-
-  // Send via Resend API if API key configured
-  if (c.env.RESEND_API_KEY) {
-    const verifyLink = `${redirect_url}?token=${token}&email=${encodeURIComponent(email)}`;
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'LegalForms <noreply@resend.dev>',
-        to: email,
-        subject: 'Verify your email to sign document',
-        html: `<p>Click to verify: <a href="${verifyLink}">Verify Email & Sign</a></p>
-               <p>Expires in 1 hour. Request IP: ${ip}</p>`
-      })
-    });
-  }
-
-  await logAudit(c.env.DB, {
-    documentId: doc.id as string,
-    type: 'email_sent',
-    data: { email },
-    ip,
-    ua: c.req.header('User-Agent') ?? '',
-    session: c.req.header('CF-Ray') ?? crypto.randomUUID()
-  });
-
-  return c.json({ sent: true, token });
-});
-
-// ── Public: Submit Document ────────────────────────────────
+// ── Public: Submit Completed Document ────────────────────────
 app.post('/api/submit/:slug', async (c) => {
-  const slugOrToken = c.req.param('slug');
+  const slug = c.req.param('slug');
   const body = await c.req.json();
-  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('x-forwarded-for') ?? '127.0.0.1';
-  const ua = c.req.header('User-Agent') ?? '';
-  const session = c.req.header('CF-Ray') ?? crypto.randomUUID();
 
-  let partyRow = await c.env.DB.prepare(
-    'SELECT * FROM document_parties WHERE party_token = ?'
-  ).bind(slugOrToken).first();
-
-  let doc = null;
-  if (partyRow) {
-    doc = await c.env.DB.prepare(
-      'SELECT * FROM documents WHERE id = ? AND status = ?'
-    ).bind(partyRow.document_id, 'active').first();
-  } else {
-    doc = await c.env.DB.prepare(
-      'SELECT * FROM documents WHERE slug = ? AND status = ?'
-    ).bind(slugOrToken, 'active').first();
-  }
+  const doc = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE (slug = ? OR id = ?) AND status = ?'
+  ).bind(slug, slug, 'active').first();
 
   if (!doc) return c.json({ error: 'Document not found or inactive' }, 404);
-  const expiresAt = doc.expires_at as number | null;
-  if (expiresAt && expiresAt < now()) {
-    await c.env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind('expired', doc.id).run();
-    return c.json({ error: 'Document expired' }, 410);
-  }
 
-  const email = (body.email || partyRow?.email || '').toLowerCase().trim();
-  const ipHash = await sha256(ip);
-
-  // Rate Limiting checks
-  if (!await checkRateLimit(c.env.DB, 'email', email, doc.id as string, doc.max_per_email as number)) {
-    return c.json({ error: 'Submission limit reached for this email address' }, 429);
-  }
-  if (!await checkRateLimit(c.env.DB, 'ip', ipHash, doc.id as string, doc.max_per_ip as number)) {
-    return c.json({ error: 'Submission limit reached for this IP address' }, 429);
-  }
-
-  // Verify token if required
-  let isEmailVerified = 0;
-  if (doc.require_verification === 1) {
-    if (body.verification_token) {
-      const tokenRow = await c.env.DB.prepare(
-        'SELECT * FROM email_tokens WHERE token = ? AND email = ? AND document_id = ? AND used = 0 AND expires_at > ?'
-      ).bind(body.verification_token, email, doc.id, now()).first();
-
-      if (tokenRow) {
-        isEmailVerified = 1;
-        await c.env.DB.prepare('UPDATE email_tokens SET used = 1 WHERE token = ?').bind(body.verification_token).run();
-      } else {
-        return c.json({ error: 'Invalid or expired email verification token' }, 403);
-      }
-    } else {
-      return c.json({ error: 'Email verification required' }, 403);
-    }
-  }
-
-  // Cryptographic audit chain calculation
+  const email = (body.email || body.fields?.signer_email || '').toLowerCase().trim();
+  const name = body.name || body.fields?.receiving_party || body.fields?.signer_name || 'Signer';
   const submissionId = crypto.randomUUID();
-  const auditData = {
-    submission_id: submissionId,
-    document_id: doc.id,
-    email,
-    ip_hash: ipHash,
-    fingerprint: body.fingerprint,
-    fields: body.fields,
-    timestamp: now()
-  };
+  const submittedAt = now();
 
-  const auditHash = await sha256(JSON.stringify(auditData));
+  const dataJson = JSON.stringify(body.fields || {});
+  const signatureData = body.signature_data || body.signature_svg || '';
 
+  // Calculate SHA-256 audit digest
+  const auditData = `${doc.id}:${email}:${dataJson}:${signatureData}:${submittedAt}`;
+  const auditHash = await sha256(auditData);
+
+  // Store in D1 Database
   await c.env.DB.prepare(
-    `INSERT INTO submissions 
-     (id, document_id, email, email_verified, ip_hash, user_agent, fingerprint, 
-      submitted_at, data_json, signature_svg, audit_hash, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(
-    submissionId, doc.id, email, isEmailVerified,
-    ipHash, ua, body.fingerprint, now(),
-    JSON.stringify(body.fields), body.signature_svg || '', auditHash, 'complete'
-  ).run();
+    `INSERT INTO submissions (id, document_id, signer_email, signer_name, data_json, signature_data, audit_hash, submitted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(submissionId, doc.id, email, name, dataJson, signatureData, auditHash, submittedAt).run();
 
-  // Update party status if executing under per-party token
-  if (partyRow) {
-    await c.env.DB.prepare(
-      'UPDATE document_parties SET status = ?, completed_at = ?, submission_id = ? WHERE id = ?'
-    ).bind('completed', now(), submissionId, partyRow.id).run();
-
-    // Check if next sequence party exists and unlock them
-    const nextParty = await c.env.DB.prepare(
-      'SELECT * FROM document_parties WHERE document_id = ? AND sequence = ? AND status = ?'
-    ).bind(doc.id, (partyRow.sequence as number) + 1, 'pending').first();
-
-    if (nextParty) {
-      await c.env.DB.prepare(
-        'UPDATE document_parties SET status = ? WHERE id = ?'
-      ).bind('unlocked', nextParty.id).run();
-
-      // Dispatch notification email to next party if email configured
-      if (c.env.RESEND_API_KEY && nextParty.email) {
-        const nextSignUrl = `https://legalform-ui.pages.dev/?slug=${nextParty.party_token}`;
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: 'LegalForm Executions <noreply@resend.dev>',
-            to: nextParty.email,
-            subject: `[ACTION REQUIRED] Signature requested for ${doc.id}`,
-            html: `<p>Prior party (${partyRow.role}) has completed their portion of document execution.</p>
-                   <p>Please click here to execute your section: <a href="${nextSignUrl}">${nextSignUrl}</a></p>`
-          })
-        }).catch(err => console.error('Failed to notify next party:', err));
-      }
-    }
-  }
-
-  await logAudit(c.env.DB, {
-    submissionId,
-    documentId: doc.id as string,
-    type: 'submit_complete',
-    data: { audit_hash: auditHash, party_id: partyRow?.party_id },
-    ip, ua, session
-  });
-
-  // Store completed submission record in R2 storage
-  const r2Key = `submissions/${doc.id}/${submissionId}.json`;
-  const r2Record = {
+  // Archive full, compact payload to R2 bucket if available
+  const payload = {
     submission_id: submissionId,
     document_id: doc.id,
+    slug: doc.slug,
     spec: typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec,
-    email,
-    submitted_at: now(),
-    fields: body.fields,
-    signature: body.signature_svg,
+    signer_email: email,
+    signer_name: name,
+    fields: body.fields || {},
+    signature_data: signatureData,
     audit_hash: auditHash,
-    fingerprint: body.fingerprint,
-    audit_trail: body.auditTrail || []
+    submitted_at: submittedAt
   };
 
   try {
-    await c.env.R2.put(r2Key, JSON.stringify(r2Record, null, 2), {
-      customMetadata: {
-        document_id: doc.id as string,
-        email,
-        audit_hash: auditHash
-      }
-    });
-  } catch (r2Err) {
-    console.error('R2 storage error:', r2Err);
+    if (c.env.R2) {
+      await c.env.R2.put(`submissions/${doc.id}/${submissionId}.json`, JSON.stringify(payload, null, 2));
+    }
+  } catch (err) {
+    console.error('R2 save error (continuing):', err);
   }
 
-  // Send completion confirmation via Resend to both Signer and Admin
+  // Send email notification to sender / admin if configured
   if (c.env.RESEND_API_KEY) {
     const parsedSpec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
-    const adminEmail = parsedSpec.document?.admin_notification_email || c.env.ADMIN_EMAIL || 'tomcallan0@outlook.com';
-    const recipients = Array.from(new Set([email, adminEmail].filter(Boolean)));
-
-    const fieldsSummaryHtml = Object.entries(body.fields || {})
-      .map(([k, v]) => `<tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">${k}</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${v}</td></tr>`)
-      .join('');
-
-    const certHtml = `
-      <div style="font-family:serif;padding:30px;max-width:680px;margin:0 auto;border:2px solid #0f172a;background:#ffffff;color:#0f172a;">
-        <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:15px;margin-bottom:20px;">
-          <h2 style="margin:0;font-family:'Cinzel',Georgia,serif;letter-spacing:1px;">OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION</h2>
-          <p style="margin:5px 0 0 0;font-style:italic;color:#475569;font-size:14px;">Legally Enforceable Instrument under ESIGN Act (15 U.S.C. § 7001) & UETA</p>
-        </div>
-        <p>This document execution certificate confirms that the agreement below has been electronically signed and cryptographically recorded.</p>
-        
-        <table style="width:100%;border-collapse:collapse;margin:20px 0;font-family:sans-serif;font-size:14px;">
-          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Document ID</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${doc.id}</td></tr>
-          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Execution Timestamp</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${new Date(now() * 1000).toUTCString()}</td></tr>
-          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Signer Email</td><td style="padding:6px 12px;border:1px solid #e2e8f0;">${email || 'N/A'}</td></tr>
-          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">Submission ID</td><td style="padding:6px 12px;border:1px solid #e2e8f0;font-family:monospace;">${submissionId}</td></tr>
-          <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;background:#f8fafc;">IP Address Hash</td><td style="padding:6px 12px;border:1px solid #e2e8f0;font-family:monospace;">${ipHash}</td></tr>
-          ${fieldsSummaryHtml}
-        </table>
-
-        <div style="margin-top:20px;padding:15px;background:#f8fafc;border:1px solid #cbd5e1;">
-          <strong style="display:block;margin-bottom:5px;font-family:sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Cryptographic Audit SHA-256 Digest:</strong>
-          <code style="word-break:break-all;font-family:monospace;font-size:12px;color:#1e3a8a;">${auditHash}</code>
-        </div>
-        
-        <div style="margin-top:20px;text-align:center;font-size:12px;color:#64748b;font-style:italic;">
-          Archived in Cloudflare R2 Vault: <code>${r2Key}</code>
-        </div>
-      </div>
-    `;
-
-    for (const recipient of recipients) {
+    const adminEmail = parsedSpec.document?.admin_notification_email || c.env.ADMIN_EMAIL;
+    if (adminEmail) {
       try {
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -603,14 +148,20 @@ app.post('/api/submit/:slug', async (c) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'LegalForm Executions <noreply@resend.dev>',
-            to: recipient,
-            subject: `[EXECUTED AGREEMENT] Certificate & Record: ${doc.id}`,
-            html: certHtml
+            from: 'LegalForm <noreply@resend.dev>',
+            to: adminEmail,
+            subject: `[EXECUTED AGREEMENT] ${doc.id} signed by ${email}`,
+            html: `
+              <h2>Document Execution Notification</h2>
+              <p>Document <strong>${doc.id}</strong> has been signed.</p>
+              <p><strong>Signer:</strong> ${name} (${email})</p>
+              <p><strong>SHA-256 Audit Hash:</strong> <code>${auditHash}</code></p>
+              <p><strong>Timestamp:</strong> ${new Date(submittedAt * 1000).toUTCString()}</p>
+            `
           })
         });
       } catch (emailErr) {
-        console.error(`Resend email error sending to ${recipient}:`, emailErr);
+        console.error('Failed to send admin email notification:', emailErr);
       }
     }
   }
@@ -618,110 +169,38 @@ app.post('/api/submit/:slug', async (c) => {
   return c.json({
     submission_id: submissionId,
     audit_hash: auditHash,
-    r2_key: r2Key,
-    message: 'Document successfully signed'
+    submitted_at: submittedAt,
+    payload,
+    message: 'Document signed successfully'
   });
 });
 
-// ── Admin: Export Submissions & Audit Trail ────────────────
+// ── Public: Export Submission Data / Compact JSON Payload ────
 app.get('/api/export/:doc_id', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
-
-  if (!access.admin && !access.scopeHash) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
   const docId = c.req.param('doc_id');
 
-  const docSql = access.admin
-    ? 'SELECT * FROM documents WHERE id = ? OR slug = ?'
-    : 'SELECT * FROM documents WHERE (id = ? OR slug = ?) AND owner_api_key_hash = ?';
-  const doc = access.admin
-    ? await c.env.DB.prepare(docSql).bind(docId, docId).first()
-    : await c.env.DB.prepare(docSql).bind(docId, docId, access.scopeHash).first();
+  const doc = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE id = ? OR slug = ?'
+  ).bind(docId, docId).first();
 
   if (!doc) return c.json({ error: 'Document not found' }, 404);
 
   const submissions = await c.env.DB.prepare(
     'SELECT * FROM submissions WHERE document_id = ? ORDER BY submitted_at DESC'
-  ).bind(docId).all();
-
-  const auditLogs = await c.env.DB.prepare(
-    'SELECT * FROM audit_logs WHERE document_id = ? ORDER BY server_timestamp ASC'
-  ).bind(docId).all();
+  ).bind(doc.id).all();
 
   return c.json({
-    document_id: docId,
-    doc: doc,
-    submissions: submissions.results,
-    audit_logs: auditLogs.results
+    document_id: doc.id,
+    spec: typeof doc.spec === 'string' ? JSON.parse(doc.spec as string) : doc.spec,
+    submissions: submissions.results
   });
 });
 
-// ── Admin: Delete Document & Purge R2 Archives ──────────────
-app.delete('/api/doc/:id', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : c.req.query('api_key');
-  const access = await resolveAccess(c.env.DB, apiKey || '', c.env.ADMIN_API_KEY);
-
-  if (!access.admin && !access.scopeHash) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  const id = c.req.param('id');
-
-  // Ownership gate: resolve the real document id before purging
-  const docSql = access.admin
-    ? 'SELECT id FROM documents WHERE id = ? OR slug = ?'
-    : 'SELECT id FROM documents WHERE (id = ? OR slug = ?) AND owner_api_key_hash = ?';
-  const owned = access.admin
-    ? await c.env.DB.prepare(docSql).bind(id, id).first<{ id: string }>()
-    : await c.env.DB.prepare(docSql).bind(id, id, access.scopeHash).first<{ id: string }>();
-
-  if (!owned) return c.json({ error: 'Document or slug not found' }, 404);
-  const docId = owned.id;
-
-  // Fetch submissions to purge from R2
-  const subs = await c.env.DB.prepare(
-    'SELECT id FROM submissions WHERE document_id = ?'
-  ).bind(docId).all();
-
-  for (const sub of (subs.results || [])) {
-    const r2Key = `submissions/${docId}/${sub.id}.json`;
-    try { await c.env.R2.delete(r2Key); } catch(e) {}
-  }
-
-  await c.env.DB.prepare('DELETE FROM submissions WHERE document_id = ?').bind(docId).run();
-  await c.env.DB.prepare('DELETE FROM audit_logs WHERE document_id = ?').bind(docId).run();
-  await c.env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(docId).run();
-
-  return c.json({ success: true, message: `Document '${id}' and all R2 archived objects purged.` });
-});
-
-// ── Public: Single Submission Audit Verification ───────────
-app.get('/api/audit/:submission_id', async (c) => {
-  const subId = c.req.param('submission_id');
-  const sub = await c.env.DB.prepare(
-    'SELECT * FROM submissions WHERE id = ?'
-  ).bind(subId).first();
-
-  if (!sub) return c.json({ error: 'Submission not found' }, 404);
-
-  const logs = await c.env.DB.prepare(
-    `SELECT event_type, event_data, server_timestamp, ip_hash, user_agent 
-     FROM audit_logs WHERE submission_id = ? ORDER BY server_timestamp ASC`
-  ).bind(subId).all();
-
-  return c.json({
-    submission: sub,
-    audit_trail: logs.results,
-    integrity: {
-      algorithm: 'SHA-256',
-      audit_hash: sub.audit_hash
-    }
-  });
+// ── Public: Close / Delete Document ─────────────────────────
+app.post('/api/doc/:slug/close', async (c) => {
+  const slug = c.req.param('slug');
+  await c.env.DB.prepare('UPDATE documents SET status = ? WHERE slug = ? OR id = ?').bind('closed', slug, slug).run();
+  return c.json({ success: true, message: `Document '${slug}' closed.` });
 });
 
 export default app;

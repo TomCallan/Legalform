@@ -34,9 +34,9 @@
     a { color: var(--accent-brand); text-decoration: none; transition: color 0.2s; }
     
     .container {
-      max-width: 1200px;
+      max-width: 900px;
       margin: 0 auto;
-      padding: 0 clamp(20px, 4vw, 64px);
+      padding: 0 clamp(12px, 3vw, 32px);
       width: 100%;
     }
     
@@ -51,7 +51,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      height: 72px;
+      min-height: 64px;
+      padding: 0.5rem 0;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
     .brand {
       display: flex;
@@ -63,18 +66,16 @@
       text-transform: uppercase;
       color: var(--text-main);
     }
-    
-    .nav-links { display: flex; align-items: center; gap: 2rem; }
-    .nav-links a.muted { 
-      color: var(--text-main); 
-      font-size: clamp(13px, 0.95vw, 15px); 
-      font-weight: 500; 
-      text-decoration: underline; 
-      text-decoration-color: var(--border-subtle); 
-      text-decoration-thickness: 1px; 
-      text-underline-offset: 4px;
+
+    /* Mobile Responsive Rules */
+    @media (max-width: 640px) {
+      .header-inner { flex-direction: column; align-items: flex-start; }
+      .signer-wrapper { padding: 1.5rem 0 2rem; }
+      .signer-head, .signer-body { padding: 1.25rem; }
+      .btn { width: 100%; padding: 0.8rem 1rem; font-size: 0.85rem; }
+      .sig-actions { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+      .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
     }
-    .nav-links a.muted:hover { text-decoration-color: var(--text-main); }
     
     .btn {
       background: var(--text-main);
@@ -93,205 +94,17 @@
       transition: all 0.2s ease;
     }
     .btn:hover { background: var(--bg-base); color: var(--text-main); }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
     .btn-outline {
       background: transparent;
       color: var(--text-main);
       border: 1px solid var(--border-subtle);
     }
     .btn-outline:hover { background: var(--bg-surface); border-color: var(--text-main); color: var(--text-main); }
-    
-    /* Hero Section */
-    .hero {
-      padding: 6rem 0 4rem;
-      text-align: left;
-    }
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0;
-      background: transparent;
-      border: none;
-      font-size: clamp(10px, 0.8vw, 12px);
-      font-weight: 600;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 1.5rem;
-    }
-    .hero h1 {
-      font-size: clamp(40px, 6.4vw, 104px);
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.03em;
-      margin: 0 0 1.5rem;
-      color: var(--text-main);
-      text-transform: uppercase;
-    }
-    .hero h1 span {
-      font-style: normal;
-      font-weight: 900;
-      color: var(--text-main);
-    }
-    .hero p {
-      font-size: clamp(13px, 0.95vw, 15px);
-      color: var(--text-muted);
-      max-width: 46ch;
-      margin: 0 0 3rem;
-      line-height: 1.5;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: flex-start;
-    }
-    
-    /* Demo Section */
-    .demo-section {
-      margin-bottom: 8rem;
-    }
-    .demo-window {
-      background: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-    .demo-header {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid var(--border-subtle);
-      background: var(--bg-surface);
-    }
-    .demo-header-title {
-      font-size: clamp(10px, 0.75vw, 11px);
-      font-weight: 600;
-      letter-spacing: 0.24em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      display: flex;
-      justify-content: space-between;
-      flex: 1;
-    }
-    .demo-code {
-      padding: 2rem;
-      font-size: 13px;
-      line-height: 1.7;
-      border-right: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      overflow-x: auto;
-      white-space: pre;
-    }
-    .demo-code .key { color: var(--text-muted); font-weight: 600; }
-    .demo-code .string { color: var(--text-main); }
-    .demo-code .keyword { color: var(--text-main); font-weight: 700; }
-    
-    .demo-preview {
-      padding: 2rem;
-      background: var(--bg-surface);
-      display: flex;
-      flex-direction: column;
-    }
-    .doc-paper {
-      background: var(--bg-base);
-      border-radius: 0;
-      border: 1px solid var(--border-subtle);
-      padding: 2rem;
-      color: var(--text-main);
-      flex: 1;
-    }
-    .doc-paper h3 {
-      font-size: clamp(12px, 1vw, 15px);
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      margin: 0 0 1rem;
-      text-transform: uppercase;
-    }
-    .doc-paper p {
-      font-size: clamp(13px, 0.95vw, 15px);
-      line-height: 1.5;
-      color: var(--text-muted);
-      margin-bottom: 1.5rem;
-    }
-    .doc-signer {
-      border: 1px solid var(--border-subtle);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 1rem;
-      border-radius: 0;
-      margin-bottom: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg-base);
-    }
-    .doc-signer-name { font-weight: 600; font-size: clamp(12px, 1vw, 15px); }
-    .status-badge {
-      font-size: clamp(10px, 0.75vw, 11px);
-      font-weight: 600;
-      padding: 0.25rem 0.5rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.24em;
-    }
-    .status-completed { color: var(--success); border-color: var(--success); }
-    .status-pending { color: var(--text-muted); border-color: var(--border-subtle); }
-    
-    /* Features */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0;
-      margin-bottom: 8rem;
-      border: 1px solid var(--border-subtle);
-    }
-    .feature {
-      padding: 2rem;
-      border-right: 1px solid var(--border-subtle);
-      background: var(--bg-base);
-      transition: background 0.3s;
-    }
-    .feature:last-child { border-right: none; }
-    .feature:hover { background: var(--bg-surface); }
-    .feature h3 { font-size: clamp(12px, 1vw, 15px); font-weight: 600; margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.02em; }
-    .feature p { font-size: clamp(13px, 0.95vw, 15px); color: var(--text-muted); line-height: 1.5; margin: 0; }
-    
-    @media (max-width: 900px) {
-      .demo-window { grid-template-columns: 1fr; }
-      .demo-code { border-right: none; border-bottom: 1px solid var(--border-subtle); }
-      .features { grid-template-columns: 1fr; border-right: 1px solid var(--border-subtle); border-bottom: none; }
-      .feature { border-right: none; border-bottom: 1px solid var(--border-subtle); }
-      .hero h1 { font-size: clamp(34px, 11vw, 56px); }
-      .hero { padding: 4rem 0; }
-    }
-    
-    footer {
-      margin-top: auto;
-      border-top: 1px solid var(--border-subtle);
-      padding: 1.5rem 0;
-      display: flex;
-      justify-content: space-between;
-      color: var(--text-muted);
-      font-size: clamp(9px, 0.7vw, 11px);
-      font-weight: 600;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-    }
-    .footer-inner {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-    }
-    @media (max-width: 900px) {
-      .footer-inner { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
-    }
 
-    /* Signer Flow (app view — scrolls normally) */
-    .signer {
-      max-width: 780px;
-      margin: 0 auto;
+    /* Signer Flow */
+    .signer-wrapper {
       padding: clamp(32px, 6vh, 72px) 0 4rem;
     }
     .signer-card {
@@ -333,6 +146,7 @@
     .signer-body { padding: 2rem; }
     .signer-section { margin-bottom: 2.5rem; }
     .signer-section:last-child { margin-bottom: 0; }
+    
     .section-label {
       font-size: clamp(10px, 0.75vw, 11px);
       font-weight: 600;
@@ -347,6 +161,7 @@
       line-height: 1.7;
       color: var(--text-main);
     }
+    
     .form-group { margin-bottom: 1.25rem; }
     .form-group label {
       display: block;
@@ -374,6 +189,7 @@
       border-color: var(--border-active);
     }
     .form-control[readonly] { cursor: default; }
+    
     .legal-footer {
       margin: 2rem 0;
       padding: 1.25rem 0;
@@ -383,6 +199,7 @@
       line-height: 1.6;
       color: var(--text-main);
     }
+    
     .sig-pad {
       border: 1px solid var(--border-subtle);
       background: var(--bg-surface);
@@ -391,6 +208,7 @@
       display: block;
       touch-action: none;
       cursor: crosshair;
+      border-radius: 0;
     }
     .sig-actions {
       display: flex;
@@ -420,42 +238,7 @@
       transition: all 0.2s;
     }
     .btn-danger-ghost:hover { background: var(--error); color: var(--bg-base); }
-    .btn:disabled { opacity: 0.4; cursor: default; }
-    .loading-card {
-      border: 1px solid var(--border-subtle);
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 3rem 2rem;
-      text-align: center;
-    }
-    .spinner {
-      width: 28px;
-      height: 28px;
-      border: 2px solid var(--border-subtle);
-      border-top-color: var(--text-main);
-      margin: 0 auto 1.5rem;
-      animation: spin 1s linear infinite;
-    }
-    .error-card {
-      border: 1px solid var(--error);
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    .error-title {
-      color: var(--error);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      font-size: clamp(12px, 1vw, 15px);
-      margin-bottom: 0.75rem;
-    }
-    .error-msg {
-      color: var(--text-muted);
-      font-size: clamp(13px, 0.95vw, 15px);
-      line-height: 1.5;
-      margin: 0;
-    }
+
     .audit-row {
       border-top: 1px solid var(--border-subtle);
       padding-top: 1.5rem;
@@ -470,7 +253,17 @@
       line-height: 1.6;
       margin-top: 0.5rem;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border-subtle);
+      padding: 1.5rem 0;
+      color: var(--text-muted);
+      font-size: clamp(9px, 0.7vw, 11px);
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
@@ -480,550 +273,434 @@
       <a href="/" class="brand">
         Legalform
       </a>
-      <div class="nav-links">
-        <a href="https://github.com/TomCallan/Legalform" target="_blank" class="muted">Documentation</a>
-        <a href="/admin.html" class="btn">Workspace Login</a>
+      <div style="display:flex; gap:1.5rem; align-items:center;">
+        <a href="/dashboard" id="dashboard-link" style="font-size: clamp(11px, 0.8vw, 13px); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-main);">
+          Dashboard / Document Ledger &rarr;
+        </a>
       </div>
     </div>
   </header>
 
   <main id="app">
-    <!-- Landing Page Content Default -->
-    <div class="container">
-      <section class="hero">
-        <div class="hero-badge">
-          Self-Hostable Infrastructure
+    <div class="container signer-wrapper">
+      <div class="signer-card" id="main-content">
+        <div style="padding: 4rem; text-align: center;">
+          <div class="section-label">Loading Document</div>
+          <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0;">Fetching cryptographic signature record…</p>
         </div>
-        <h1>
-          Agreements as Code.<br>
-          <span>Cryptographically secured.</span>
-        </h1>
-        <p>
-          Legalform provides a developer-first protocol to define, deploy, and execute court-enforceable legal documents. Ditch legacy vendors for a precise, self-hosted signing pipeline.
-        </p>
-        <div class="hero-actions">
-          <a href="/admin.html" class="btn" style="padding: 0.8rem 2rem; font-size: 1rem;">Open Workspace</a>
-          <a href="https://github.com/TomCallan/Legalform" target="_blank" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">View on GitHub</a>
-        </div>
-      </section>
-
-      <section class="demo-section">
-        <div class="demo-window">
-          <div class="demo-header">
-            <div class="demo-header-title">
-              <span>definitions/nda.yaml</span>
-              <span>Compiled Output</span>
-            </div>
-          </div>
-          <div class="demo-code">
-<span class="keyword">document:</span>
-  <span class="key">id:</span> <span class="string">"nda-core-v2"</span>
-  <span class="key">title:</span> <span class="string">"Mutual Non-Disclosure Agreement"</span>
-  <span class="key">jurisdiction:</span> <span class="string">"State of Delaware"</span>
-  <span class="key">signing_order:</span> <span class="string">"sequential"</span>
-
-<span class="keyword">parties:</span>
-  - <span class="key">id:</span> <span class="string">"discloser"</span>
-    <span class="key">role:</span> <span class="string">"Disclosing Party"</span>
-    <span class="key">sequence:</span> 1
-  - <span class="key">id:</span> <span class="string">"recipient"</span>
-    <span class="key">role:</span> <span class="string">"Receiving Party"</span>
-    <span class="key">sequence:</span> 2
-          </div>
-          <div class="demo-preview">
-            <div class="doc-paper">
-              <h3>Mutual Non-Disclosure Agreement</h3>
-              <p>This Agreement is entered into to prevent the unauthorized disclosure of Confidential Information.</p>
-              
-              <div class="doc-signer">
-                <div>
-                  <div class="doc-signer-name">Disclosing Party</div>
-                  <div style="font-size:0.7rem; color:#666; margin-top:2px;">Jane Doe • Verified</div>
-                </div>
-                <div class="status-badge status-completed">Signed</div>
-              </div>
-              
-              <div class="doc-signer" style="opacity: 0.6">
-                <div>
-                  <div class="doc-signer-name">Receiving Party</div>
-                  <div style="font-size:0.7rem; color:#666; margin-top:2px;">Awaiting signature...</div>
-                </div>
-                <div class="status-badge status-pending">Pending</div>
-              </div>
-            </div>
-            <div style="margin-top:1.5rem; text-align:center; font-size:clamp(10px, 0.75vw, 11px); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.24em; font-variant-numeric: tabular-nums;">
-              SHA-256 Digest: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="features">
-        <div class="feature">
-          <h3>Legal Rigor</h3>
-          <p>Native compliance with ESIGN Act and eIDAS Regulation. Every execution generates a tamper-evident audit trail backed by SHA-256 hashing.</p>
-        </div>
-        <div class="feature">
-          <h3>Declarative Specs</h3>
-          <p>Define documents, parties, and routing logic entirely in YAML or via our Visual Builder. Treat your legal templates like application code.</p>
-        </div>
-        <div class="feature">
-          <h3>Cloudflare Native</h3>
-          <p>Built for the edge. Deploy directly to Cloudflare Workers and Pages for global low-latency access and zero maintenance overhead.</p>
-        </div>
-      </section>
+      </div>
     </div>
   </main>
 
   <footer>
-    <div class="container footer-inner">
-      <p style="margin:0">LEGALFORM — OPEN SOURCE LEGAL DOCUMENT INFRASTRUCTURE</p>
-      <p style="margin:0;">MIT LICENSE • HOSTED ON YOUR DOMAIN</p>
+    <div class="container">
+      LEGALFORM — MONARCH DESIGN SYSTEM • COURT-ENFORCEABLE SIGNATURE INFRASTRUCTURE
     </div>
   </footer>
 
 <script>
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8787'
-  : 'https://legalform-api.tomcallan0.workers.dev';
-
+const API_BASE = '';
 const params = new URLSearchParams(window.location.search);
-const pathSegments = window.location.pathname.split('/').filter(Boolean);
-const lastSegment = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : null;
-const slugParam = params.get('slug');
-const slug = slugParam || (lastSegment && !lastSegment.includes('.html') && lastSegment !== 'index' ? lastSegment : null);
+const slug = params.get('slug') || 'my-nda';
 
-if (slug) {
-  const appContainer = document.getElementById('app');
-  const auditTrail = [];
+const queryPrefills = {};
+for (const [key, val] of params.entries()) {
+  if (key !== 'slug') queryPrefills[key] = val;
+}
 
-  function audit(type, data = {}) {
-    auditTrail.push({ type, data, client_timestamp: Date.now(), url: window.location.href });
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function loadDocument() {
+  const container = document.getElementById('main-content');
+  if (window.location.pathname.startsWith('/dashboard')) {
+    renderDashboard();
+    return;
   }
-
-  function esc(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-
-  function setView(html) {
-    appContainer.innerHTML = `<div class="container"><div class="signer">${html}</div></div>`;
-  }
-
-  function loadingView() {
-    setView(`
-      <div class="loading-card">
-        <div class="spinner"></div>
-        <div class="section-label" style="margin-bottom: 0.5rem;">Loading Document</div>
-        <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching cryptographic signature record…</p>
-      </div>`);
-  }
-
-  function errorView(title, message) {
-    setView(`
-      <div class="error-card">
-        <div class="error-title">${esc(title)}</div>
-        <p class="error-msg">${esc(message)}</p>
-      </div>`);
-  }
-
-  function renderStatic(content) {
-    const wrap = document.createElement('div');
-    wrap.className = 'static-body';
-    (content || '').split(/\n+/).forEach(line => {
-      const t = line.trim();
-      if (!t) return;
-      if (/^#{1,3}\s+/.test(t)) {
-        const label = document.createElement('div');
-        label.className = 'section-label';
-        label.textContent = t.replace(/^#{1,3}\s+/, '');
-        wrap.appendChild(label);
-      } else if (/^[-*]\s+/.test(t)) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 0.75rem; margin-bottom: 0.5rem; line-height: 1.6; font-size: clamp(13px, 0.95vw, 15px); color: var(--text-main);';
-        const dash = document.createElement('span');
-        dash.style.color = 'var(--text-muted)';
-        dash.textContent = '—';
-        const bodyText = document.createElement('span');
-        bodyText.textContent = t.replace(/^[-*]\s+/, '');
-        row.append(dash, bodyText);
-        wrap.appendChild(row);
-      } else {
-        const p = document.createElement('p');
-        p.textContent = t;
-        wrap.appendChild(p);
-      }
-    });
-    return wrap;
-  }
-
-  function renderField(f) {
-    const group = document.createElement('div');
-    group.className = 'form-group';
-    const label = document.createElement('label');
-    label.textContent = (f.label || f.name) + (f.required ? ' *' : '');
-    group.appendChild(label);
-
-    let input;
-    if (f.type === 'select') {
-      input = document.createElement('select');
-      input.className = 'form-control';
-      (f.options || []).forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o;
-        opt.textContent = o;
-        input.appendChild(opt);
-      });
-    } else {
-      input = document.createElement('input');
-      input.type = f.type === 'email' ? 'email' : (f.type === 'date' ? 'date' : 'text');
-      input.className = 'form-control';
-    }
-
-    input.dataset.name = f.name;
-    if (f.type === 'datetime-auto') {
-      input.value = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      input.readOnly = true;
-    } else if (f.value != null) {
-      input.value = f.value;
-    }
-    if (f.required) input.required = true;
-    input.addEventListener('focus', () => audit('field_focus', { name: f.name }));
-    group.appendChild(input);
-    return group;
-  }
-
-  function initSigPad(canvas) {
-    const ctx = canvas.getContext('2d');
-    const strokes = [];
-    let drawing = false;
-    let stroke = null;
-
-    function size() {
-      const w = canvas.offsetWidth || 300;
-      const h = canvas.offsetHeight || 200;
-      canvas.width = w * devicePixelRatio;
-      canvas.height = h * devicePixelRatio;
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      strokes.forEach(pts => {
-        if (!pts.length) return;
-        ctx.beginPath();
-        ctx.moveTo(pts[0].x, pts[0].y);
-        pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-        ctx.stroke();
-      });
-      return { w, h };
-    }
-
-    function point(e) {
-      const r = canvas.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
-    }
-
-    canvas.addEventListener('pointerdown', e => {
-      drawing = true;
-      stroke = [point(e)];
-      strokes.push(stroke);
-      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
-      ctx.beginPath();
-      ctx.moveTo(stroke[0].x, stroke[0].y);
-      ctx.stroke();
-    });
-    canvas.addEventListener('pointermove', e => {
-      if (!drawing || !stroke) return;
-      const p = point(e);
-      const last = stroke[stroke.length - 1];
-      if (Math.abs(p.x - last.x) + Math.abs(p.y - last.y) < 2) return;
-      stroke.push(p);
-      ctx.lineTo(p.x, p.y);
-      ctx.stroke();
-    });
-    const stop = () => { drawing = false; stroke = null; };
-    canvas.addEventListener('pointerup', stop);
-    canvas.addEventListener('pointerleave', stop);
-
-    size();
-    window.addEventListener('resize', size);
-
-    return {
-      hasSignature: () => strokes.length > 0,
-      clear() {
-        strokes.length = 0;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      },
-      toSVG() {
-        if (!strokes.length) return '';
-        const { w, h } = size();
-        const d = strokes.map(pts => pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')).join(' ');
-        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><path d="${d}" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-      }
-    };
-  }
-
-  async function fingerprint() {
-    const parts = [navigator.userAgent, `${screen.width}x${screen.height}`, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.language];
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts.join('|') + Date.now()));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  function showSuccess(doc, data) {
-    setView(`
-      <div class="signer-card">
-        <div class="signer-head">
-          <div class="signer-eyebrow" style="color: var(--success);">Execution Recorded</div>
-          <h1 class="signer-title">Document Signed</h1>
-          <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">${esc(doc.id)} — execution complete. A certificate of electronic execution has been dispatched by email.</p>
-        </div>
-        <div class="signer-body">
-          <div class="signer-meta" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem;">
-            <span>Submission ${esc(data.submission_id)}</span>
-            <span>Vault ${esc(data.r2_key || '—')}</span>
-          </div>
-          <div class="audit-row">
-            <div class="section-label">Cryptographic Audit — SHA-256 Digest</div>
-            <div class="audit-hash">${esc(data.audit_hash)}</div>
-          </div>
-        </div>
-      </div>`);
-  }
-
-  function buildSigner(doc, verification) {
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/doc/${slug}`);
+    if (!res.ok) throw new Error('Document not found or link expired.');
+    const doc = await res.json();
     const spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
-    const d = spec.document || {};
-    const party = doc.active_party;
-    const signerEmail = (party && party.email) || (verification && verification.email) || '';
-    const verificationToken = (verification && verification.token) || null;
-    const formValues = {};
-    let emailInput = null;
-    let sigPad = null;
+    renderSigner(doc, spec);
+  } catch (err) {
+    container.innerHTML = `
+      <div style="padding: 3rem;">
+        <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">Access Denied</div>
+        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0;">${esc(err.message)}</p>
+      </div>`;
+  }
+}
 
-    const card = document.createElement('div');
-    card.className = 'signer-card';
+async function renderDashboard() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = `
+    <div class="signer-head">
+      <div class="signer-eyebrow">Sender Management Ledger</div>
+      <h1 class="signer-title">Received Submissions & Documents</h1>
+    </div>
+    <div class="signer-body" id="dash-body">
+      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching active document ledger and received submissions...</p>
+    </div>`;
 
-    const head = document.createElement('div');
-    head.className = 'signer-head';
-    head.innerHTML = `
+  try {
+    const res = await fetch(`${API_BASE}/api/documents/list`);
+    const data = await res.json();
+    const docs = data.documents || [];
+    const dashBody = document.getElementById('dash-body');
+
+    if (!docs.length) {
+      dashBody.innerHTML = `<p style="color: var(--text-muted);">No documents deployed yet.</p>`;
+      return;
+    }
+
+    let cardsHtml = '';
+    for (const d of docs) {
+      let subDataHtml = '<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">No submissions received yet.</p>';
+      
+      try {
+        const subRes = await fetch(`${API_BASE}/api/export/${d.id}`);
+        const subResult = await subRes.json();
+        const subs = subResult.submissions || [];
+        
+        if (subs.length > 0) {
+          subDataHtml = subs.map(s => {
+            let fieldsObj = {};
+            try { fieldsObj = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {}); } catch(e) {}
+            const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<span style="display:inline-block; margin-right:1rem;"><strong>${esc(k)}:</strong> ${esc(v)}</span>`).join('');
+            
+            const subPayload = JSON.stringify({
+              submission_id: s.id,
+              document_id: d.id,
+              spec: subResult.spec,
+              signer_email: s.signer_email,
+              signer_name: s.signer_name,
+              fields: fieldsObj,
+              signature_data: s.signature_data,
+              audit_hash: s.audit_hash,
+              submitted_at: s.submitted_at
+            });
+
+            return `
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1rem; margin-top: 0.75rem; font-size: 0.85rem;">
+                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                  <div><strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})</div>
+                  <div style="font-variant-numeric: tabular-nums; color: var(--text-muted);">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</div>
+                </div>
+                <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
+                <div>
+                  <button onclick='downloadSubPdf(${esc(JSON.stringify(subPayload))}, "${esc(s.id.slice(0, 8))}")' class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
+                    📄 Download Signed PDF
+                  </button>
+                </div>
+              </div>`;
+          }).join('');
+        }
+      } catch(e) {
+        console.error('Error fetching submissions for', d.id, e);
+      }
+
+      cardsHtml += `
+        <div style="border: 1px solid var(--border-subtle); padding: 1.25rem; margin-bottom: 1.5rem; background: var(--bg-base);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+            <div>
+              <strong style="font-size: 1rem;">${esc(d.id)}</strong>
+              <span style="margin-left: 0.5rem; color: ${d.status === 'active' ? 'var(--success)' : 'var(--error)'}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${esc(d.status)}</span>
+            </div>
+            <div>
+              <a href="/?slug=${esc(d.slug)}" target="_blank" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; margin-right: 0.4rem;">Open Sign Link</a>
+              <button onclick="exportDocData('${esc(d.id)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Export JSON</button>
+            </div>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+            Received Submissions (${d.submission_count}):
+          </div>
+          ${subDataHtml}
+        </div>`;
+    }
+
+    dashBody.innerHTML = cardsHtml;
+  } catch (err) {
+    document.getElementById('dash-body').innerHTML = `<p style="color: var(--error);">Error loading ledger: ${esc(err.message)}</p>`;
+  }
+}
+
+async function downloadSubPdf(payloadStr, subShortId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/render-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payloadStr
+    });
+    if (!res.ok) throw new Error('PDF compilation failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `executed-agreement-${subShortId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(err) {
+    alert(`PDF download error: ${err.message}`);
+  }
+}
+
+async function exportDocData(docId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/export/${docId}`);
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `export-${docId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert(`Export failed: ${err.message}`);
+  }
+}
+
+function renderSigner(doc, spec) {
+  const container = document.getElementById('main-content');
+  const d = spec.document || {};
+  const formValues = {};
+  
+  let html = `
+    <div class="signer-head">
       <div class="signer-eyebrow">${esc(d.jurisdiction || 'Electronic Execution')}</div>
       <h1 class="signer-title">${esc(d.title || 'Legal Document')}</h1>
       <div class="signer-meta">
-        <span>Document ${esc(doc.id)}</span>
-        <span>Expires ${doc.expires_at ? esc(new Date(doc.expires_at * 1000).toUTCString().replace('GMT', 'UTC')) : '—'}</span>
-        ${party ? `<span>Signing as ${esc(party.role)}</span>` : ''}
-      </div>`;
-    card.appendChild(head);
+        <span>Document ID ${esc(doc.id)}</span>
+        <span>Date ${new Date().toISOString().slice(0, 10)}</span>
+      </div>
+    </div>
+    <div class="signer-body">
+  `;
 
-    const body = document.createElement('div');
-    body.className = 'signer-body';
+  let sigPadInit = null;
 
-    let hasSignature = false;
-    (spec.sections || []).forEach(s => {
-      const sec = document.createElement('div');
-      sec.className = 'signer-section';
-
-      if (s.type === 'static') {
-        sec.appendChild(renderStatic(s.content));
-      } else if (s.type === 'form') {
-        (s.fields || []).forEach(f => {
-          const el = renderField(f);
-          const control = el.querySelector('input, select');
-          if (f.type === 'datetime-auto') {
-            formValues[f.name] = control.value;
-          } else {
-            control.addEventListener('input', e => { formValues[f.name] = e.target.value; });
-          }
-          sec.appendChild(el);
-        });
-      } else if (s.type === 'signature') {
-        hasSignature = true;
-        const label = document.createElement('div');
-        label.className = 'section-label';
-        label.textContent = s.signer_label || 'Signature';
-        sec.appendChild(label);
-
-        (s.fields || []).forEach(f => {
-          const el = renderField(f);
-          const control = el.querySelector('input');
-          if (f.type === 'datetime-auto') formValues[f.name] = control.value;
-          sec.appendChild(el);
-        });
-
-        if (d.legal_footer) {
-          const footer = document.createElement('p');
-          footer.className = 'legal-footer';
-          footer.textContent = d.legal_footer;
-          sec.appendChild(footer);
-        }
-
-        const pad = document.createElement('canvas');
-        pad.className = 'sig-pad';
-        sec.appendChild(pad);
-        sigPad = initSigPad(pad);
-
-        const actions = document.createElement('div');
-        actions.className = 'sig-actions';
-        const hint = document.createElement('span');
-        hint.className = 'sig-hint';
-        hint.textContent = 'Draw signature above';
-        const clear = document.createElement('button');
-        clear.type = 'button';
-        clear.className = 'btn-danger-ghost';
-        clear.textContent = 'Clear';
-        clear.addEventListener('click', () => sigPad.clear());
-        actions.append(hint, clear);
-        sec.appendChild(actions);
+  (spec.sections || []).forEach((sec) => {
+    if (sec.type === 'static') {
+      html += `
+        <div class="signer-section">
+          <div class="static-body">${esc(sec.content).replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</div>
+        </div>`;
+    } else if (sec.type === 'form' || sec.type === 'signature') {
+      html += `<div class="signer-section">`;
+      if (sec.signer_label) {
+        html += `<div class="section-label">${esc(sec.signer_label)}</div>`;
       }
-      body.appendChild(sec);
-    });
+      
+      (sec.fields || []).forEach(f => {
+        let defaultVal = queryPrefills[f.name] || f.value || '';
+        if (f.type === 'datetime-auto') {
+          defaultVal = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        }
+        formValues[f.name] = defaultVal;
 
-    if (!signerEmail) {
-      const group = document.createElement('div');
-      group.className = 'form-group';
-      const label = document.createElement('label');
-      label.textContent = 'Signer Email *';
-      const input = document.createElement('input');
-      input.type = 'email';
-      input.className = 'form-control';
-      input.required = true;
-      group.append(label, input);
-      emailInput = input;
-      body.appendChild(group);
+        const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
+        html += `
+          <div class="form-group">
+            <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+            <input type="${f.type === 'email' ? 'email' : 'text'}" 
+                   class="form-control" 
+                   data-field="${esc(f.name)}" 
+                   value="${esc(defaultVal)}" 
+                   ${isReadOnly} 
+                   ${f.required ? 'required' : ''}>
+          </div>`;
+      });
+
+      if (sec.type === 'signature') {
+        if (d.legal_footer) {
+          html += `<p class="legal-footer">${esc(d.legal_footer)}</p>`;
+        }
+        html += `
+          <div class="form-group">
+            <label>Draw Signature Above *</label>
+            <canvas id="signature-canvas" class="sig-pad"></canvas>
+            <div class="sig-actions">
+              <span class="sig-hint">Sign inside box using mouse or touch</span>
+              <button type="button" class="btn-danger-ghost" id="clear-sig">Clear</button>
+            </div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+  });
+
+  html += `
+      <div style="margin-top: 2rem;">
+        <button id="submit-btn" class="btn" style="width:100%; padding:0.9rem 2rem;">
+          Sign & Execute
+        </button>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('input[data-field]').forEach(input => {
+    input.addEventListener('input', e => {
+      formValues[e.target.dataset.field] = e.target.value;
+    });
+  });
+
+  const canvas = document.getElementById('signature-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let strokes = 0;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * devicePixelRatio;
+      canvas.height = rect.height * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000000';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+    resizeCanvas();
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
-    const submit = document.createElement('button');
-    submit.type = 'button';
-    submit.className = 'btn';
-    submit.style.cssText = 'width: 100%; padding: 0.9rem 2rem; margin-top: 1rem;';
-    submit.textContent = 'Sign & Execute';
+    const startDraw = e => { isDrawing = true; strokes++; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+    const draw = e => { if (!isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+    const stopDraw = () => { isDrawing = false; };
 
-    submit.addEventListener('click', async () => {
-      const email = (emailInput ? emailInput.value.trim() : signerEmail) || '';
-      if (!email) {
-        submit.textContent = 'Signer email required';
-        setTimeout(() => { submit.textContent = 'Sign & Execute'; }, 2000);
-        return;
-      }
-      if (hasSignature && sigPad && !sigPad.hasSignature()) {
-        submit.textContent = 'Signature required';
-        setTimeout(() => { submit.textContent = 'Sign & Execute'; }, 2000);
-        return;
-      }
-      submit.disabled = true;
-      submit.textContent = 'Recording Execution…';
-      audit('submit', { document_id: doc.id });
-      try {
-        const payload = {
-          email,
-          fields: formValues,
-          signature_svg: hasSignature && sigPad ? sigPad.toSVG() : '',
-          fingerprint: await fingerprint(),
-          auditTrail
-        };
-        if (verificationToken) payload.verification_token = verificationToken;
-        const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Submission failed');
-        audit('submit_success', { submission_id: data.submission_id, audit_hash: data.audit_hash });
-        showSuccess(doc, data);
-      } catch (e) {
-        submit.disabled = false;
-        submit.textContent = 'Sign & Execute';
-        errorView('Submission Failed', e.message);
-      }
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDraw);
+
+    document.getElementById('clear-sig').addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      strokes = 0;
     });
 
-    body.appendChild(submit);
-    card.appendChild(body);
-
-    appContainer.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'container';
-    const signer = document.createElement('div');
-    signer.className = 'signer';
-    signer.appendChild(card);
-    wrap.appendChild(signer);
-    appContainer.appendChild(wrap);
+    sigPadInit = {
+      hasSignature: () => strokes > 0,
+      toSVG: () => canvas.toDataURL()
+    };
   }
 
-  function verifyStep(doc, prefillEmail) {
-    setView(`
-      <div class="signer-card">
-        <div class="signer-head">
-          <div class="signer-eyebrow">Email Verification Required</div>
-          <h1 class="signer-title">Verify Your Email</h1>
-          <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">A one-time verification link is required before this document can be executed.</p>
-        </div>
-        <div class="signer-body">
-          <div class="form-group">
-            <label>Signer Email *</label>
-            <input type="email" class="form-control" id="verify-email" value="${esc(prefillEmail || '')}">
-          </div>
-          <button class="btn" id="verify-send" style="width: 100%; padding: 0.9rem 2rem;">Send Verification</button>
-        </div>
-      </div>`);
+  document.getElementById('submit-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('submit-btn');
+    if (sigPadInit && !sigPadInit.hasSignature()) {
+      btn.textContent = 'Signature required';
+      setTimeout(() => { btn.textContent = 'Sign & Execute'; }, 2000);
+      return;
+    }
 
-    document.getElementById('verify-send').addEventListener('click', async () => {
-      const email = document.getElementById('verify-email').value.trim();
-      if (!email) return;
-      const btn = document.getElementById('verify-send');
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
-      audit('email_verify_request', { email });
-      try {
-        const redirect_url = `${window.location.origin}${window.location.pathname}?slug=${encodeURIComponent(slug)}`;
-        const res = await fetch(`${API_BASE}/api/verify-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, email, redirect_url })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not send verification email');
-        setView(`
-          <div class="signer-card">
-            <div class="signer-head">
-              <div class="signer-eyebrow">Check Your Inbox</div>
-              <h1 class="signer-title">Verification Sent</h1>
-              <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">A verification link has been sent to <strong>${esc(email)}</strong>. It expires in one hour.</p>
-            </div>
-          </div>`);
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = 'Send Verification';
-        errorView('Verification Failed', e.message);
-      }
-    });
-  }
+    btn.disabled = true;
+    btn.textContent = 'Recording Execution…';
 
-  loadingView();
-  audit('page_open');
+    try {
+      const payload = {
+        fields: formValues,
+        signature_data: sigPadInit ? sigPadInit.toSVG() : ''
+      };
 
-  const urlParams = new URLSearchParams(window.location.search);
-  fetch(`${API_BASE}/api/doc/${slug}`)
-    .then(async r => {
-      if (r.ok) return r.json();
-      let msg = 'Document not found or expired. The link may have been revoked or completed.';
-      try {
-        const j = await r.json();
-        if (j.error) msg = j.error;
-      } catch (e) {}
-      throw new Error(msg);
-    })
-    .then(doc => {
-      const token = urlParams.get('token');
-      const emailParam = urlParams.get('email');
-      if (doc.require_verification && !token) {
-        verifyStep(doc, (doc.active_party && doc.active_party.email) || '');
-        return;
-      }
-      buildSigner(doc, token && emailParam ? { token, email: emailParam } : null);
-    })
-    .catch(err => errorView('Access Denied', err.message));
+      const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Submission failed');
+
+      renderSuccess(doc, result);
+    } catch (err) {
+      alert(err.message);
+      btn.disabled = false;
+      btn.textContent = 'Sign & Execute';
+    }
+  });
 }
+
+function renderSuccess(doc, result) {
+  const container = document.getElementById('main-content');
+  const payloadJson = JSON.stringify(result.payload, null, 2);
+
+  container.innerHTML = `
+    <div class="signer-head">
+      <div class="signer-eyebrow" style="color: var(--success);">Execution Recorded</div>
+      <h1 class="signer-title">Document Signed</h1>
+      <p style="margin: 0; color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); line-height: 1.6;">${esc(doc.id)} — execution complete. Agreement cryptographically recorded.</p>
+    </div>
+    <div class="signer-body">
+      <div class="signer-meta" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem;">
+        <span>Submission ID ${esc(result.submission_id)}</span>
+      </div>
+      <div class="audit-row">
+        <div class="section-label">Cryptographic Audit — SHA-256 Digest</div>
+        <div class="audit-hash">${esc(result.audit_hash)}</div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-top:2rem;">
+        <button id="download-pdf-btn" class="btn">
+          📄 Download Compiled PDF Agreement
+        </button>
+        <button id="download-json-btn" class="btn btn-outline">
+          📥 Export Local Compact JSON Data
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('download-pdf-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('download-pdf-btn');
+    btn.disabled = true;
+    btn.textContent = 'Generating PDF...';
+    try {
+      const res = await fetch(`${API_BASE}/api/render-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payloadJson
+      });
+      if (!res.ok) throw new Error('PDF compilation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `executed-agreement-${result.submission_id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📄 Download Compiled PDF Agreement';
+    }
+  });
+
+  document.getElementById('download-json-btn').addEventListener('click', () => {
+    const blob = new Blob([payloadJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `signed-document-${result.submission_id.slice(0, 8)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+loadDocument();
 </script>
 </body>
 </html>
