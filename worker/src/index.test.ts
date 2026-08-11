@@ -106,3 +106,16 @@ test('render-pdf includes the full agreement, fields, and certificate page', asy
   // Page 2: certificate of execution
   assert.ok(pdfText.includes('OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION'), 'certificate page present');
 });
+
+test('render-pdf renders a typed (plain-text) signature on the agreement page', async () => {
+  const res = await app.request('/api/render-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...fullPayload, signature_data: 'Aloysius T. Widget' })
+  });
+
+  assert.equal(res.status, 200);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const pdfText = extractPdfTexts(bytes).join(' ').replace(/\s+/g, ' ');
+  assert.ok(pdfText.includes('Aloysius T. Widget'), 'typed signature text present in PDF');
+});

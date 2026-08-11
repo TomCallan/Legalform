@@ -384,6 +384,25 @@ app.post('/api/render-pdf', async (c) => {
   };
 
   const hasEmbeddableSignature = /^data:image\/(png|jpe?g);base64,/.test(signatureData);
+  const hasTypedSignature = !!signatureData && !/^data:image\//.test(signatureData);
+  const hasRecordedSignature = hasEmbeddableSignature || hasTypedSignature;
+
+  // Draw either an embedded signature image or a typed (plain-text) signature,
+  // followed by an underline to read as a signature block.
+  const drawSignatureBlock = async (label: string, width: number) => {
+    if (!hasRecordedSignature) return;
+    newPageIfNeeded(140);
+    page.drawText(label, { x: margin, y, size: 10, font: helvBold, color: ink });
+    y -= 14;
+    if (hasEmbeddableSignature) {
+      await embedSignatureImage(width);
+    } else {
+      page.drawText(signatureData, { x: margin, y, size: 18, font: helvOblique, color: ink });
+      y -= 4;
+      page.drawRectangle({ x: margin, y: y + 6, width: Math.min(width + 40, page.getWidth() - margin * 2), height: 1, color: grid });
+      y -= 12;
+    }
+  };
 
   // ── Page 1: full executed agreement ──
   centered(docTitle, helvBold, 18, ink);
@@ -438,14 +457,11 @@ app.post('/api/render-pdf', async (c) => {
   ]);
   spacer(15);
 
-  if (hasEmbeddableSignature) {
+  if (hasRecordedSignature) {
     try {
-      newPageIfNeeded(120);
-      page.drawText('SIGNATURE OF RECORD', { x: margin, y, size: 10, font: helvBold, color: ink });
-      y -= 14;
-      await embedSignatureImage(200);
+      await drawSignatureBlock('SIGNATURE OF RECORD', 200);
     } catch (err) {
-      console.error('Signature embed failed (agreement page):', err);
+      console.error('Signature block failed (agreement page):', err);
     }
   }
 
@@ -472,14 +488,11 @@ app.post('/api/render-pdf', async (c) => {
   ]);
   spacer(20);
 
-  if (hasEmbeddableSignature) {
+  if (hasRecordedSignature) {
     try {
-      newPageIfNeeded(140);
-      page.drawText('DIGITAL SIGNATURE CANVAS RECORD', { x: margin, y, size: 10, font: helvBold, color: ink });
-      y -= 14;
-      await embedSignatureImage(220);
+      await drawSignatureBlock('DIGITAL SIGNATURE CANVAS RECORD', 220);
     } catch (err) {
-      console.error('Signature embed failed (certificate page):', err);
+      console.error('Signature block failed (certificate page):', err);
     }
   }
 

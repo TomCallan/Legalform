@@ -256,7 +256,7 @@ sections:
 `
   };
 
-  const FIELD_TYPES = ['text', 'email', 'textarea', 'checkbox', 'select', 'radio', 'datetime-auto'];
+  const FIELD_TYPES = ['text', 'email', 'textarea', 'checkbox', 'select', 'radio', 'datetime-auto', 'date', 'datetime'];
   const META_KEYS = ['id', 'title', 'jurisdiction', 'expires_in_days', 'signing_order', 'legal_footer'];
 
   function esc(v) {
@@ -729,6 +729,9 @@ sections:
     }
     if (f.type === 'datetime-auto') {
       return `<div class="form-group">${label}<div class="form-control">${esc(new Date().toLocaleString())}</div></div>`;
+    }
+    if (f.type === 'date' || f.type === 'datetime') {
+      return `<div class="form-group">${label}<div class="form-control b-preview-empty"></div></div>`;
     }
     return `<div class="form-group">${label}<div class="form-control b-preview-empty"></div></div>`;
   }

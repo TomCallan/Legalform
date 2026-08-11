@@ -395,6 +395,12 @@
     .b-close:hover { border-color:var(--text-main); color:var(--text-main); }
     .b-preview-empty { min-height:1em; }
 
+    .sig-mode { display:flex; margin-bottom:0.75rem; }
+    .sig-mode-btn { background:transparent; border:1px solid var(--border-subtle); border-right:none; padding:0.45rem 1.25rem; font:inherit; font-size:0.72rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-muted); cursor:pointer; border-radius:0; }
+    .sig-mode-btn:last-child { border-right:1px solid var(--border-subtle); }
+    .sig-mode-btn.active { background:var(--text-main); color:var(--bg-base); border-color:var(--text-main); }
+    .sig-type-input { font-size:clamp(15px,1.1vw,19px); font-style:italic; }
+
     footer {
       margin-top: auto;
       border-top: 1px solid var(--border-subtle);
@@ -1056,10 +1062,11 @@ function renderSigner(doc, spec) {
             </div>`;
         } else {
           const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
+          const inputType = f.type === 'email' ? 'email' : f.type === 'datetime' ? 'datetime-local' : f.type === 'date' ? 'date' : 'text';
           html += `
             <div class="form-group">
               <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
-              <input type="${f.type === 'email' ? 'email' : 'text'}" 
+              <input type="${inputType}" 
                      class="form-control" 
                      data-field="${esc(f.name)}" 
                      value="${esc(defaultVal)}" 
@@ -1075,11 +1082,21 @@ function renderSigner(doc, spec) {
         }
         html += `
           <div class="form-group">
-            <label>Draw Signature Above *</label>
-            <canvas id="signature-canvas" class="sig-pad"></canvas>
-            <div class="sig-actions">
-              <span class="sig-hint">Sign inside box using mouse or touch</span>
-              <button type="button" class="btn-danger-ghost" id="clear-sig">Clear</button>
+            <label>Signature *</label>
+            <div class="sig-mode">
+              <button type="button" class="sig-mode-btn active" data-sigmode="draw">Draw</button>
+              <button type="button" class="sig-mode-btn" data-sigmode="type">Type</button>
+            </div>
+            <div id="sig-draw-pane">
+              <canvas id="signature-canvas" class="sig-pad"></canvas>
+              <div class="sig-actions">
+                <span class="sig-hint">Sign inside box using mouse or touch</span>
+                <button type="button" class="btn-danger-ghost" id="clear-sig">Clear</button>
+              </div>
+            </div>
+            <div id="sig-type-pane" style="display:none;">
+              <input type="text" id="sig-type-input" class="form-control sig-type-input" placeholder="Type your full legal name" autocomplete="name" />
+              <span class="sig-hint">Your typed name is recorded as your signature</span>
             </div>
           </div>`;
       }
@@ -1159,10 +1176,30 @@ function renderSigner(doc, spec) {
     };
   }
 
+  let sigMode = 'draw';
+  const modeBtns = container.querySelectorAll('[data-sigmode]');
+  const drawPane = document.getElementById('sig-draw-pane');
+  const typePane = document.getElementById('sig-type-pane');
+  const typeInput = document.getElementById('sig-type-input');
+  if (modeBtns.length) {
+    modeBtns.forEach(b => b.addEventListener('click', () => {
+      sigMode = b.dataset.sigmode;
+      modeBtns.forEach(x => x.classList.toggle('active', x === b));
+      if (drawPane) drawPane.style.display = sigMode === 'draw' ? '' : 'none';
+      if (typePane) typePane.style.display = sigMode === 'type' ? '' : 'none';
+    }));
+  }
+
   document.getElementById('submit-btn').addEventListener('click', async () => {
     const btn = document.getElementById('submit-btn');
-    if (sigPadInit && !sigPadInit.hasSignature()) {
-      btn.textContent = 'Signature required';
+    if (sigMode === 'draw') {
+      if (sigPadInit && !sigPadInit.hasSignature()) {
+        btn.textContent = 'Signature required';
+        setTimeout(() => { btn.textContent = 'Sign & Execute'; }, 2000);
+        return;
+      }
+    } else if (!typeInput || !typeInput.value.trim()) {
+      btn.textContent = 'Type your signature first';
       setTimeout(() => { btn.textContent = 'Sign & Execute'; }, 2000);
       return;
     }
@@ -1173,7 +1210,9 @@ function renderSigner(doc, spec) {
     try {
       const payload = {
         fields: formValues,
-        signature_data: sigPadInit ? sigPadInit.toSVG() : ''
+        signature_data: sigMode === 'type'
+          ? (typeInput ? typeInput.value.trim() : '')
+          : (sigPadInit ? sigPadInit.toSVG() : '')
       };
 
       const result = await safeFetchJson(`${API_BASE}/api/submit/${slug}`, {
