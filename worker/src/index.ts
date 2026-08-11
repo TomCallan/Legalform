@@ -15,9 +15,16 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal Server Error' }, 500);
 });
 
+app.notFound((c) => {
+  return c.json({ error: 'Route Not Found', path: c.req.path }, 404);
+});
+
 app.use('*', cors());
 
 const now = () => Math.floor(Date.now() / 1000);
+
+app.get('/', (c) => c.json({ status: 'ok', service: 'LegalForm API' }));
+app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: now() }));
 
 async function sha256(message: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(message);

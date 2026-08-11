@@ -304,17 +304,66 @@
   </footer>
 
 <script>
-const API_BASE = '';
 const params = new URLSearchParams(window.location.search);
+const API_BASE = window.LEGALFORM_API_BASE || params.get('api_base') || localStorage.getItem('LEGALFORM_API_BASE') || '';
 const slug = params.get('slug') || 'my-nda';
 
 const queryPrefills = {};
 for (const [key, val] of params.entries()) {
-  if (key !== 'slug') queryPrefills[key] = val;
+  if (key !== 'slug' && key !== 'api_base') queryPrefills[key] = val;
 }
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function safeFetchJson(url, options) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (netErr) {
+    const err = new Error(`Network error connecting to backend (${url}): ${netErr.message}`);
+    err.isNetwork = true;
+    throw err;
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  const text = await res.text();
+
+  if (text.trim().startsWith('<') || contentType.includes('text/html')) {
+    if (res.status === 403) {
+      const err = new Error('Access Denied (HTTP 403): Cloudflare firewall or WAF blocked access to this API route.');
+      err.status = 403;
+      throw err;
+    }
+    if (res.status === 404) {
+      const err = new Error('API Endpoint Not Found (HTTP 404): Cloudflare Pages served static HTML instead of Worker API. Ensure Worker routing is configured or pass ?api_base=URL.');
+      err.status = 404;
+      throw err;
+    }
+    const err = new Error(`API returned HTML instead of expected JSON (HTTP ${res.status}). Verify Cloudflare Worker deployment or API_BASE configuration.`);
+    err.status = res.status;
+    throw err;
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (parseErr) {
+    const err = new Error(`Invalid JSON response (HTTP ${res.status}): ${text.slice(0, 120)}`);
+    err.status = res.status;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const msg = data.error || data.message || `Server returned error status ${res.status}`;
+    const err = new Error(msg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
 }
 
 async function loadDocument() {
@@ -325,16 +374,16 @@ async function loadDocument() {
   }
   
   try {
-    const res = await fetch(`${API_BASE}/api/doc/${slug}`);
-    if (!res.ok) throw new Error('Document not found or link expired.');
-    const doc = await res.json();
+    const doc = await safeFetchJson(`${API_BASE}/api/doc/${slug}`);
     const spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
     renderSigner(doc, spec);
   } catch (err) {
+    const is403 = err.status === 403 || (err.message && err.message.toLowerCase().includes('access denied'));
+    const titleText = is403 ? 'Access Denied' : 'Unable to Load Document';
     container.innerHTML = `
       <div style="padding: 3rem;">
-        <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">Access Denied</div>
-        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0;">${esc(err.message)}</p>
+        <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">${esc(titleText)}</div>
+        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0; line-height: 1.5;">${esc(err.message)}</p>
       </div>`;
   }
 }
@@ -351,8 +400,7 @@ async function renderDashboard() {
     </div>`;
 
   try {
-    const res = await fetch(`${API_BASE}/api/documents/list`);
-    const data = await res.json();
+    const data = await safeFetchJson(`${API_BASE}/api/documents/list`);
     const docs = data.documents || [];
     const dashBody = document.getElementById('dash-body');
 
@@ -366,8 +414,7 @@ async function renderDashboard() {
       let subDataHtml = '<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">No submissions received yet.</p>';
       
       try {
-        const subRes = await fetch(`${API_BASE}/api/export/${d.id}`);
-        const subResult = await subRes.json();
+        const subResult = await safeFetchJson(`${API_BASE}/api/export/${d.id}`);
         const subs = subResult.submissions || [];
         
         if (subs.length > 0) {
@@ -455,8 +502,7 @@ async function downloadSubPdf(payloadStr, subShortId) {
 
 async function exportDocData(docId) {
   try {
-    const res = await fetch(`${API_BASE}/api/export/${docId}`);
-    const data = await res.json();
+    const data = await safeFetchJson(`${API_BASE}/api/export/${docId}`);
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -666,14 +712,11 @@ function renderSigner(doc, spec) {
         signature_data: sigPadInit ? sigPadInit.toSVG() : ''
       };
 
-      const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
+      const result = await safeFetchJson(`${API_BASE}/api/submit/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Submission failed');
 
       renderSuccess(doc, result);
     } catch (err) {
