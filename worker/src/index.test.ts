@@ -1,12 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { inflateSync } from 'node:zlib';
 import app from './index';
 
 const fullPayload = {
   submission_id: '11111111-2222-3333-4444-555555555555',
   document_id: 'nda-001',
   slug: 'aijiz88japn',
-  spec: { document: { title: 'MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT' } },
+  spec: {
+    document: { title: 'MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT', jurisdiction: 'Delaware, USA' },
+    sections: [
+      { type: 'static', content: '## PURPOSE\nThis agreement governs the exchange of confidential information.' },
+      { type: 'form', fields: [
+        { name: 'receiving_party', label: 'Receiving Party' },
+        { name: 'term_months', label: 'Term (months)' }
+      ] }
+    ]
+  },
   signer_email: 'signer@example.com',
   signer_name: 'Jane Doe',
   fields: { receiving_party: 'Acme Corp', term_months: '12' },
@@ -53,4 +63,46 @@ test('render-pdf rejects invalid JSON', async () => {
   assert.equal(res.status, 400);
   const data = await res.json() as { error?: string };
   assert.ok(data.error);
+});
+
+// Inflate FlateDecode streams and decode the hex-string <...> Tj text operators.
+function extractPdfTexts(pdfBytes: Uint8Array): string[] {
+  const src = Buffer.from(pdfBytes).toString('latin1');
+  const texts: string[] = [];
+  for (const m of src.matchAll(/stream\r?\n([\s\S]*?)endstream/g)) {
+    let content: string;
+    try {
+      content = inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1');
+    } catch {
+      continue; // not a deflate stream (font programs etc.)
+    }
+    for (const hex of content.matchAll(/<([0-9A-Fa-f]{2,})> Tj/g)) {
+      let s = '';
+      for (let i = 0; i < hex[1].length; i += 2) s += String.fromCharCode(parseInt(hex[1].slice(i, i + 2), 16));
+      texts.push(s);
+    }
+  }
+  return texts;
+}
+
+test('render-pdf includes the full agreement, fields, and certificate page', async () => {
+  const res = await app.request('/api/render-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fullPayload)
+  });
+
+  assert.equal(res.status, 200);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Text may wrap across multiple Tj ops; join and collapse whitespace to reconstruct lines.
+  const pdfText = extractPdfTexts(bytes).join(' ').replace(/\s+/g, ' ');
+
+  // Page 1: full executed agreement
+  assert.ok(pdfText.includes('MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT'), 'agreement title present');
+  assert.ok(pdfText.includes('Acme Corp'), 'field value present');
+  assert.ok(pdfText.includes('Signer Email'), 'signature metadata present');
+  assert.ok(pdfText.includes('a'.repeat(64)), 'audit hash present');
+
+  // Page 2: certificate of execution
+  assert.ok(pdfText.includes('OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION'), 'certificate page present');
 });

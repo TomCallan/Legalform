@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
   <style>
     :root {
       --bg-base: #ffffff;
@@ -433,6 +434,79 @@ async function renderAuthGate() {
   input.focus();
 }
 
+const deployPanelHtml = `
+  <div style="border:1px solid var(--border-active); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; background:var(--bg-surface);">
+    <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.25rem;">Deploy New Document</div>
+    <div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:0.75rem;">Paste a YAML spec (same format as <code>templates/*.yaml</code>) and get a shareable signing link.</div>
+    <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:8px; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
+    <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+      <button id="deploy-btn" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
+      <span id="deploy-status" style="font-size:0.8rem; color:var(--text-muted);"></span>
+    </div>
+    <div id="deploy-result" style="margin-top:0.75rem;"></div>
+  </div>`;
+
+async function deployDocumentFromPanel() {
+  const textarea = document.getElementById('deploy-spec');
+  const btn = document.getElementById('deploy-btn');
+  const status = document.getElementById('deploy-status');
+  const result = document.getElementById('deploy-result');
+  result.innerHTML = '';
+
+  let spec;
+  try {
+    spec = (typeof window.jsyaml !== 'undefined')
+      ? window.jsyaml.load(textarea.value)
+      : JSON.parse(textarea.value); // YAML is a superset of JSON — degrade gracefully
+  } catch (err) {
+    result.innerHTML = `<span style="color: var(--error); font-size: 0.8rem;">YAML parse error: ${esc(err.message)}</span>`;
+    return;
+  }
+
+  if (!spec || typeof spec !== 'object' || !spec.document || !spec.document.id) {
+    result.innerHTML = `<span style="color: var(--error); font-size: 0.8rem;">Spec must include a top-level <code>document</code> key with an <code>id</code>.</span>`;
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = 'Deploying…';
+  try {
+    const docId = String(spec.document.id);
+    const slug = (await sha256Hex(`${docId}-${new Date().toISOString()}`)).slice(0, 12);
+    const expiresDays = Number(spec.document.expires_in_days || 30);
+    const expiresAt = Math.floor(Date.now() / 1000) + expiresDays * 86400;
+
+    const res = await fetch(`${API_BASE}/api/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: docId, slug, spec, expires_at: expiresAt })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Deploy failed (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    const signLink = `${window.location.origin}/?slug=${data.slug}`;
+
+    result.innerHTML = `
+      <div style="border:1px solid var(--border-subtle); border-radius:8px; padding:0.85rem; background:var(--bg-base); font-size:0.8rem;">
+        <div style="color: var(--success); font-weight:600; margin-bottom:0.5rem;">✓ Deployed — Document ID: ${esc(data.id)}</div>
+        <div style="color:var(--text-muted); margin-bottom:0.25rem;">Shareable signing link:</div>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <code style="word-break:break-all; color:var(--text-main);">${esc(signLink)}</code>
+          <button class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.7rem;" onclick="navigator.clipboard.writeText('${esc(signLink)}')">Copy</button>
+        </div>
+      </div>`;
+    textarea.value = '';
+    renderDashboard(); // refresh the ledger below
+  } catch (err) {
+    result.innerHTML = `<span style="color: var(--error); font-size: 0.8rem;">${esc(err.message)}</span>`;
+  } finally {
+    btn.disabled = false;
+    status.textContent = '';
+  }
+}
+
 async function renderDashboard() {
   const container = document.getElementById('main-content');
   if (sessionStorage.getItem(DASHBOARD_AUTH_KEY) !== '1') {
@@ -444,9 +518,15 @@ async function renderDashboard() {
       <div class="signer-eyebrow">Sender Management Ledger</div>
       <h1 class="signer-title">Received Submissions & Documents</h1>
     </div>
-    <div class="signer-body" id="dash-body">
-      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching active document ledger and received submissions...</p>
+    <div class="signer-body">
+      <div id="dash-deploy">${deployPanelHtml}</div>
+      <div id="dash-body">
+        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching active document ledger and received submissions...</p>
+      </div>
     </div>`;
+
+  const deployBtn = document.getElementById('deploy-btn');
+  if (deployBtn) deployBtn.addEventListener('click', deployDocumentFromPanel);
 
   try {
     const data = await safeFetchJson(`${API_BASE}/api/documents/list`);

@@ -43,8 +43,16 @@ function safeParseJson(input: string): unknown {
   }
 }
 
+// PDF standard fonts use the WinAnsi encoding; any character outside it is
+// replaced with '?' so arbitrary user/spec text can't break rendering.
+const WIN_ANSI_SAFE = /[^\x20-\x7E\u00A0-\u00FF\u0152\u0153\u0178\u0192\u02C6\u02DC\u2013\u2014\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u20AC\u2122\u0160\u0161\u017D\u017E]/g;
+
+function winAnsiSafe(text: string): string {
+  return text.replace(WIN_ANSI_SAFE, '?');
+}
+
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = text.split(/\s+/);
+  const words = winAnsiSafe(text).split(/\s+/);
   const lines: string[] = [];
   let line = '';
   for (const word of words) {
@@ -253,7 +261,7 @@ app.get('/api/export/:doc_id', async (c) => {
   });
 });
 
-// ── Public: Render PDF Certificate / Compiled Agreement ────
+// ── Public: Render Full Executed Agreement PDF + Certificate ──
 app.post('/api/render-pdf', async (c) => {
   let body: Record<string, unknown>;
   try {
@@ -266,74 +274,214 @@ app.post('/api/render-pdf', async (c) => {
   const docId = String(body.document_id ?? body.slug ?? 'unknown');
   const specRaw = typeof body.spec === 'string' ? safeParseJson(body.spec) : (body.spec ?? {});
   const spec = (specRaw && typeof specRaw === 'object' ? specRaw : {}) as Record<string, any>;
-  const docTitle = String(spec.document?.title ?? docId);
+  const docTitle = String(spec.document?.title ?? docId).toUpperCase();
+  const jurisdiction = String(spec.document?.jurisdiction ?? '');
+  const legalFooter = String(spec.document?.legal_footer ?? '');
+  const sections = Array.isArray(spec.sections) ? spec.sections : [];
   const signerName = String(body.signer_name ?? body.name ?? 'Signer');
   const signerEmail = String(body.signer_email ?? body.email ?? '');
   const fields = (body.fields && typeof body.fields === 'object' ? body.fields : {}) as Record<string, unknown>;
   const signatureData = String(body.signature_data ?? '');
   const auditHash = String(body.audit_hash ?? '');
   const submittedAt = typeof body.submitted_at === 'number' ? body.submitted_at : 0;
+  const timeStr = submittedAt
+    ? new Date(submittedAt * 1000).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+    : 'N/A';
 
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([612, 792]); // US Letter portrait
+  const pageW = 612;
+  const pageH = 792;
+  const margin = 40;
+  const maxWidth = pageW - margin * 2;
   const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const courier = await pdfDoc.embedFont(StandardFonts.Courier);
+  const helvOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+  const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-  const margin = 56;
-  const maxWidth = 612 - margin * 2;
-  const ink = rgb(0.09, 0.1, 0.13);
-  const muted = rgb(0.45, 0.47, 0.52);
-  let y = 792 - margin;
+  // Palette mirrors cli/legalform.py build_pdf_bytes
+  const ink = rgb(0.0588, 0.0902, 0.1647);      // #0f172a
+  const muted = rgb(0.2784, 0.3333, 0.4118);    // #475569
+  const cell = rgb(0.2, 0.2549, 0.3333);        // #334155
+  const hashBlue = rgb(0.0078, 0.5176, 0.7804); // #0284c7
+  const tableBg = rgb(0.9725, 0.9804, 0.9882);  // #f8fafc
+  const grid = rgb(0.7961, 0.8353, 0.8824);     // #cbd5e1
+  const bodyInk = rgb(0.1176, 0.1608, 0.2314);  // #1e293b
+
+  let page = pdfDoc.addPage([pageW, pageH]);
+  let y = pageH - margin;
+
+  const newPageIfNeeded = (needed: number) => {
+    if (y - needed < margin) {
+      page = pdfDoc.addPage([pageW, pageH]);
+      y = pageH - margin;
+    }
+  };
 
   const centered = (text: string, font: PDFFont, size: number, color: Color = ink) => {
-    page.drawText(text, { x: (612 - font.widthOfTextAtSize(text, size)) / 2, y, size, font, color });
-  };
-  const drawLine = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
-    page.drawText(text, { x: margin, y, size: opts.size ?? 11, font: opts.font ?? helv, color: opts.color ?? ink });
-    y -= opts.gap ?? 16;
-  };
-  const drawWrapped = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
-    for (const line of wrapText(text, opts.font ?? helv, opts.size ?? 11, maxWidth)) drawLine(line, opts);
-  };
-  const rule = () => {
-    page.drawLine({ start: { x: margin, y }, end: { x: 612 - margin, y }, thickness: 0.7, color: muted });
-    y -= 14;
-  };
-
-  centered('CERTIFICATE OF EXECUTION', helvBold, 19, ink);
-  y -= 6;
-  centered('LegalForm — Court-Enforceable Signature Infrastructure', helv, 8.5, muted);
-  y -= 14;
-  rule();
-
-  drawLine(docTitle.toUpperCase(), { font: helvBold, size: 12, gap: 20 });
-  drawLine(`Document ID: ${docId}`, { size: 10.5, gap: 8 });
-  drawLine(`Signer: ${signerName}${signerEmail ? ` <${signerEmail}>` : ''}`, { size: 10.5, gap: 8 });
-  drawLine(`Submitted: ${submittedAt ? new Date(submittedAt * 1000).toUTCString() : 'n/a'}`, { size: 10.5, gap: 16 });
-
-  const fieldEntries = Object.entries(fields);
-  if (fieldEntries.length > 0) {
-    drawLine('Executed Terms / Fields', { font: helvBold, size: 11, gap: 10 });
-    for (const [k, v] of fieldEntries) {
-      const val = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
-      drawWrapped(`${k}: ${val}`, { size: 10, gap: 13 });
+    for (const line of wrapText(text, font, size, maxWidth)) {
+      page.drawText(line, { x: (pageW - font.widthOfTextAtSize(line, size)) / 2, y, size, font, color });
+      y -= size + 6;
     }
-    y -= 6;
+  };
+
+  const drawWrapped = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
+    const font = opts.font ?? helv;
+    const size = opts.size ?? 11;
+    for (const line of wrapText(text, font, size, maxWidth)) {
+      page.drawText(line, { x: margin, y, size, font, color: opts.color ?? ink });
+      y -= opts.gap ?? size + 4.5;
+    }
+  };
+
+  const rule = (thickness: number, color: Color, spaceAfter: number) => {
+    page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness, color });
+    y -= spaceAfter;
+  };
+
+  const spacer = (n: number) => { y -= n; };
+
+  const drawTable = (
+    rows: Array<{ label: string; value: string; valueFont?: PDFFont; valueSize?: number; valueColor?: Color }>,
+    colWidths: [number, number] = [180, 350]
+  ) => {
+    const [labelCol, valueCol] = colWidths;
+    const pad = 5;
+    const lineHeight = 13;
+    for (const row of rows) {
+      const labelLines = wrapText(row.label, helvBold, 10, labelCol - pad * 2);
+      const valueFont = row.valueFont ?? helv;
+      const valueSize = row.valueSize ?? 10;
+      const valueLines = wrapText(row.value, valueFont, valueSize, valueCol - pad * 2);
+      const rowHeight = Math.max(labelLines.length, valueLines.length) * lineHeight + pad * 2;
+      newPageIfNeeded(rowHeight + 8);
+      const top = y;
+      const bottom = y - rowHeight;
+      page.drawRectangle({ x: margin, y: bottom, width: labelCol, height: rowHeight, color: tableBg });
+      page.drawRectangle({ x: margin, y: bottom, width: labelCol + valueCol, height: rowHeight, borderColor: grid, borderWidth: 0.5 });
+      page.drawLine({ start: { x: margin + labelCol, y: top }, end: { x: margin + labelCol, y: bottom }, thickness: 0.5, color: grid });
+      let ty = top - pad;
+      for (const line of labelLines) {
+        page.drawText(line, { x: margin + pad, y: ty - 10, size: 10, font: helvBold, color: ink });
+        ty -= lineHeight;
+      }
+      let vy = top - pad;
+      for (const line of valueLines) {
+        page.drawText(line, { x: margin + labelCol + pad, y: vy - valueSize, size: valueSize, font: valueFont, color: row.valueColor ?? cell });
+        vy -= lineHeight;
+      }
+      y = bottom;
+    }
+  };
+
+  const embedSignatureImage = async (width: number) => {
+    const m = signatureData.match(/^data:image\/(png|jpe?g);base64,(.+)$/);
+    if (!m) return;
+    const imgBytes = Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
+    const img = m[1] === 'png' ? await pdfDoc.embedPng(imgBytes) : await pdfDoc.embedJpg(imgBytes);
+    const height = Math.round((img.height / img.width) * width);
+    page.drawImage(img, { x: margin, y: y - height, width, height });
+    y -= height + 10;
+  };
+
+  const hasEmbeddableSignature = /^data:image\/(png|jpe?g);base64,/.test(signatureData);
+
+  // ── Page 1: full executed agreement ──
+  centered(docTitle, helvBold, 18, ink);
+  if (jurisdiction) {
+    spacer(2);
+    centered(`Jurisdiction: ${jurisdiction}`, helvOblique, 10, muted);
+  }
+  spacer(10);
+  rule(2, ink, 15);
+
+  for (const sec of sections) {
+    if (sec.type === 'static') {
+      for (const rawLine of String(sec.content ?? '').split('\n')) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        newPageIfNeeded(40);
+        if (line.startsWith('## ')) {
+          page.drawText(winAnsiSafe(line.slice(3)), { x: margin, y, size: 11, font: helvBold, color: ink });
+          y -= 20;
+        } else {
+          drawWrapped(line, { font: helv, size: 9.5, color: bodyInk, gap: 14 });
+          y -= 4;
+        }
+      }
+    } else if (sec.type === 'form' || sec.type === 'signature') {
+      const rows: Array<{ label: string; value: string }> = [];
+      for (const f of (sec.fields ?? [])) {
+        const fname = f.name;
+        const flabel = f.label ?? fname;
+        const val = fields[fname] ?? f.value ?? '';
+        rows.push({ label: String(flabel), value: String(val) });
+      }
+      if (rows.length) {
+        spacer(6);
+        drawTable(rows);
+        spacer(10);
+      }
+    }
   }
 
-  if (signatureData) {
-    drawLine('Signature: Captured (electronic) — see exported JSON payload for raw data', { size: 10, gap: 16 });
+  spacer(15);
+  if (legalFooter) {
+    newPageIfNeeded(40);
+    drawWrapped(legalFooter, { font: helvOblique, size: 8.5, color: muted, gap: 12 });
+    spacer(10);
   }
 
-  drawLine('Cryptographic Audit — SHA-256 Digest', { font: helvBold, size: 11, gap: 10 });
-  const hashChunks = auditHash.match(/.{1,76}/g) ?? [auditHash || 'n/a'];
-  for (const chunk of hashChunks) {
-    drawLine(chunk, { font: courier, size: 9, gap: 14 });
+  drawTable([
+    { label: 'Execution UTC Timestamp', value: timeStr },
+    { label: 'Signer Email', value: signerEmail },
+    { label: 'SHA-256 Cryptographic Audit Hash', value: auditHash, valueFont: courierBold, valueSize: 9, valueColor: hashBlue }
+  ]);
+  spacer(15);
+
+  if (hasEmbeddableSignature) {
+    try {
+      newPageIfNeeded(120);
+      page.drawText('SIGNATURE OF RECORD', { x: margin, y, size: 10, font: helvBold, color: ink });
+      y -= 14;
+      await embedSignatureImage(200);
+    } catch (err) {
+      console.error('Signature embed failed (agreement page):', err);
+    }
   }
 
-  y = 40;
-  centered('Generated by LegalForm — verify this digest against the sender ledger export', helv, 8, muted);
+  rule(1, grid, 10);
+  drawWrapped('Compiled from the cryptographically verified submission record', { font: helvOblique, size: 8.5, color: muted, gap: 12 });
+
+  // ── Page 2: official certificate of electronic execution ──
+  page = pdfDoc.addPage([pageW, pageH]);
+  y = pageH - margin;
+
+  centered('OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION', helvBold, 16, ink);
+  spacer(4);
+  centered('Court-Enforceable Instrument (ESIGN Act 15 U.S.C. § 7001 & EU eIDAS Regulation Art. 25)', helvOblique, 9, muted);
+  spacer(10);
+  rule(2, ink, 15);
+
+  drawTable([
+    { label: 'Document ID', value: docId },
+    { label: 'Submission ID', value: submissionId },
+    { label: 'Signer Name', value: signerName },
+    { label: 'Signer Email', value: signerEmail },
+    { label: 'Execution UTC Timestamp', value: timeStr },
+    { label: 'Cryptographic Audit SHA-256 Digest', value: auditHash, valueFont: courierBold, valueSize: 9, valueColor: hashBlue }
+  ]);
+  spacer(20);
+
+  if (hasEmbeddableSignature) {
+    try {
+      newPageIfNeeded(140);
+      page.drawText('DIGITAL SIGNATURE CANVAS RECORD', { x: margin, y, size: 10, font: helvBold, color: ink });
+      y -= 14;
+      await embedSignatureImage(220);
+    } catch (err) {
+      console.error('Signature embed failed (certificate page):', err);
+    }
+  }
 
   const pdfBytes = new Uint8Array(await pdfDoc.save());
   const subShortId = submissionId.slice(0, 8);
