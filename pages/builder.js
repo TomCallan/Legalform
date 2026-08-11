@@ -503,7 +503,7 @@ sections:
 
   function saveTemplate(name) {
     const spec = toSpec();
-    if (!spec.document.title && !(spec.sections && spec.sections.length)) {
+    if (!spec.document || (!spec.document.title && !(spec.sections && spec.sections.length))) {
       if (window.showToast) window.showToast('Nothing to save — build a document first.', 'error');
       return;
     }
@@ -511,14 +511,24 @@ sections:
     const saved = getSavedTemplates();
     saved[name] = yaml;
     saveSavedTemplates(saved);
+    currentTemplateName = name;
     renderPanel();
     updatePreview();
-    if (window.showToast) window.showToast(`Template "${name}" saved.`, 'success');
+    if (window.showToast) window.showToast(`Template "${name}" saved cleanly.`, 'success');
+  }
+
+  function saveCurrentTemplate() {
+    if (!currentTemplateName) {
+      promptTemplateName();
+      return;
+    }
+    saveTemplate(currentTemplateName);
   }
 
   function deleteSavedTemplate(name) {
     const saved = getSavedTemplates();
     if (saved[name]) { delete saved[name]; saveSavedTemplates(saved); }
+    if (currentTemplateName === name) currentTemplateName = '';
     renderPanel();
     updatePreview();
     if (window.showToast) window.showToast(`Template "${name}" deleted.`, 'success');
@@ -530,12 +540,12 @@ sections:
     overlay.innerHTML = `
       <div class="b-preview-modal" style="max-width:420px;">
         <div class="b-preview-toolbar">
-          <span class="b-lbl" style="margin:0;">Save Current As Template</span>
+          <span class="b-lbl" style="margin:0;">Save As New Template</span>
           <button type="button" class="b-close" data-st="cancel" aria-label="Cancel">&#215;</button>
         </div>
         <div style="padding:1rem 1rem 1.5rem;">
           <label class="b-lbl">Template name</label>
-          <input id="template-name-input" class="b-input" placeholder="My I-130 Statement v2" />
+          <input id="template-name-input" class="b-input" value="${esc(currentTemplateName ? currentTemplateName + ' (Copy)' : '')}" placeholder="My Custom Statement" />
         </div>
         <div class="b-preview-toolbar b-preview-foot" style="justify-content:flex-end;">
           <button type="button" data-st="save" class="btn" style="padding:0.5rem 1rem; font-size:0.75rem;">Save Template</button>
@@ -555,6 +565,13 @@ sections:
     input.focus();
   }
 
+  function loadTemplate(name) {
+    currentTemplateName = name;
+    state = specToState(window.jsyaml.load(getTemplate(name)));
+    renderPanel();
+    updatePreview();
+  }
+
   /* rendering */
   function renderFieldEditor(f, sIdx, fIdx) {
     const opts = (f.options || []).join('\n');
@@ -570,28 +587,26 @@ sections:
         </div>
         <div class="b-grid">
           <div><label class="b-lbl">Type</label>
-            <select data-bind="sections.${sIdx}.fields.${fIdx}.type" class="b-input">
-              ${FIELD_TYPES.map(t => `<option value="${t}" ${t === f.type ? 'selected' : ''}>${t}</option>`).join('')}
+            <select data-bind="sections.${sIdx}.fields.${fIdx}.type" class="b-select">
+              ${FIELD_TYPES.map(t => `<option value="${t}" ${f.type === t ? 'selected' : ''}>${t}</option>`).join('')}
             </select></div>
-          <div class="b-check"><label>
-            <input type="checkbox" data-bind="sections.${sIdx}.fields.${fIdx}.required" ${f.required ? 'checked' : ''} /> Required
-          </label></div>
+          <div><label class="b-lbl">Placeholder</label>
+            <input data-bind="sections.${sIdx}.fields.${fIdx}.placeholder" class="b-input" value="${esc(f.placeholder || '')}" /></div>
         </div>`);
-      if (f.type === 'select' || f.type === 'radio') {
-        html.push(`
-        <div><label class="b-lbl">Options (one per line)</label>
-          <textarea data-bind="sections.${sIdx}.fields.${fIdx}.options" class="b-input b-ta" rows="3">${esc(opts)}</textarea></div>`);
-      }
       if (f.type === 'textarea') {
-        html.push(`
-        <div><label class="b-lbl">Rows</label>
-          <input type="number" min="2" max="20" data-bind="sections.${sIdx}.fields.${fIdx}.rows" class="b-input b-num" value="${esc(f.rows || 4)}" /></div>`);
+        html.push(`<div><label class="b-lbl">Initial pre-fill text</label><textarea data-bind="sections.${sIdx}.fields.${fIdx}.value" class="b-input b-ta" rows="${Math.max(4, Math.min(12, f.rows || 6))}" placeholder="Pre-filled statement text...">${esc(f.value || '')}</textarea></div>`);
+      } else {
+        html.push(`<div><label class="b-lbl">Default value</label><input data-bind="sections.${sIdx}.fields.${fIdx}.value" class="b-input" value="${esc(f.value || '')}" /></div>`);
       }
-      if (f.type === 'text' || f.type === 'email' || f.type === 'textarea') {
-        html.push(`
-        <div><label class="b-lbl">Placeholder (optional)</label>
-          <input data-bind="sections.${sIdx}.fields.${fIdx}.placeholder" class="b-input" value="${esc(f.placeholder || '')}" /></div>`);
+      if (f.type === 'select' || f.type === 'radio') {
+        html.push(`<div><label class="b-lbl">Options (one per line)</label><textarea data-bind="sections.${sIdx}.fields.${fIdx}.options" class="b-input b-ta" rows="3">${esc(opts)}</textarea></div>`);
       }
+      html.push(`
+        <div style="margin-top:0.4rem;">
+          <label class="b-check"><input type="checkbox" data-bind="sections.${sIdx}.fields.${fIdx}.required" ${f.required ? 'checked' : ''}> Required field</label>
+        </div>`);
+    } else {
+      html.push(`<div class="b-hint">Auto timestamp field (read-only in signer UI)</div>`);
     }
     html.push('</div>');
     return html.join('');

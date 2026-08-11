@@ -50,13 +50,16 @@ const WIN_ANSI_SAFE = /[^\x20-\x7E\u00A0-\u00FF\u0152\u0153\u0178\u0192\u02C6\u0
 function winAnsiSafe(text: string): string {
   if (!text) return '';
   return String(text)
+    .replace(/[\u2028\u2029\v\f]/g, '\n')       // Unicode line & paragraph separators -> newlines
+    .replace(/\r\n?/g, '\n')                   // CR / CRLF -> LF
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '') // strip non-printable & zero-width characters
     .replace(/[\u2018\u2019\u201A\u2032]/g, "'") // single quotes / apostrophes (e.g. ’ -> ')
     .replace(/[\u201C\u201D\u201E\u2033]/g, '"') // double quotes (e.g. “ ” -> ")
-    .replace(/[\u2013\u2014]/g, '-')            // en/em dashes (e.g. — -> -)
+    .replace(/[\u2010-\u2015]/g, '-')          // hyphens & en/em dashes (e.g. — -> -)
     .replace(/\u2026/g, '...')                 // horizontal ellipsis (…)
     .replace(/\u2022/g, '*')                   // bullet (•)
-    .replace(/[\u00A0\u2000-\u200B]/g, ' ')     // non-breaking & special spaces
-    .replace(WIN_ANSI_SAFE, '?');
+    .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ') // non-breaking & special spaces -> standard space
+    .replace(WIN_ANSI_SAFE, (m) => (/\s/.test(m) ? ' ' : '')); // strip unmapped chars without adding ?
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {

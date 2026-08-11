@@ -630,19 +630,19 @@ async function renderAuthGate() {
 const deployPanelHtml = `
   <div style="border:1px solid var(--border-active); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; background:var(--bg-surface);">
     <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.25rem;">Deploy New Document</div>
-    <div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:0.75rem;">Build with the visual builder or paste a YAML spec — both produce the same format as <code>templates/*.yaml</code>.</div>
+    <div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:0.75rem;">Build visually with drag & drop or switch to YAML Spec Code below.</div>
     <div class="deploy-tabs">
-      <button type="button" id="tab-yaml" class="deploy-tab active">YAML</button>
-      <button type="button" id="tab-builder" class="deploy-tab">Builder</button>
+      <button type="button" id="tab-builder" class="deploy-tab active">Visual Builder</button>
+      <button type="button" id="tab-yaml" class="deploy-tab">YAML Code</button>
     </div>
-    <div id="deploy-yaml-pane">
-    <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:0; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
-    <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-      <button id="deploy-btn" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
-      <span id="deploy-status" style="font-size:0.8rem; color:var(--text-muted);"></span>
+    <div id="deploy-builder-pane" style="margin-top:1rem;"></div>
+    <div id="deploy-yaml-pane" style="display:none; margin-top:1rem;">
+      <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:0; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
+      <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <button id="deploy-btn" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
+        <span id="deploy-status" style="font-size:0.8rem; color:var(--text-muted);"></span>
+      </div>
     </div>
-    </div>
-    <div id="deploy-builder-pane" style="display:none; margin-top:1rem;"></div>
     <div id="deploy-result" style="margin-top:0.75rem;"></div>
   </div>`;
 
@@ -732,6 +732,12 @@ async function renderDashboard() {
 
   const deployBtn = document.getElementById('deploy-btn');
   if (deployBtn) deployBtn.addEventListener('click', deployDocumentFromPanel);
+
+  const bp = document.getElementById('deploy-builder-pane');
+  if (bp && !bp.dataset.init && window.renderBuilderPanel) {
+    bp.dataset.init = '1';
+    window.renderBuilderPanel(bp);
+  }
 
   const tabYaml = document.getElementById('tab-yaml');
   const tabBuilder = document.getElementById('tab-builder');
