@@ -253,6 +253,132 @@ sections:
         label: "Date of Statement Execution"
         type: "datetime-auto"
         required: true
+`,
+    'Tom Statement': `document:
+  id: "tom"
+  title: "SPOUSAL RELATIONSHIP STATEMENT — THOMAS"
+  jurisdiction: "United Kingdom Home Office & US Department of State / USCIS"
+  expires_in_days: 60
+  signing_order: "sequential"
+  legal_footer: "I DECLARE UNDER PENALTY OF PERJURY THAT THE FOREGOING IS TRUE AND CORRECT."
+
+parties:
+  - id: "author"
+    role: "Statement Author (Thomas Callan)"
+    sequence: 1
+
+sections:
+  - type: "static"
+    content: |
+      ## STATEMENT OF GENUINE AND SUBSISTING RELATIONSHIP
+      This personal statement is submitted in support of our spousal visa / immigration application. It describes, in detail, the history, development, cohabitation, and ongoing commitment of our relationship.
+
+  - type: "form"
+    signer_label: "AUTHOR INFORMATION"
+    fields:
+      - name: "full_name"
+        label: "Full Legal Name of Statement Author"
+        type: "text"
+        value: "Thomas Callan"
+        required: true
+      - name: "spouse_name"
+        label: "Full Legal Name of Spouse"
+        type: "text"
+        value: "Madison Callan"
+        required: true
+
+  - type: "form"
+    signer_label: "STATEMENT OF RELATIONSHIP HISTORY & COHABITATION"
+    fields:
+      - name: "relationship_statement"
+        label: "Detailed Chronological Account of Relationship"
+        type: "textarea"
+        rows: 25
+        required: true
+        value: |
+          From August 2024 to July 2025, I attended Embry-Riddle Aeronautical University as part of a study abroad program for my university degree. In November, I began utilizing the dating application Hinge, which Madison was also using at that time. Although we matched once, I deleted my account shortly after our initial contact. One night, while caring for my roommate’s puppy, I returned to the application. Madison was one of the first profiles I encountered; as it happened, she had also decided to resume using the application that same day. We established an immediate rapport, characterized by a similar sense of humor and shared aspirations. Despite our cultural differences, we felt a significant connection. I deferred to Madison’s familiarity with the area to arrange our first date. We met at the school library and spent the evening playing mini-golf and conversing. We felt immediately comfortable in each other’s company.
+
+          Over the following three weeks, we continued to date. I had committed to attending Thanksgiving with my roommate's family, and Madison was scheduled to visit her home for the Christmas holidays. To mitigate the time apart, when she suggested hiking in Sedona, I proposed that we stay in a cabin in Flagstaff and go skiing instead. It was our first experience with the sport; although we were beginners, we enjoyed the activity together. Madison prepared a meal for me, and during the evening, we expressed our mutual commitment to one another. When Madison fell ill before our departure from the cabin, I assumed responsibility for driving her vehicle - a milestone that marked the beginning of my role as her primary driver for the subsequent 10 months. Shortly after Christmas, I experienced mechanical issues with my own vehicle, and Madison offered the use of hers. In return, I invited her to dinner at my residence. What began as a practical arrangement quickly evolved into a committed partnership, as we preferred to spend our time together. We remained inseparable throughout the remainder of my time in the United States.
+
+          Planning for the upcoming academic year, Madison decided to move out of university accommodation into her own residence in Prescott. To assist with her transition and support her flight training program, I contributed to her rent for the initial months beginning in early June. We spent the majority of our time together at this residence, and I was subsequently added as a resident on the lease. During spring break, we traveled to Missouri to visit Madison’s parents. The visit was successful, and we spent time with her siblings and their partners. We returned from Missouri accompanied by Madison’s cat, Wally, who became a central part of our household.
+
+          I departed the United States in August upon the conclusion of my visa term to complete my degree. During my departure preparations, my passport was destroyed; consequently, we took the opportunity to visit the Los Angeles consulate and spend additional time together. We visited Santa Monica, the Griffith Observatory, and planned to visit the Echo Park swan boats, though we were unable to do so due to traffic. This period marked the beginning of our long-distance relationship. We maintained constant communication through video calls and digital platforms, ensuring we remained connected despite the 5,000-mile distance.
+
+          Madison visited the United Kingdom during the final week of October to celebrate her birthday and Halloween. During this visit, she was introduced to my family, with whom she had already been in contact. At the Sheffield Botanical Gardens, I proposed with a handmade ruby ring. Although the circumstances were not ideal - the garden lights were dysfunctional, it was raining, and parts of the proposal were left at the hotel - I was resolved to refine the experience in the future.
+
+          Earlier in the year, Madison concluded that her flight program at Embry-Riddle was not aligned with her long-term professional interests. With my support, she withdrew from the university with the intention of pursuing a different educational path in Alaska as making her happy was my primary concern. Following her withdrawal, we decided to convert a planned Christmas visit into a permanent relocation to the United Kingdom. To facilitate this, I leased an apartment in Sheffield city center. From mid-December through early June, Madison resided with me in the United Kingdom. During this period, as she was unable to work on a tourist visa, I provided financial support to enable her to explore her interests.
+
+          In February, we chose to elope. Seeking a private ceremony, we arranged a stay in a mountain cabin in Colorado to coincide with Valentine’s Day. We spent time with a childhood friend of Madison’s and shared a meaningful experience together.
+
+          In June, Madison returned to the United States to seek employment in Kansas City, necessitating a transition back to a long-distance relationship. We maintain daily contact. To reduce the time zone difference and facilitate greater proximity, I have obtained a working holiday visa for Canada, effective September 2nd. I intend to reside in Canada throughout the processing period of our visa to ensure that we can visit each other more easily.
+
+          Our relationship is of the utmost significance to me. Since we met, I have felt a sense of comfort and authenticity that is unparalleled. Our commitment to one another and our shared vision for our future remain constant.
+
+  - type: "signature"
+    signer_label: "AUTHOR SWORN SIGNATURE"
+    fields:
+      - name: "execution_date"
+        label: "Date of Sworn Execution"
+        type: "datetime-auto"
+        required: true
+`,
+    'Madi Statement': `document:
+  id: "madi"
+  title: "SPOUSAL RELATIONSHIP STATEMENT — MADISON"
+  jurisdiction: "United Kingdom Home Office & US Department of State / USCIS"
+  expires_in_days: 60
+  signing_order: "sequential"
+  legal_footer: "I DECLARE UNDER PENALTY OF PERJURY THAT THE FOREGOING IS TRUE AND CORRECT."
+
+parties:
+  - id: "author"
+    role: "Statement Author (Madison Callan)"
+    sequence: 1
+
+sections:
+  - type: "static"
+    content: |
+      ## STATEMENT OF GENUINE AND SUBSISTING RELATIONSHIP
+      This personal statement is submitted in support of our spousal visa / immigration application. It describes, in detail, the history, development, cohabitation, and ongoing commitment of our relationship.
+
+  - type: "form"
+    signer_label: "AUTHOR INFORMATION"
+    fields:
+      - name: "full_name"
+        label: "Full Legal Name of Statement Author"
+        type: "text"
+        value: "Madison Callan"
+        required: true
+      - name: "spouse_name"
+        label: "Full Legal Name of Spouse"
+        type: "text"
+        value: "Thomas Callan"
+        required: true
+
+  - type: "form"
+    signer_label: "STATEMENT OF RELATIONSHIP HISTORY & COHABITATION"
+    fields:
+      - name: "relationship_statement"
+        label: "Detailed Chronological Account of Relationship"
+        type: "textarea"
+        rows: 25
+        required: true
+        value: |
+          Thomas and I met on a dating app called Hinge while we were both located in Prescott Arizona. Frankly I accidentally ignored him the first time we matched on the app but found him again later and hit it off swimmingly. After chatting for a few days we went on a date, which I planned as I was confident I could plan a much more fun date than he could as I knew more fun things to do as the resident American. Once again it went very well, and we continued to have dates at an italian restaurant, a date in the park, then another at his house before he left for Thanksgiving break. When he came back a week later we planned a trip before winter break to a cabin. There we bonded and I embarrassingly admitted I loved him, he admitted the same. From that point on we've been extremely close ever since, for when I left for winter break and came back two weeks later, we lived together. First out of an excuse for convenience since Tom's car broke down and we could drive to university together, then it just came that we simply enjoyed each other's company too much to leave. From that point on we were together everyday, I communicated regularly with his mother and grandmother via telephone. Subsequently, Thomas accompanied me to my family home in Missouri to be formally introduced to my parents. Our cohabitation continued for several months until we relocated to a joint residence with our cat, Waldo.
+
+          In early August 2025, we entered a period of long-distance communication lasting approximately four months. Prior to Thomas's departure, we traveled to Los Angeles to secure an emergency travel document after his passport was inadvertently damaged. During our time apart, we maintained daily contact through Discord and WhatsApp, utilizing video calls and synchronized activities to remain connected. To mitigate the seven-hour time difference, I adjusted my sleep schedule to align with his, ensuring we could share our mornings and evenings together. In October, I traveled to the United Kingdom for ten days to celebrate my birthday, during which time I met his extended family and we formally announced our engagement. I have maintained a positive and close relationship with his family since that time.
+
+          Following this visit, I elected to withdraw from my university in the United States to join Thomas in England and pursue a specialized aviation career path. After the initial four-month separation, I resided with Thomas in England for six months. During this period, we celebrated Christmas with his family and toured the country. On February 14, 2026, we were legally married in Colorado, USA. Our friend, Alice Nelson, assisted us in navigating the administrative requirements for our marriage license during a holiday weekend. Throughout this time, Thomas provided primary financial support for our household.
+
+          In June 2026, I returned to the United States to secure employment and fund my upcoming flight training in Alaska. As of the present date, we await Thomas's return on August 20, prior to his scheduled employment in Canada commencing September 2. Our relationship is characterized by deep mutual affection and consistent financial and emotional support. My family can attest to the depth of our commitment and the genuine nature of our marriage. Based on the facts presented in this account, it is evident that our relationship is bona fide and enduring.
+
+  - type: "signature"
+    signer_label: "AUTHOR SWORN SIGNATURE"
+    fields:
+      - name: "execution_date"
+        label: "Date of Sworn Execution"
+        type: "datetime-auto"
+        required: true
 `
   };
 

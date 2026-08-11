@@ -1,0 +1,57 @@
+document:
+  id: "madi"
+  title: "SPOUSAL RELATIONSHIP STATEMENT — MADISON"
+  jurisdiction: "United Kingdom Home Office & US Department of State / USCIS"
+  expires_in_days: 60
+  signing_order: "sequential"
+  legal_footer: "I DECLARE UNDER PENALTY OF PERJURY THAT THE FOREGOING IS TRUE AND CORRECT."
+
+parties:
+  - id: "author"
+    role: "Statement Author (Madison Callan)"
+    sequence: 1
+
+sections:
+  - type: "static"
+    content: |
+      ## STATEMENT OF GENUINE AND SUBSISTING RELATIONSHIP
+      This personal statement is submitted in support of our spousal visa / immigration application. It describes, in detail, the history, development, cohabitation, and ongoing commitment of our relationship.
+
+  - type: "form"
+    signer_label: "AUTHOR INFORMATION"
+    fields:
+      - name: "full_name"
+        label: "Full Legal Name of Statement Author"
+        type: "text"
+        value: "Madison Callan"
+        required: true
+      - name: "spouse_name"
+        label: "Full Legal Name of Spouse"
+        type: "text"
+        value: "Thomas Callan"
+        required: true
+
+  - type: "form"
+    signer_label: "STATEMENT OF RELATIONSHIP HISTORY & COHABITATION"
+    fields:
+      - name: "relationship_statement"
+        label: "Detailed Chronological Account of Relationship"
+        type: "textarea"
+        rows: 25
+        required: true
+        value: |
+          Thomas and I met on a dating app called Hinge while we were both located in Prescott Arizona. Frankly I accidentally ignored him the first time we matched on the app but found him again later and hit it off swimmingly. After chatting for a few days we went on a date, which I planned as I was confident I could plan a much more fun date than he could as I knew more fun things to do as the resident American. Once again it went very well, and we continued to have dates at an italian restaurant, a date in the park, then another at his house before he left for Thanksgiving break. When he came back a week later we planned a trip before winter break to a cabin. There we bonded and I embarrassingly admitted I loved him, he admitted the same. From that point on we've been extremely close ever since, for when I left for winter break and came back two weeks later, we lived together. First out of an excuse for convenience since Tom's car broke down and we could drive to university together, then it just came that we simply enjoyed each other's company too much to leave. From that point on we were together everyday, I communicated regularly with his mother and grandmother via telephone. Subsequently, Thomas accompanied me to my family home in Missouri to be formally introduced to my parents. Our cohabitation continued for several months until we relocated to a joint residence with our cat, Waldo.
+
+          In early August 2025, we entered a period of long-distance communication lasting approximately four months. Prior to Thomas's departure, we traveled to Los Angeles to secure an emergency travel document after his passport was inadvertently damaged. During our time apart, we maintained daily contact through Discord and WhatsApp, utilizing video calls and synchronized activities to remain connected. To mitigate the seven-hour time difference, I adjusted my sleep schedule to align with his, ensuring we could share our mornings and evenings together. In October, I traveled to the United Kingdom for ten days to celebrate my birthday, during which time I met his extended family and we formally announced our engagement. I have maintained a positive and close relationship with his family since that time.
+
+          Following this visit, I elected to withdraw from my university in the United States to join Thomas in England and pursue a specialized aviation career path. After the initial four-month separation, I resided with Thomas in England for six months. During this period, we celebrated Christmas with his family and toured the country. On February 14, 2026, we were legally married in Colorado, USA. Our friend, Alice Nelson, assisted us in navigating the administrative requirements for our marriage license during a holiday weekend. Throughout this time, Thomas provided primary financial support for our household.
+
+          In June 2026, I returned to the United States to secure employment and fund my upcoming flight training in Alaska. As of the present date, we await Thomas's return on August 20, prior to his scheduled employment in Canada commencing September 2. Our relationship is characterized by deep mutual affection and consistent financial and emotional support. My family can attest to the depth of our commitment and the genuine nature of our marriage. Based on the facts presented in this account, it is evident that our relationship is bona fide and enduring.
+
+  - type: "signature"
+    signer_label: "AUTHOR SWORN SIGNATURE"
+    fields:
+      - name: "execution_date"
+        label: "Date of Sworn Execution"
+        type: "datetime-auto"
+        required: true

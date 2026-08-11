@@ -144,3 +144,27 @@ test('render-pdf handles multi-page box content without clipping or overlap', as
   assert.ok(pdfText.includes('Paragraph line 100:'), '100th line present (not clipped)');
 });
 
+test('render-pdf renders tom and madi spousal relationship statement templates losslessly', async () => {
+  const tomText = "From August 2024 to July 2025, I attended Embry-Riddle Aeronautical University...";
+  const madiText = "Thomas and I met on a dating app called Hinge while we were both located in Prescott Arizona...";
+
+  for (const [docId, text] of [['tom', tomText], ['madi', madiText]]) {
+    const res = await app.request('/api/render-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...fullPayload,
+        document_id: docId,
+        fields: { relationship_statement: text },
+        signature_data: 'Thomas Callan'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    assert.equal(String.fromCharCode(...bytes.slice(0, 4)), '%PDF');
+    assert.ok(bytes.length > 1000);
+  }
+});
+
+
