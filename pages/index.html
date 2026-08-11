@@ -369,29 +369,13 @@ async function safeFetchJson(url, options) {
 
 async function loadDocument() {
   const container = document.getElementById('main-content');
-  if (window.location.pathname.startsWith('/dashboard')) {
+  if (window.location.pathname.startsWith('/dashboard') || !params.has('slug')) {
     renderDashboard();
     return;
   }
-  
+
   try {
-    let targetSlug = slug;
-    let doc;
-    try {
-      doc = await safeFetchJson(`${API_BASE}/api/doc/${targetSlug}`);
-    } catch (firstErr) {
-      if (!params.has('slug')) {
-        const listData = await safeFetchJson(`${API_BASE}/api/documents/list`);
-        if (listData.documents && listData.documents.length > 0) {
-          targetSlug = listData.documents[0].slug;
-          doc = await safeFetchJson(`${API_BASE}/api/doc/${targetSlug}`);
-        } else {
-          throw firstErr;
-        }
-      } else {
-        throw firstErr;
-      }
-    }
+    const doc = await safeFetchJson(`${API_BASE}/api/doc/${slug}`);
     const spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
     renderSigner(doc, spec);
   } catch (err) {
@@ -408,8 +392,53 @@ async function loadDocument() {
   }
 }
 
+const DASHBOARD_AUTH_HASH = 'ed27cc4da76834c9eb5bd7c29e4b6001d93a7dc800323beaaa49ebda91361e08';
+const DASHBOARD_AUTH_KEY = 'legalform_dashboard_unlocked';
+
+async function sha256Hex(input) {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function renderAuthGate() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = `
+    <div class="signer-head">
+      <div class="signer-eyebrow">Sender Management Ledger</div>
+      <h1 class="signer-title">Restricted Access</h1>
+    </div>
+    <div class="signer-body">
+      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0 0 1.25rem; line-height: 1.6;">Enter the sender passcode to view received submissions and document status.</p>
+      <input id="auth-passcode" type="password" placeholder="Passcode" autocomplete="current-password" style="width:100%; max-width:320px; padding:0.75rem 1rem; font-size:1rem; border:1px solid var(--border-subtle); border-radius:8px; background:var(--bg-surface); color:var(--text-main); outline:none;" />
+      <div style="margin-top:1rem;">
+        <button id="auth-submit" class="btn">Unlock Ledger</button>
+      </div>
+      <p id="auth-error" style="color: var(--error); font-size:0.85rem; margin-top:1rem; display:none;">Incorrect passcode.</p>
+    </div>`;
+  const input = document.getElementById('auth-passcode');
+  const error = document.getElementById('auth-error');
+  const attempt = async () => {
+    if ((await sha256Hex(input.value)) === DASHBOARD_AUTH_HASH) {
+      sessionStorage.setItem(DASHBOARD_AUTH_KEY, '1');
+      renderDashboard();
+    } else {
+      error.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  };
+  document.getElementById('auth-submit').addEventListener('click', attempt);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') attempt(); });
+  input.focus();
+}
+
 async function renderDashboard() {
   const container = document.getElementById('main-content');
+  if (sessionStorage.getItem(DASHBOARD_AUTH_KEY) !== '1') {
+    renderAuthGate();
+    return;
+  }
   container.innerHTML = `
     <div class="signer-head">
       <div class="signer-eyebrow">Sender Management Ledger</div>
