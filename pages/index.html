@@ -167,6 +167,15 @@
       line-height: 1.7;
       color: var(--text-main);
     }
+    .static-heading {
+      margin: 0 0 1rem;
+      font-size: clamp(14px, 1.1vw, 18px);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      color: var(--text-main);
+      text-transform: uppercase;
+    }
     
     .form-group { margin-bottom: 1.25rem; }
     .form-group label {
@@ -874,6 +883,27 @@ async function deleteDocument(id, slug) {
   }
 }
 
+function renderStaticBody(content) {
+  const lines = String(content ?? '').replace(/\r\n/g, '\n').split('\n');
+  const parts = [];
+  let para = [];
+  const flush = () => {
+    if (para.length) { parts.push(`<p>${para.join('<br>')}</p>`); para = []; }
+  };
+  for (const raw of lines) {
+    if (raw.startsWith('## ')) {
+      flush();
+      parts.push(`<h2 class="static-heading">${esc(raw.slice(3))}</h2>`);
+    } else if (raw.trim() === '') {
+      flush();
+    } else {
+      para.push(esc(raw));
+    }
+  }
+  flush();
+  return parts.join('');
+}
+
 function renderSigner(doc, spec) {
   const container = document.getElementById('main-content');
   const d = spec.document || {};
@@ -897,7 +927,7 @@ function renderSigner(doc, spec) {
     if (sec.type === 'static') {
       html += `
         <div class="signer-section">
-          <div class="static-body">${esc(sec.content).replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</div>
+          <div class="static-body">${renderStaticBody(sec.content)}</div>
         </div>`;
     } else if (sec.type === 'form' || sec.type === 'signature') {
       html += `<div class="signer-section">`;
