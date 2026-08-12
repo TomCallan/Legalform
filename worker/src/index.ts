@@ -102,6 +102,9 @@ app.post('/api/submit/:slug', async (c) => {
 
   const dataJson = JSON.stringify(body.fields || {});
   const signatureData = body.signature_data || body.signature_svg || '';
+  const interactionLogs = typeof body.interaction_logs === 'string' 
+    ? body.interaction_logs 
+    : JSON.stringify(body.interaction_logs || []);
 
   // Calculate SHA-256 audit digest
   const auditData = `${doc.id}:${email}:${dataJson}:${signatureData}:${submittedAt}`;
@@ -109,9 +112,9 @@ app.post('/api/submit/:slug', async (c) => {
 
   // Store in D1 Database
   await c.env.DB.prepare(
-    `INSERT INTO submissions (id, document_id, signer_email, signer_name, data_json, signature_data, audit_hash, submitted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(submissionId, doc.id, email, name, dataJson, signatureData, auditHash, submittedAt).run();
+    `INSERT INTO submissions (id, document_id, signer_email, signer_name, data_json, signature_data, audit_hash, submitted_at, interaction_logs)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(submissionId, doc.id, email, name, dataJson, signatureData, auditHash, submittedAt, interactionLogs).run();
 
   // Archive full, compact payload to R2 bucket if available
   const payload = {
@@ -124,7 +127,8 @@ app.post('/api/submit/:slug', async (c) => {
     fields: body.fields || {},
     signature_data: signatureData,
     audit_hash: auditHash,
-    submitted_at: submittedAt
+    submitted_at: submittedAt,
+    interaction_logs: body.interaction_logs || []
   };
 
   try {
@@ -151,7 +155,8 @@ app.post('/api/submit/:slug', async (c) => {
           signer_name: name,
           fields: body.fields || {},
           audit_hash: auditHash,
-          submitted_at: submittedAt
+          submitted_at: submittedAt,
+          interaction_logs: body.interaction_logs || []
         })
       });
     } catch (webhookErr) {
@@ -196,6 +201,86 @@ app.post('/api/submit/:slug', async (c) => {
     payload,
     message: 'Document signed successfully'
   });
+});
+
+// ── Public: Verify SHA256 Signature & Document Integrity ──────
+app.post('/api/verify', async (c) => {
+  const body = await c.req.json();
+  const { hash, payload, text } = body;
+
+  // Mode 1: Text content SHA-256 verification
+  if (text !== undefined && text !== null) {
+    const textHash = await sha256(String(text));
+    const matches = hash ? textHash.toLowerCase() === String(hash).trim().toLowerCase() : true;
+    return c.json({
+      valid: matches,
+      calculated_hash: textHash,
+      provided_hash: hash || null,
+      message: matches ? 'SHA-256 Hash matches text content.' : 'SHA-256 Hash mismatch for text content.'
+    });
+  }
+
+  // Mode 2: Submission JSON Payload verification
+  if (payload) {
+    let sub = payload;
+    if (payload.submissions && Array.isArray(payload.submissions) && payload.submissions.length > 0) {
+      sub = payload.submissions[0];
+    } else if (payload.payload) {
+      sub = payload.payload;
+    }
+
+    const docId = sub.document_id || sub.id;
+    const email = (sub.signer_email || sub.email || '').toLowerCase().trim();
+    const fields = sub.fields || {};
+    const dataJson = typeof fields === 'string' ? fields : JSON.stringify(fields);
+    const signatureData = sub.signature_data || sub.signature_svg || '';
+    const submittedAt = sub.submitted_at;
+    const expectedHash = sub.audit_hash || hash;
+
+    if (docId && submittedAt && expectedHash) {
+      const auditData = `${docId}:${email}:${dataJson}:${signatureData}:${submittedAt}`;
+      const calculatedHash = await sha256(auditData);
+      const isValid = calculatedHash.toLowerCase() === String(expectedHash).trim().toLowerCase();
+
+      return c.json({
+        valid: isValid,
+        calculated_hash: calculatedHash,
+        expected_hash: expectedHash,
+        document_id: docId,
+        signer_email: email,
+        submitted_at: submittedAt,
+        message: isValid ? 'Cryptographic SHA-256 Audit Signature is VALID.' : 'Cryptographic Audit Signature is INVALID or TAMPERED.'
+      });
+    }
+  }
+
+  // Mode 3: Check hash in Database
+  if (hash) {
+    const cleanHash = String(hash).trim().toLowerCase();
+    const subMatch = await c.env.DB.prepare(
+      'SELECT s.*, d.id as doc_id FROM submissions s JOIN documents d ON s.document_id = d.id WHERE LOWER(s.audit_hash) = ?'
+    ).bind(cleanHash).first();
+
+    if (subMatch) {
+      return c.json({
+        valid: true,
+        calculated_hash: cleanHash,
+        submission_id: subMatch.id,
+        document_id: subMatch.document_id,
+        signer_email: subMatch.signer_email,
+        submitted_at: subMatch.submitted_at,
+        message: 'SHA-256 Audit Signature found in official ledger.'
+      });
+    } else {
+      return c.json({
+        valid: false,
+        provided_hash: cleanHash,
+        message: 'SHA-256 Digest not found in legal ledger database.'
+      });
+    }
+  }
+
+  return c.json({ error: 'Please provide hash, text, or payload to verify.' }, 400);
 });
 
 // ── Public: Export Submission Data / Compact JSON Payload ────

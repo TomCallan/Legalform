@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS submissions (
     data_json TEXT NOT NULL,      -- All field values submitted by user
     signature_data TEXT NOT NULL, -- SVG or PNG data URL of user signature
     audit_hash TEXT NOT NULL,     -- SHA-256(document_id + data_json + signature + timestamp)
-    submitted_at INTEGER DEFAULT (unixepoch())
+    submitted_at INTEGER DEFAULT (unixepoch()),
+    interaction_logs TEXT         -- JSON metadata of input events (typing, pasting, additions)
 );
 
 CREATE INDEX IF NOT EXISTS idx_submissions_doc ON submissions(document_id, submitted_at);

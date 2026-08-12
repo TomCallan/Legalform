@@ -111,6 +111,118 @@ def export_doc(
             console.print(f"[bold red]Export failed:[/bold red] {e}")
             raise typer.Exit(code=1)
 
+@app.command("verify")
+def verify_signature(
+    hash_or_file: str = typer.Argument(None, help="SHA-256 hash string OR path to submission JSON / text document"),
+    expected_hash: str = typer.Option(None, "--hash", "-h", help="Expected SHA-256 audit digest to compare against"),
+    text: str = typer.Option(None, "--text", "-t", help="Raw document text content to calculate SHA-256 for")
+):
+    """Verify SHA-256 audit digest signature of a document, text content, or submission payload."""
+    api_base, _ = get_config()
+    payload_body = {}
+
+    if hash_or_file:
+        file_path = Path(hash_or_file)
+        if file_path.exists():
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                # Try parsing as JSON payload first
+                data = json.loads(content)
+                payload_body["payload"] = data
+                if expected_hash:
+                    payload_body["hash"] = expected_hash
+            except Exception:
+                # Treat as raw text file
+                payload_body["text"] = content
+                if expected_hash:
+                    payload_body["hash"] = expected_hash
+        else:
+            # Treat argument directly as hash string
+            payload_body["hash"] = hash_or_file
+
+    if expected_hash and "hash" not in payload_body:
+        payload_body["hash"] = expected_hash
+    if text:
+        payload_body["text"] = text
+
+    if not payload_body:
+        console.print("[bold red]Error:[/bold red] Provide a hash string, file path, --hash, or --text to verify.")
+        raise typer.Exit(code=1)
+
+    # Local offline fallback SHA-256 calculation for text / submission payload if API is down
+    local_hash = None
+    if "text" in payload_body:
+        local_hash = hashlib.sha256(payload_body["text"].encode('utf-8')).hexdigest()
+    elif "payload" in payload_body:
+        sub = payload_body["payload"]
+        if "submissions" in sub and len(sub["submissions"]) > 0:
+            sub = sub["submissions"][0]
+        elif "payload" in sub:
+            sub = sub["payload"]
+
+        doc_id = sub.get("document_id") or sub.get("id") or sub.get("spec", {}).get("document", {}).get("id")
+        email = (sub.get("signer_email") or sub.get("email") or "").lower().strip()
+        fields = sub.get("fields", {})
+        data_json = fields if isinstance(fields, str) else json.dumps(fields)
+        signature_data = sub.get("signature_data") or sub.get("signature_svg") or ""
+        submitted_at = sub.get("submitted_at")
+        
+        if doc_id and submitted_at:
+            audit_str = f"{doc_id}:{email}:{data_json}:{signature_data}:{submitted_at}"
+            local_hash = hashlib.sha256(audit_str.encode('utf-8')).hexdigest()
+        elif sub.get("audit_hash"):
+            local_hash = sub.get("audit_hash")
+        elif "spec" in sub or "document_id" in sub:
+            # Hash JSON payload representation
+            local_hash = hashlib.sha256(json.dumps(sub).encode('utf-8')).hexdigest()
+
+    res_data = None
+    try:
+        with console.status("[bold blue]Verifying SHA-256 cryptographic signature...[/bold blue]"):
+            r = requests.post(f"{api_base}/api/verify", json=payload_body, timeout=5)
+            if r.status_code == 200:
+                res_data = r.json()
+    except Exception:
+        pass
+
+    if res_data:
+        if res_data.get("valid"):
+            console.print("\n[bold green]✓ SHA-256 SIGNATURE VALID & VERIFIED![/bold green]")
+            console.print(f"• Message: [cyan]{res_data.get('message')}[/cyan]")
+            if res_data.get("calculated_hash"):
+                console.print(f"• SHA-256 Digest: [bold yellow]{res_data.get('calculated_hash')}[/bold yellow]")
+            if res_data.get("document_id"):
+                console.print(f"• Document ID: [green]{res_data.get('document_id')}[/green]")
+            if res_data.get("signer_email"):
+                console.print(f"• Signer Email: [green]{res_data.get('signer_email')}[/green]")
+        else:
+            console.print("\n[bold red]✗ SIGNATURE VERIFICATION FAILED / TAMPERED![/bold red]")
+            console.print(f"• Message: [red]{res_data.get('message')}[/red]")
+            if res_data.get("calculated_hash"):
+                console.print(f"• Calculated SHA-256: [yellow]{res_data.get('calculated_hash')}[/yellow]")
+            if res_data.get("expected_hash") or res_data.get("provided_hash"):
+                console.print(f"• Expected/Provided Hash: [red]{res_data.get('expected_hash') or res_data.get('provided_hash')}[/red]")
+        return
+
+    # Offline evaluation if API request was unavailable
+    if local_hash or payload_body.get("hash"):
+        target_hash = payload_body.get("hash", "")
+        computed_hash = local_hash or target_hash
+        if target_hash and local_hash and target_hash.lower() == local_hash.lower():
+            console.print("\n[bold green]✓ SHA-256 SIGNATURE VERIFIED (Offline Calculation)[/bold green]")
+            console.print(f"• Computed Hash: [bold yellow]{local_hash}[/bold yellow]")
+        elif target_hash and local_hash:
+            console.print("\n[bold red]✗ SHA-256 MISMATCH (Offline Calculation)[/bold red]")
+            console.print(f"• Computed Hash: [yellow]{local_hash}[/yellow]")
+            console.print(f"• Expected Hash: [red]{target_hash}[/red]")
+        else:
+            console.print("\n[bold green]SHA-256 Digest Provided (Offline Mode):[/bold green]")
+            console.print(f"• SHA-256: [bold yellow]{target_hash or local_hash}[/bold yellow]")
+            console.print("[dim]Note: Start 'legalform serve' or connect to API server to verify against remote database.[/dim]")
+    else:
+        console.print("[bold red]Unable to connect to verification API server and no local file/text provided.[/bold red]")
+        raise typer.Exit(code=1)
+
 @app.command("pdf")
 def generate_pdf(
     json_path: Path = typer.Argument(..., help="Path to compact submission JSON file"),

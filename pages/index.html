@@ -71,6 +71,7 @@
     @media (max-width: 640px) {
       .container { padding: 0 12px; }
       .header-inner { padding: 0.75rem 0; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+      .brand { margin-left: 12px; }
       .signer-wrapper { padding: 1rem 0 2rem; }
       .signer-head { padding: 1.25rem 1rem; }
       .signer-body { padding: 1.25rem 1rem; }
@@ -278,7 +279,11 @@
       <a href="/" class="brand">
         Legalform
       </a>
-      <div style="display:flex; gap:1.5rem; align-items:center;">
+      <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <a href="/verify" id="verify-link" style="font-size: clamp(11px, 0.8vw, 13px); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-main);">
+          🔍 Verify SHA-256
+        </a>
+        <span style="color: var(--border-subtle);">|</span>
         <a href="/dashboard" id="dashboard-link" style="font-size: clamp(11px, 0.8vw, 13px); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-main);">
           Dashboard / Document Ledger &rarr;
         </a>
@@ -319,6 +324,10 @@ function esc(s) {
 
 async function loadDocument() {
   const container = document.getElementById('main-content');
+  if (window.location.pathname.startsWith('/verify')) {
+    renderVerifyPage();
+    return;
+  }
   if (window.location.pathname.startsWith('/dashboard')) {
     renderDashboard();
     return;
@@ -336,6 +345,126 @@ async function loadDocument() {
         <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">Access Denied</div>
         <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0;">${esc(err.message)}</p>
       </div>`;
+  }
+}
+
+function renderVerifyPage() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = `
+    <div class="signer-head">
+      <div class="signer-eyebrow">Cryptographic Audit Tool</div>
+      <h1 class="signer-title">Verify SHA-256 Signature</h1>
+      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0;">Verify document integrity, check SHA-256 hashes, or upload executed JSON agreement files.</p>
+    </div>
+    <div class="signer-body">
+      <div class="form-group">
+        <label>Verification Method</label>
+        <div style="display:flex; gap:1rem; margin-bottom: 1rem;">
+          <label style="cursor:pointer;"><input type="radio" name="verify-mode" value="hash" checked onchange="toggleVerifyMode()"> SHA-256 Digest Hash</label>
+          <label style="cursor:pointer;"><input type="radio" name="verify-mode" value="file" onchange="toggleVerifyMode()"> Submission JSON File</label>
+          <label style="cursor:pointer;"><input type="radio" name="verify-mode" value="text" onchange="toggleVerifyMode()"> Plain Text Content</label>
+        </div>
+      </div>
+
+      <div id="mode-hash-sec" class="form-group">
+        <label>Enter SHA-256 Hash Digest</label>
+        <input type="text" id="verify-hash-input" class="form-control" placeholder="e.g. a3f89b... or audit hash string">
+      </div>
+
+      <div id="mode-file-sec" class="form-group" style="display:none;">
+        <label>Upload Exported JSON Payload</label>
+        <input type="file" id="verify-file-input" accept=".json" class="form-control">
+      </div>
+
+      <div id="mode-text-sec" class="form-group" style="display:none;">
+        <label>Document Raw Content</label>
+        <textarea id="verify-text-input" class="form-control" rows="6" placeholder="Paste full document text here..."></textarea>
+        <div style="margin-top: 0.5rem;">
+          <label>Expected SHA-256 Hash (Optional)</label>
+          <input type="text" id="verify-expected-hash" class="form-control" placeholder="Leave empty to compute hash">
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <button onclick="performVerification()" class="btn" style="width:100%;">
+          Verify Signature & Document Integrity
+        </button>
+      </div>
+
+      <div id="verify-result" style="margin-top: 1.5rem;"></div>
+    </div>
+  `;
+}
+
+function toggleVerifyMode() {
+  const mode = document.querySelector('input[name="verify-mode"]:checked').value;
+  document.getElementById('mode-hash-sec').style.display = mode === 'hash' ? 'block' : 'none';
+  document.getElementById('mode-file-sec').style.display = mode === 'file' ? 'block' : 'none';
+  document.getElementById('mode-text-sec').style.display = mode === 'text' ? 'block' : 'none';
+  document.getElementById('verify-result').innerHTML = '';
+}
+
+async function performVerification() {
+  const resultDiv = document.getElementById('verify-result');
+  const mode = document.querySelector('input[name="verify-mode"]:checked').value;
+  resultDiv.innerHTML = `<p style="color: var(--text-muted);">Verifying cryptographic signature...</p>`;
+
+  try {
+    let body = {};
+    if (mode === 'hash') {
+      const hashVal = document.getElementById('verify-hash-input').value.trim();
+      if (!hashVal) throw new Error('Please enter a SHA-256 hash string.');
+      body.hash = hashVal;
+    } else if (mode === 'file') {
+      const fileInput = document.getElementById('verify-file-input');
+      if (!fileInput.files || !fileInput.files[0]) throw new Error('Please select a JSON file.');
+      const fileText = await fileInput.files[0].text();
+      body.payload = JSON.parse(fileText);
+    } else if (mode === 'text') {
+      const textVal = document.getElementById('verify-text-input').value;
+      const expectedHash = document.getElementById('verify-expected-hash').value.trim();
+      if (!textVal) throw new Error('Please paste raw text content.');
+      body.text = textVal;
+      if (expectedHash) body.hash = expectedHash;
+    }
+
+    const res = await fetch(`${API_BASE}/api/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    
+    if (data.valid) {
+      resultDiv.innerHTML = `
+        <div style="background: #f0fdf4; border: 1px solid var(--success); padding: 1.25rem; color: #166534;">
+          <div style="font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem;">✓ VALID CRYPTOGRAPHIC SIGNATURE</div>
+          <div style="font-size: 0.9rem; line-height: 1.5;">${esc(data.message)}</div>
+          ${data.calculated_hash ? `<div style="font-family: monospace; font-size: 0.8rem; margin-top: 0.5rem; word-break: break-all;">SHA-256 Digest: ${esc(data.calculated_hash)}</div>` : ''}
+          ${data.document_id ? `<div style="font-size: 0.8rem; margin-top: 0.25rem;">Document ID: <strong>${esc(data.document_id)}</strong> | Signer: <strong>${esc(data.signer_email)}</strong></div>` : ''}
+        </div>`;
+    } else {
+      resultDiv.innerHTML = `
+        <div style="background: #fef2f2; border: 1px solid var(--error); padding: 1.25rem; color: #991b1b;">
+          <div style="font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem;">✗ INVALID OR UNVERIFIED SIGNATURE</div>
+          <div style="font-size: 0.9rem; line-height: 1.5;">${esc(data.message || data.error)}</div>
+          ${data.calculated_hash ? `<div style="font-family: monospace; font-size: 0.8rem; margin-top: 0.5rem; word-break: break-all;">Computed SHA-256: ${esc(data.calculated_hash)}</div>` : ''}
+        </div>`;
+    }
+  } catch (err) {
+    resultDiv.innerHTML = `<div style="color: var(--error); font-weight: 600;">Verification Error: ${esc(err.message)}</div>`;
+  }
+}
+
+function toggleSubContent(subId) {
+  const el = document.getElementById(`sub-content-${subId}`);
+  const btn = document.getElementById(`sub-toggle-btn-${subId}`);
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    btn.textContent = '▼ Minimize Content';
+  } else {
+    el.style.display = 'none';
+    btn.textContent = '▶ Expand Content';
   }
 }
 
@@ -376,6 +505,20 @@ async function renderDashboard() {
             try { fieldsObj = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {}); } catch(e) {}
             const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<span style="display:inline-block; margin-right:1rem;"><strong>${esc(k)}:</strong> ${esc(v)}</span>`).join('');
             
+            let interactionLogs = [];
+            try { interactionLogs = typeof s.interaction_logs === 'string' ? JSON.parse(s.interaction_logs) : (s.interaction_logs || []); } catch(e) {}
+            
+            let logSummaryHtml = '';
+            if (interactionLogs.length > 0) {
+              const charAdds = interactionLogs.filter(l => l.type === 'add').length;
+              const pastes = interactionLogs.filter(l => l.type === 'paste').length;
+              const deletes = interactionLogs.filter(l => l.type === 'delete').length;
+              logSummaryHtml = `
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; background: #f1f5f9; padding: 0.4rem 0.6rem;">
+                  ⌨️ <strong>Interaction Telemetry Log:</strong> ${charAdds} characters typed, ${pastes} paste operations, ${deletes} deletions recorded across ${interactionLogs.length} total events.
+                </div>`;
+            }
+
             const subPayload = JSON.stringify({
               submission_id: s.id,
               document_id: d.id,
@@ -385,21 +528,35 @@ async function renderDashboard() {
               fields: fieldsObj,
               signature_data: s.signature_data,
               audit_hash: s.audit_hash,
-              submitted_at: s.submitted_at
+              submitted_at: s.submitted_at,
+              interaction_logs: interactionLogs
             });
+
+            const safeId = esc(s.id);
 
             return `
               <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1rem; margin-top: 0.75rem; font-size: 0.85rem;">
-                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                  <div><strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})</div>
-                  <div style="font-variant-numeric: tabular-nums; color: var(--text-muted);">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                  <div>
+                    <strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})
+                  </div>
+                  <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span style="font-variant-numeric: tabular-nums; color: var(--text-muted); font-size:0.75rem;">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</span>
+                    <button id="sub-toggle-btn-${safeId}" onclick="toggleSubContent('${safeId}')" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
+                      ▼ Minimize Content
+                    </button>
+                  </div>
                 </div>
-                <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
-                <div>
-                  <button onclick='downloadSubPdf(${esc(JSON.stringify(subPayload))}, "${esc(s.id.slice(0, 8))}")' class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
-                    📄 Download Signed PDF
-                  </button>
+                
+                <div id="sub-content-${safeId}">
+                  <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.5rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
+                  ${logSummaryHtml}
+                  <div style="margin-top: 0.75rem;">
+                    <button onclick='downloadSubPdf(${esc(JSON.stringify(subPayload))}, "${esc(s.id.slice(0, 8))}")' class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
+                      📄 Download Signed PDF
+                    </button>
+                  </div>
                 </div>
               </div>`;
           }).join('');
@@ -473,6 +630,7 @@ function renderSigner(doc, spec) {
   const container = document.getElementById('main-content');
   const d = spec.document || {};
   const formValues = {};
+  const interactionLogs = [];
   
   let html = `
     <div class="signer-head">
@@ -588,6 +746,7 @@ function renderSigner(doc, spec) {
 
   container.innerHTML = html;
 
+  // Key stroke, paste, and character addition logging setup
   container.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
     const fn = e => {
       const fieldName = e.target.dataset.field;
@@ -599,6 +758,23 @@ function renderSigner(doc, spec) {
     };
     input.addEventListener('input', fn);
     input.addEventListener('change', fn);
+
+    // Record typing additions / deletions
+    input.addEventListener('keydown', e => {
+      const fieldName = e.target.dataset.field;
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        interactionLogs.push({ field: fieldName, type: 'delete', key: e.key, ts: Date.now() });
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        interactionLogs.push({ field: fieldName, type: 'add', char: e.key, ts: Date.now() });
+      }
+    });
+
+    // Record paste events
+    input.addEventListener('paste', e => {
+      const fieldName = e.target.dataset.field;
+      const pastedData = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      interactionLogs.push({ field: fieldName, type: 'paste', length: pastedData.length, ts: Date.now() });
+    });
   });
 
   const canvas = document.getElementById('signature-canvas');
@@ -663,7 +839,8 @@ function renderSigner(doc, spec) {
     try {
       const payload = {
         fields: formValues,
-        signature_data: sigPadInit ? sigPadInit.toSVG() : ''
+        signature_data: sigPadInit ? sigPadInit.toSVG() : '',
+        interaction_logs: interactionLogs
       };
 
       const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
