@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import type { Color, PDFFont } from 'pdf-lib';
 
 type Bindings = {
   DB: D1Database;
@@ -15,15 +17,75 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal Server Error' }, 500);
 });
 
+app.notFound((c) => {
+  return c.json({ error: 'Route Not Found', path: c.req.path }, 404);
+});
+
 app.use('*', cors());
 
 const now = () => Math.floor(Date.now() / 1000);
+
+app.get('/', (c) => c.json({ status: 'ok', service: 'LegalForm API' }));
+app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: now() }));
 
 async function sha256(message: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function safeParseJson(input: string): unknown {
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
+}
+
+// PDF standard fonts use the WinAnsi encoding; any character outside it is
+// replaced with '?' so arbitrary user/spec text can't break rendering.
+const WIN_ANSI_SAFE = /[^\x20-\x7E\u00A0-\u00FF\u0152\u0153\u0178\u0192\u02C6\u02DC\u2013\u2014\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u20AC\u2122\u0160\u0161\u017D\u017E]/g;
+
+function winAnsiSafe(text: string): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\u2028\u2029\v\f]/g, '\n')       // Unicode line & paragraph separators -> newlines
+    .replace(/\r\n?/g, '\n')                   // CR / CRLF -> LF
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '') // strip non-printable & zero-width characters
+    .replace(/[\u2018\u2019\u201A\u2032]/g, "'") // single quotes / apostrophes (e.g. ’ -> ')
+    .replace(/[\u201C\u201D\u201E\u2033]/g, '"') // double quotes (e.g. “ ” -> ")
+    .replace(/[\u2010-\u2015]/g, '-')          // hyphens & en/em dashes (e.g. — -> -)
+    .replace(/\u2026/g, '...')                 // horizontal ellipsis (…)
+    .replace(/\u2022/g, '*')                   // bullet (•)
+    .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ') // non-breaking & special spaces -> standard space
+    .replace(WIN_ANSI_SAFE, (m) => (/\s/.test(m) ? ' ' : '')); // strip unmapped chars without adding ?
+}
+
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const safeText = winAnsiSafe(String(text ?? ''));
+  const rawLines = safeText.replace(/\r\n/g, '\n').split('\n');
+  const lines: string[] = [];
+  for (const rawLine of rawLines) {
+    if (!rawLine.trim()) {
+      lines.push('');
+      continue;
+    }
+    const words = rawLine.split(/\s+/);
+    let line = '';
+    for (const word of words) {
+      if (!word) continue;
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
 }
 
 // ── Public: Deploy / Store Document Spec ──────────────────────
@@ -304,11 +366,337 @@ app.get('/api/export/:doc_id', async (c) => {
   });
 });
 
-// ── Public: Close / Delete Document ─────────────────────────
+// ── Public: Render Full Executed Agreement PDF + Certificate ──
+app.post('/api/render-pdf', async (c) => {
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const submissionId = String(body.submission_id ?? 'unknown');
+  const docId = String(body.document_id ?? body.slug ?? 'unknown');
+  const specRaw = typeof body.spec === 'string' ? safeParseJson(body.spec) : (body.spec ?? {});
+  const spec = (specRaw && typeof specRaw === 'object' ? specRaw : {}) as Record<string, any>;
+  const docTitle = String(spec.document?.title ?? docId).toUpperCase();
+  const jurisdiction = String(spec.document?.jurisdiction ?? '');
+  const legalFooter = String(spec.document?.legal_footer ?? '');
+  const sections = Array.isArray(spec.sections) ? spec.sections : [];
+  const signerName = String(body.signer_name ?? body.name ?? 'Signer');
+  const signerEmail = String(body.signer_email ?? body.email ?? '');
+  const fields = (body.fields && typeof body.fields === 'object' ? body.fields : {}) as Record<string, unknown>;
+  const signatureData = String(body.signature_data ?? '');
+  const auditHash = String(body.audit_hash ?? '');
+  const submittedAt = typeof body.submitted_at === 'number' ? body.submitted_at : 0;
+  const timeStr = submittedAt
+    ? new Date(submittedAt * 1000).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+    : 'N/A';
+
+  const pdfDoc = await PDFDocument.create();
+  const pageW = 612;
+  const pageH = 792;
+  const margin = 40;
+  const maxWidth = pageW - margin * 2;
+  const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const helvOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+  const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
+
+  // Palette mirrors cli/legalform.py build_pdf_bytes
+  const ink = rgb(0.0588, 0.0902, 0.1647);      // #0f172a
+  const muted = rgb(0.2784, 0.3333, 0.4118);    // #475569
+  const cell = rgb(0.2, 0.2549, 0.3333);        // #334155
+  const hashBlue = rgb(0.0078, 0.5176, 0.7804); // #0284c7
+  const tableBg = rgb(0.9725, 0.9804, 0.9882);  // #f8fafc
+  const grid = rgb(0.7961, 0.8353, 0.8824);     // #cbd5e1
+  const bodyInk = rgb(0.1176, 0.1608, 0.2314);  // #1e293b
+
+  let page = pdfDoc.addPage([pageW, pageH]);
+  let y = pageH - margin;
+
+  const newPageIfNeeded = (needed: number) => {
+    if (y - needed < margin) {
+      page = pdfDoc.addPage([pageW, pageH]);
+      y = pageH - margin;
+    }
+  };
+
+  const centered = (text: string, font: PDFFont, size: number, color: Color = ink) => {
+    const gap = size + 6;
+    for (const line of wrapText(text, font, size, maxWidth)) {
+      if (!line) {
+        y -= gap;
+        continue;
+      }
+      newPageIfNeeded(gap);
+      page.drawText(line, { x: (pageW - font.widthOfTextAtSize(line, size)) / 2, y, size, font, color });
+      y -= gap;
+    }
+  };
+
+  const drawWrapped = (text: string, opts: { font?: PDFFont; size?: number; color?: Color; gap?: number } = {}) => {
+    const font = opts.font ?? helv;
+    const size = opts.size ?? 11;
+    const gap = opts.gap ?? size + 4.5;
+    for (const line of wrapText(text, font, size, maxWidth)) {
+      if (!line) {
+        y -= gap;
+        continue;
+      }
+      newPageIfNeeded(gap);
+      page.drawText(line, { x: margin, y, size, font, color: opts.color ?? ink });
+      y -= gap;
+    }
+  };
+
+  const rule = (thickness: number, color: Color, spaceAfter: number) => {
+    newPageIfNeeded(thickness + spaceAfter);
+    page.drawLine({ start: { x: margin, y }, end: { x: pageW - margin, y }, thickness, color });
+    y -= spaceAfter;
+  };
+
+  const spacer = (n: number) => { y -= n; };
+
+  const drawTable = (
+    rows: Array<{ label: string; value: string; valueFont?: PDFFont; valueSize?: number; valueColor?: Color }>,
+    colWidths: [number, number] = [180, 350]
+  ) => {
+    const [labelCol, valueCol] = colWidths;
+    const pad = 5;
+    const lineHeight = 13;
+    for (const row of rows) {
+      const labelLines = wrapText(row.label, helvBold, 10, labelCol - pad * 2);
+      const valueFont = row.valueFont ?? helv;
+      const valueSize = row.valueSize ?? 10;
+      const valueLines = wrapText(row.value, valueFont, valueSize, valueCol - pad * 2);
+      
+      let labelIdx = 0;
+      let valueIdx = 0;
+      const totalLabelLines = labelLines.length;
+      const totalValueLines = valueLines.length;
+
+      if (totalLabelLines === 0 && totalValueLines === 0) continue;
+
+      while (labelIdx < totalLabelLines || valueIdx < totalValueLines) {
+        const minHeightNeeded = lineHeight + pad * 2;
+        if (y - minHeightNeeded < margin) {
+          page = pdfDoc.addPage([pageW, pageH]);
+          y = pageH - margin;
+        }
+
+        const availHeight = y - margin;
+        const maxLinesFit = Math.max(1, Math.floor((availHeight - pad * 2) / lineHeight));
+        const remLabel = totalLabelLines - labelIdx;
+        const remValue = totalValueLines - valueIdx;
+        const linesToDraw = Math.min(maxLinesFit, Math.max(remLabel, remValue));
+
+        const chunkHeight = linesToDraw * lineHeight + pad * 2;
+        const top = y;
+        const bottom = y - chunkHeight;
+
+        page.drawRectangle({ x: margin, y: bottom, width: labelCol, height: chunkHeight, color: tableBg });
+        page.drawRectangle({ x: margin, y: bottom, width: labelCol + valueCol, height: chunkHeight, borderColor: grid, borderWidth: 0.5 });
+        page.drawLine({ start: { x: margin + labelCol, y: top }, end: { x: margin + labelCol, y: bottom }, thickness: 0.5, color: grid });
+
+        let ty = top - pad;
+        const labelEnd = Math.min(labelIdx + linesToDraw, totalLabelLines);
+        while (labelIdx < labelEnd) {
+          const l = labelLines[labelIdx++];
+          if (l) page.drawText(l, { x: margin + pad, y: ty - 10, size: 10, font: helvBold, color: ink });
+          ty -= lineHeight;
+        }
+
+        let vy = top - pad;
+        const valueEnd = Math.min(valueIdx + linesToDraw, totalValueLines);
+        while (valueIdx < valueEnd) {
+          const l = valueLines[valueIdx++];
+          if (l) page.drawText(l, { x: margin + labelCol + pad, y: vy - valueSize, size: valueSize, font: valueFont, color: row.valueColor ?? cell });
+          vy -= lineHeight;
+        }
+
+        y = bottom;
+      }
+    }
+  };
+
+  const embedSignatureImage = async (width: number) => {
+    const m = signatureData.match(/^data:image\/(png|jpe?g);base64,(.+)$/);
+    if (!m) return;
+    const imgBytes = Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
+    const img = m[1] === 'png' ? await pdfDoc.embedPng(imgBytes) : await pdfDoc.embedJpg(imgBytes);
+    const height = Math.round((img.height / img.width) * width);
+    page.drawImage(img, { x: margin, y: y - height, width, height });
+    y -= height + 10;
+  };
+
+  const hasEmbeddableSignature = /^data:image\/(png|jpe?g);base64,/.test(signatureData);
+  const hasTypedSignature = !!signatureData && !/^data:image\//.test(signatureData);
+  const hasRecordedSignature = hasEmbeddableSignature || hasTypedSignature;
+
+  // Draw either an embedded signature image or a typed (plain-text) signature,
+  // followed by an underline to read as a signature block.
+  const drawSignatureBlock = async (label: string, width: number) => {
+    if (!hasRecordedSignature) return;
+    newPageIfNeeded(140);
+    page.drawText(label, { x: margin, y, size: 10, font: helvBold, color: ink });
+    y -= 14;
+    if (hasEmbeddableSignature) {
+      await embedSignatureImage(width);
+    } else {
+      page.drawText(signatureData, { x: margin, y, size: 18, font: helvOblique, color: ink });
+      y -= 4;
+      page.drawRectangle({ x: margin, y: y + 6, width: Math.min(width + 40, page.getWidth() - margin * 2), height: 1, color: grid });
+      y -= 12;
+    }
+  };
+
+  // ── Page 1: full executed agreement ──
+  centered(docTitle, helvBold, 18, ink);
+  if (jurisdiction) {
+    spacer(2);
+    centered(`Jurisdiction: ${jurisdiction}`, helvOblique, 10, muted);
+  }
+  spacer(10);
+  rule(2, ink, 15);
+
+  for (const sec of sections) {
+    if (sec.type === 'static') {
+      for (const rawLine of String(sec.content ?? '').split('\n')) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        newPageIfNeeded(40);
+        if (line.startsWith('## ')) {
+          page.drawText(winAnsiSafe(line.slice(3)), { x: margin, y, size: 11, font: helvBold, color: ink });
+          y -= 20;
+        } else {
+          drawWrapped(line, { font: helv, size: 9.5, color: bodyInk, gap: 14 });
+          y -= 4;
+        }
+      }
+    } else if (sec.type === 'form' || sec.type === 'signature') {
+      const rows: Array<{ label: string; value: string }> = [];
+      for (const f of (sec.fields ?? [])) {
+        const fname = f.name;
+        const flabel = f.label ?? fname;
+        const val = fields[fname] ?? f.value ?? '';
+        rows.push({ label: String(flabel), value: String(val) });
+      }
+      if (rows.length) {
+        spacer(6);
+        drawTable(rows);
+        spacer(10);
+      }
+    }
+  }
+
+  spacer(15);
+  if (legalFooter) {
+    newPageIfNeeded(40);
+    drawWrapped(legalFooter, { font: helvOblique, size: 8.5, color: muted, gap: 12 });
+    spacer(10);
+  }
+
+  drawTable([
+    { label: 'Execution UTC Timestamp', value: timeStr },
+    { label: 'Signer Email', value: signerEmail },
+    { label: 'SHA-256 Cryptographic Audit Hash', value: auditHash, valueFont: courierBold, valueSize: 9, valueColor: hashBlue }
+  ]);
+  spacer(15);
+
+  if (hasRecordedSignature) {
+    try {
+      await drawSignatureBlock('SIGNATURE OF RECORD', 200);
+    } catch (err) {
+      console.error('Signature block failed (agreement page):', err);
+    }
+  }
+
+  rule(1, grid, 10);
+  drawWrapped('Compiled from the cryptographically verified submission record', { font: helvOblique, size: 8.5, color: muted, gap: 12 });
+
+  // ── Page 2: official certificate of electronic execution ──
+  page = pdfDoc.addPage([pageW, pageH]);
+  y = pageH - margin;
+
+  centered('OFFICIAL CERTIFICATE OF ELECTRONIC EXECUTION', helvBold, 16, ink);
+  spacer(4);
+  centered('Court-Enforceable Instrument (ESIGN Act 15 U.S.C. § 7001 & EU eIDAS Regulation Art. 25)', helvOblique, 9, muted);
+  spacer(10);
+  rule(2, ink, 15);
+
+  drawTable([
+    { label: 'Document ID', value: docId },
+    { label: 'Submission ID', value: submissionId },
+    { label: 'Signer Name', value: signerName },
+    { label: 'Signer Email', value: signerEmail },
+    { label: 'Execution UTC Timestamp', value: timeStr },
+    { label: 'Cryptographic Audit SHA-256 Digest', value: auditHash, valueFont: courierBold, valueSize: 9, valueColor: hashBlue }
+  ]);
+  spacer(20);
+
+  if (hasRecordedSignature) {
+    try {
+      await drawSignatureBlock('DIGITAL SIGNATURE CANVAS RECORD', 220);
+    } catch (err) {
+      console.error('Signature block failed (certificate page):', err);
+    }
+  }
+
+  const pdfBytes = new Uint8Array(await pdfDoc.save());
+  const subShortId = submissionId.slice(0, 8);
+  return c.body(pdfBytes, 200, {
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="executed-agreement-${subShortId}.pdf"`
+  });
+});
+
+// ── Public: Close / Revoke Document ─────────────────────────
 app.post('/api/doc/:slug/close', async (c) => {
   const slug = c.req.param('slug');
   await c.env.DB.prepare('UPDATE documents SET status = ? WHERE slug = ? OR id = ?').bind('closed', slug, slug).run();
   return c.json({ success: true, message: `Document '${slug}' closed.` });
+});
+
+// ── Public: Restart / Reopen a Document for Signing ─────────
+app.post('/api/doc/:slug/restart', async (c) => {
+  const slug = c.req.param('slug');
+  await c.env.DB.prepare(
+    `UPDATE documents SET status = 'active',
+       expires_at = CASE WHEN expires_at IS NOT NULL AND expires_at < ? THEN NULL ELSE expires_at END
+     WHERE slug = ? OR id = ?`
+  ).bind(now(), slug, slug).run();
+  return c.json({ success: true, message: `Document '${slug}' reopened for signing.` });
+});
+
+// ── Public: Permanently Delete a Document Run ───────────────
+app.delete('/api/doc/:id', async (c) => {
+  const docId = c.req.param('id');
+
+  const doc = await c.env.DB.prepare(
+    'SELECT id, slug FROM documents WHERE id = ? OR slug = ?'
+  ).bind(docId, docId).first();
+
+  if (!doc) return c.json({ error: 'Document not found' }, 404);
+
+  // Purge archived submission payloads from R2
+  if (c.env.R2) {
+    try {
+      let cursor: string | undefined;
+      do {
+        const listed = await c.env.R2.list({ prefix: `submissions/${doc.id}/`, cursor });
+        for (const obj of listed.objects) await c.env.R2.delete(obj.key);
+        cursor = listed.truncated ? listed.cursor : undefined;
+      } while (cursor);
+    } catch (err) {
+      console.error('R2 purge error (continuing):', err);
+    }
+  }
+
+  await c.env.DB.prepare('DELETE FROM submissions WHERE document_id = ?').bind(doc.id).run();
+  await c.env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(doc.id).run();
+
+  return c.json({ success: true, deleted: doc.id });
 });
 
 export default app;

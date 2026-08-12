@@ -5,7 +5,9 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "tsx --test src/index.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.0.0",
@@ -13,6 +15,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240208.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.3.3",
     "wrangler": "^3.28.1"
   }

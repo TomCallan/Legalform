@@ -353,22 +353,21 @@ def build_pdf_bytes(payload: dict) -> bytes:
                     if line.startswith("## "): story.append(Paragraph(line.replace("## ", ""), h2_style))
                     else: story.append(Paragraph(line, body_style)); story.append(Spacer(1, 4))
             elif sec_type == "form" or sec_type == "signature":
-                form_rows = []
                 for f in sec.get("fields", []):
                     fname = f.get("name")
                     flabel = f.get("label", fname)
-                    val = fields.get(fname, f.get("value", ""))
-                    form_rows.append([Paragraph(str(flabel), header_label_style), Paragraph(str(val), cell_style)])
-                if form_rows:
-                    story.append(Spacer(1, 6))
-                    ftable = Table(form_rows, colWidths=[180, 350])
+                    val = str(fields.get(fname, f.get("value", "")))
+                    formatted_val = val.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br/>').replace('  ', '&nbsp;&nbsp;')
+                    ftable = Table([[Paragraph(str(flabel), header_label_style), Paragraph(formatted_val, cell_style)]], colWidths=[180, 350], splitByRow=1)
                     ftable.setStyle(TableStyle([
                         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
                         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
                         ('PADDING', (0, 0), (-1, -1), 5),
                     ]))
+                    story.append(Spacer(1, 4))
                     story.append(ftable)
-                    story.append(Spacer(1, 10))
+                if sec.get("fields"):
+                    story.append(Spacer(1, 6))
 
     story.append(Spacer(1, 15))
     if legal_footer:
