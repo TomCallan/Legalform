@@ -134,9 +134,8 @@ CREATE INDEX IF NOT EXISTS idx_submissions_doc ON submissions(document_id, submi
 
 ## Git Workflow
 
-- All commits must be reviewed before merging (use `git commit` + `git push` or the user's configured workflow).
-- **Before committing**: confirm changes with user.
-- **Before pushing**: confirm changes with user.
+- Always commit and push verified changes directly to `origin/main` upon task completion.
+- Run verification checklist (`npm test`, `typecheck`, syntax checks) before pushing.
 - **Deploy to production**: require separate confirmation (non-local).
 
 ## Verification Checklist (before push)
