@@ -185,5 +185,81 @@ test('render-pdf normalizes smart apostrophes, quotes, and em dashes without que
   assert.ok(!pdfText.includes('?'), 'no question mark placeholders in rendered text');
 });
 
+test('api/verify validates raw text content and computes SHA-256 hash', async () => {
+  const text = 'Legalform Agreement Content';
+  const res = await app.request('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  });
+
+  assert.equal(res.status, 200);
+  const data = await res.json() as { valid: boolean; calculated_hash: string };
+  assert.equal(data.valid, true);
+  assert.equal(data.calculated_hash.length, 64);
+});
+
+test('api/verify validates matching text and hash', async () => {
+  const text = 'Hello Legalform';
+  const msgUint8 = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const expectedHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const res = await app.request('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, hash: expectedHash })
+  });
+
+  assert.equal(res.status, 200);
+  const data = await res.json() as { valid: boolean; calculated_hash: string };
+  assert.equal(data.valid, true);
+  assert.equal(data.calculated_hash, expectedHash);
+});
+
+test('api/verify rejects mismatched hash and text', async () => {
+  const res = await app.request('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: 'Agreement Text', hash: '0'.repeat(64) })
+  });
+
+  assert.equal(res.status, 200);
+  const data = await res.json() as { valid: boolean };
+  assert.equal(data.valid, false);
+});
+
+test('api/verify validates JSON submission payload audit hash', async () => {
+  const docId = 'nda-test';
+  const email = 'test@example.com';
+  const fields = { party: 'Acme' };
+  const dataJson = JSON.stringify(fields);
+  const signatureData = 'John Hancock';
+  const submittedAt = 1700000000;
+  const auditString = `${docId}:${email}:${dataJson}:${signatureData}:${submittedAt}`;
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(auditString));
+  const validHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const res = await app.request('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      payload: {
+        document_id: docId,
+        signer_email: email,
+        fields,
+        signature_data: signatureData,
+        submitted_at: submittedAt,
+        audit_hash: validHash
+      }
+    })
+  });
+
+  assert.equal(res.status, 200);
+  const data = await res.json() as { valid: boolean; calculated_hash: string };
+  assert.equal(data.valid, true);
+  assert.equal(data.calculated_hash, validHash);
+});
+
 
 
