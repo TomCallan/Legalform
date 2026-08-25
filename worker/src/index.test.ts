@@ -256,10 +256,33 @@ test('api/verify validates JSON submission payload audit hash', async () => {
   });
 
   assert.equal(res.status, 200);
-  const data = await res.json() as { valid: boolean; calculated_hash: string };
+  const data = await res.json() as { valid: boolean; calculated_hash: string; fields: Record<string, unknown> };
   assert.equal(data.valid, true);
   assert.equal(data.calculated_hash, validHash);
+  assert.deepEqual(data.fields, fields);
 });
+
+test('api/verify preserves and validates multiline raw text with whitespace and newlines', async () => {
+  const multilineText = `  AGREEMENT HEADER  \n\nSection 1:\n  - Line 1\n  - Line 2\r\n\r\n[End of Document]\n\n`;
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(multilineText));
+  const expectedHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const res = await app.request('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: multilineText,
+      hash: expectedHash
+    })
+  });
+
+  assert.equal(res.status, 200);
+  const data = await res.json() as { valid: boolean; calculated_hash: string; text: string };
+  assert.equal(data.valid, true);
+  assert.equal(data.calculated_hash, expectedHash);
+  assert.equal(data.text, multilineText);
+});
+
 
 
 

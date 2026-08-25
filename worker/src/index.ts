@@ -272,12 +272,14 @@ app.post('/api/verify', async (c) => {
 
   // Mode 1: Text content SHA-256 verification
   if (text !== undefined && text !== null) {
-    const textHash = await sha256(String(text));
+    const rawText = String(text);
+    const textHash = await sha256(rawText);
     const matches = hash ? textHash.toLowerCase() === String(hash).trim().toLowerCase() : true;
     return c.json({
       valid: matches,
       calculated_hash: textHash,
       provided_hash: hash || null,
+      text: rawText,
       message: matches ? 'SHA-256 Hash matches text content.' : 'SHA-256 Hash mismatch for text content.'
     });
   }
@@ -310,7 +312,10 @@ app.post('/api/verify', async (c) => {
         expected_hash: expectedHash,
         document_id: docId,
         signer_email: email,
+        signer_name: sub.signer_name || null,
         submitted_at: submittedAt,
+        fields: typeof fields === 'string' ? (fields.startsWith('{') ? JSON.parse(fields) : fields) : fields,
+        signature_data: signatureData,
         message: isValid ? 'Cryptographic SHA-256 Audit Signature is VALID.' : 'Cryptographic Audit Signature is INVALID or TAMPERED.'
       });
     }

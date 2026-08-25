@@ -254,10 +254,17 @@
     .audit-hash {
       font-size: clamp(10px, 0.75vw, 12px);
       color: var(--text-main);
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
       word-break: break-all;
+      overflow-wrap: anywhere;
       line-height: 1.6;
       margin-top: 0.5rem;
+      max-width: 100%;
+      box-sizing: border-box;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 0.6rem 0.8rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
 
     footer {
@@ -641,25 +648,57 @@ async function performVerification() {
       }
     }
     
+    const verifiedText = data.text !== undefined && data.text !== null ? data.text : (mode === 'text' ? document.getElementById('verify-text-input').value : null);
+    const verifiedFields = data.fields || (mode === 'file' && body.payload ? (body.payload.fields || (body.payload.submissions && body.payload.submissions[0] ? body.payload.submissions[0].fields : null)) : null);
+
+    let textPreviewHtml = '';
+    if (verifiedText !== null && verifiedText !== undefined) {
+      textPreviewHtml = `
+        <div style="margin-top: 1rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 0.35rem; font-weight: 600;">Verified Input Content (Whitespace &amp; Newlines Preserved):</div>
+          <pre style="white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; background: var(--bg-base); border: 1px solid var(--border-subtle); padding: 0.85rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.8rem; line-height: 1.5; margin: 0; max-height: 220px; overflow-y: auto; color: var(--text-main);">${esc(verifiedText)}</pre>
+        </div>`;
+    }
+
+    let fieldsPreviewHtml = '';
+    if (verifiedFields && typeof verifiedFields === 'object' && Object.keys(verifiedFields).length > 0) {
+      fieldsPreviewHtml = `
+        <div style="margin-top: 1rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 0.35rem; font-weight: 600;">Verified Field Values:</div>
+          <div style="background: var(--bg-base); border: 1px solid var(--border-subtle); padding: 0.85rem; max-height: 220px; overflow-y: auto;">
+            ${Object.entries(verifiedFields).map(([k, v]) => `
+              <div style="margin-bottom: 0.5rem;">
+                <span style="font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);">${esc(k)}:</span>
+                <div style="white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; font-size: 0.85rem; color: var(--text-main); margin-top: 0.2rem;">${esc(typeof v === 'object' ? JSON.stringify(v, null, 2) : v)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+    
     if (data.valid) {
       resultDiv.innerHTML = `
-        <div style="background: var(--bg-surface); border: 1px solid var(--success); padding: 1.5rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--success); padding: 1.5rem; max-width: 100%; box-sizing: border-box;">
           <div style="color: var(--success); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 0.5rem;">STATUS: VALID CRYPTOGRAPHIC SIGNATURE</div>
           <div style="font-size: clamp(13px, 0.95vw, 15px); color: var(--text-main); line-height: 1.6; margin-bottom: 0.75rem;">${esc(data.message)}</div>
-          ${data.calculated_hash ? `<div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; word-break: break-all; color: var(--text-muted); background: var(--bg-base); padding: 0.5rem; border: 1px solid var(--border-subtle); margin-top: 0.5rem;">SHA-256: ${esc(data.calculated_hash)}</div>` : ''}
+          ${data.calculated_hash ? `<div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; word-break: break-all; overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; color: var(--text-muted); background: var(--bg-base); padding: 0.6rem 0.8rem; border: 1px solid var(--border-subtle); margin-top: 0.5rem;">SHA-256: ${esc(data.calculated_hash)}</div>` : ''}
           ${data.document_id ? `<div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-top: 0.75rem;">Document: <strong style="color:var(--text-main);">${esc(data.document_id)}</strong> | Signer: <strong style="color:var(--text-main);">${esc(data.signer_email || 'N/A')}</strong></div>` : ''}
+          ${textPreviewHtml}
+          ${fieldsPreviewHtml}
         </div>`;
     } else {
       resultDiv.innerHTML = `
-        <div style="background: var(--bg-surface); border: 1px solid var(--error); padding: 1.5rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--error); padding: 1.5rem; max-width: 100%; box-sizing: border-box;">
           <div style="color: var(--error); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 0.5rem;">STATUS: INVALID OR UNVERIFIED SIGNATURE</div>
           <div style="font-size: clamp(13px, 0.95vw, 15px); color: var(--text-main); line-height: 1.6; margin-bottom: 0.75rem;">${esc(data.message || data.error || 'The supplied cryptographic record could not be authenticated.')}</div>
-          ${data.calculated_hash ? `<div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; word-break: break-all; color: var(--text-muted); background: var(--bg-base); padding: 0.5rem; border: 1px solid var(--border-subtle); margin-top: 0.5rem;">Computed SHA-256: ${esc(data.calculated_hash)}</div>` : ''}
+          ${data.calculated_hash ? `<div style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; word-break: break-all; overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; color: var(--text-muted); background: var(--bg-base); padding: 0.6rem 0.8rem; border: 1px solid var(--border-subtle); margin-top: 0.5rem;">Computed SHA-256: ${esc(data.calculated_hash)}</div>` : ''}
+          ${textPreviewHtml}
+          ${fieldsPreviewHtml}
         </div>`;
     }
   } catch (err) {
     resultDiv.innerHTML = `
-      <div style="background: var(--bg-surface); border: 1px solid var(--error); padding: 1.25rem;">
+      <div style="background: var(--bg-surface); border: 1px solid var(--error); padding: 1.25rem; max-width: 100%; box-sizing: border-box;">
         <div style="color: var(--error); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 0.25rem;">Verification Error</div>
         <div style="font-size: 0.9rem; color: var(--text-main);">${esc(err.message)}</div>
       </div>`;
@@ -859,7 +898,7 @@ async function renderDashboard() {
                 </summary>
                 <div style="margin-top: 0.75rem;">
                   <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
-                  <div style="font-size: 0.75rem; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, monospace; word-break: break-all; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, monospace; word-break: break-all; overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
                   ${logSummaryHtml}
                   <div style="margin-top:0.75rem;">
                     <button onclick='downloadSubPdf(${esc(JSON.stringify(subPayload))}, "${esc(s.id.slice(0, 8))}")' class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
