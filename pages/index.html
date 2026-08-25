@@ -308,44 +308,153 @@
     </div>
   </footer>
 
+<script src="builder.js"></script>
 <script>
-const API_BASE = '';
 const params = new URLSearchParams(window.location.search);
+const isPagesDev = window.location.hostname.includes('pages.dev');
+const isLocalProxy = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '8080';
+const DEFAULT_API_BASE = (isPagesDev || !isLocalProxy)
+  ? 'https://legalform-api.tomcallan0.workers.dev'
+  : '';
+const API_BASE = window.LEGALFORM_API_BASE || params.get('api_base') || localStorage.getItem('LEGALFORM_API_BASE') || DEFAULT_API_BASE;
 const slug = params.get('slug') || 'my-nda';
 
 const queryPrefills = {};
 for (const [key, val] of params.entries()) {
-  if (key !== 'slug') queryPrefills[key] = val;
+  if (key !== 'slug' && key !== 'api_base') queryPrefills[key] = val;
 }
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+async function safeFetchJson(url, options) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (netErr) {
+    const err = new Error(`Network error connecting to backend (${url}): ${netErr.message}`);
+    err.isNetwork = true;
+    throw err;
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  const text = await res.text();
+
+  if (text.trim().startsWith('<') || contentType.includes('text/html')) {
+    if (res.status === 403) {
+      const err = new Error('Access Denied (HTTP 403): Cloudflare firewall or WAF blocked access to this API route.');
+      err.status = 403;
+      throw err;
+    }
+    if (res.status === 404) {
+      const err = new Error('API Endpoint Not Found (HTTP 404): Cloudflare Pages served static HTML instead of Worker API. Ensure Worker routing is configured or pass ?api_base=URL.');
+      err.status = 404;
+      throw err;
+    }
+    const err = new Error(`API returned HTML instead of expected JSON (HTTP ${res.status}). Verify Cloudflare Worker deployment or API_BASE configuration.`);
+    err.status = res.status;
+    throw err;
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (parseErr) {
+    const err = new Error(`Invalid JSON response (HTTP ${res.status}): ${text.slice(0, 120)}`);
+    err.status = res.status;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const msg = data.error || data.message || `Server returned error status ${res.status}`;
+    const err = new Error(msg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
+}
+
+function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+
+  const label = document.createElement('div');
+  label.textContent = type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Notice';
+
+  const close = document.createElement('button');
+  close.className = 'toast-close';
+  close.setAttribute('aria-label', 'Dismiss notification');
+  close.textContent = '×';
+  close.addEventListener('click', () => dismissToast(el));
+
+  const head = document.createElement('div');
+  head.className = 'toast-head';
+  head.appendChild(label);
+  head.appendChild(close);
+
+  const msg = document.createElement('div');
+  msg.className = 'toast-msg';
+  msg.textContent = message;
+
+  el.appendChild(head);
+  el.appendChild(msg);
+  container.appendChild(el);
+
+  setTimeout(() => dismissToast(el), type === 'error' ? 7000 : 4000);
+}
+
+function dismissToast(el) {
+  if (!el || el.dataset.dismissed) return;
+  el.dataset.dismissed = '1';
+  el.classList.add('toast-leave');
+  setTimeout(() => el.remove(), 240);
+}
+
 async function loadDocument() {
   const container = document.getElementById('main-content');
-  if (window.location.pathname.startsWith('/verify')) {
+  if (window.location.pathname.startsWith('/verify') || params.has('verify')) {
     renderVerifyPage();
     return;
   }
-  if (window.location.pathname.startsWith('/dashboard')) {
+  if (window.location.pathname.startsWith('/dashboard') || (!params.has('slug') && !window.location.search)) {
     renderDashboard();
     return;
   }
-  
+
   try {
-    const res = await fetch(`${API_BASE}/api/doc/${slug}`);
-    if (!res.ok) throw new Error('Document not found or link expired.');
-    const doc = await res.json();
+    const doc = await safeFetchJson(`${API_BASE}/api/doc/${slug}`);
     const spec = typeof doc.spec === 'string' ? JSON.parse(doc.spec) : doc.spec;
     renderSigner(doc, spec);
   } catch (err) {
+    const is403 = err.status === 403 || (err.message && err.message.toLowerCase().includes('access denied'));
+    const titleText = is403 ? 'Access Denied' : 'Unable to Load Document';
     container.innerHTML = `
       <div style="padding: 3rem;">
-        <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">Access Denied</div>
-        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0;">${esc(err.message)}</p>
+        <div style="color: var(--error); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; font-size: clamp(12px, 1vw, 15px); margin-bottom: 0.75rem;">${esc(titleText)}</div>
+        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0; line-height: 1.5;">${esc(err.message)}</p>
+        <div style="margin-top: 1.5rem;">
+          <a href="/dashboard" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">View Sender Ledger Dashboard</a>
+        </div>
       </div>`;
   }
+}
+
+async function sha256Hex(input) {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function renderVerifyPage() {
@@ -359,7 +468,7 @@ function renderVerifyPage() {
     <div class="signer-body">
       <div class="form-group">
         <label>Verification Method</label>
-        <div style="display:flex; gap:1rem; margin-bottom: 1rem;">
+        <div style="display:flex; gap:1rem; margin-bottom: 1rem; flex-wrap:wrap;">
           <label style="cursor:pointer;"><input type="radio" name="verify-mode" value="hash" checked onchange="toggleVerifyMode()"> SHA-256 Digest Hash</label>
           <label style="cursor:pointer;"><input type="radio" name="verify-mode" value="file" onchange="toggleVerifyMode()"> Submission JSON File</label>
           <label style="cursor:pointer;"><input type="radio" name="verify-mode" value="text" onchange="toggleVerifyMode()"> Plain Text Content</label>
@@ -428,12 +537,11 @@ async function performVerification() {
       if (expectedHash) body.hash = expectedHash;
     }
 
-    const res = await fetch(`${API_BASE}/api/verify`, {
+    const data = await safeFetchJson(`${API_BASE}/api/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    const data = await res.json();
     
     if (data.valid) {
       resultDiv.innerHTML = `
@@ -456,16 +564,112 @@ async function performVerification() {
   }
 }
 
-function toggleSubContent(subId) {
-  const el = document.getElementById(`sub-content-${subId}`);
-  const btn = document.getElementById(`sub-toggle-btn-${subId}`);
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-    btn.textContent = '▼ Minimize Content';
-  } else {
-    el.style.display = 'none';
-    btn.textContent = '▶ Expand Content';
+const deployPanelHtml = `
+  <div style="border:1px solid var(--border-active); border-radius:0; padding:1.25rem; margin-bottom:1.5rem; background:var(--bg-surface);">
+    <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.25rem;">Deploy New Document</div>
+    <div style="color:var(--text-muted); font-size:0.8rem; margin-bottom:0.75rem;">Build visually with drag & drop or switch to YAML Spec Code below.</div>
+    <div class="deploy-tabs">
+      <button type="button" id="tab-builder" class="deploy-tab active">Visual Builder</button>
+      <button type="button" id="tab-yaml" class="deploy-tab">YAML Code</button>
+    </div>
+    <div id="deploy-builder-pane" style="margin-top:1rem;"></div>
+    <div id="deploy-yaml-pane" style="display:none; margin-top:1rem;">
+      <textarea id="deploy-spec" rows="14" spellcheck="false" placeholder="document:&#10;  id: my-nda-2&#10;  title: Mutual Non-Disclosure Agreement&#10;  jurisdiction: New York, USA&#10;  expires_in_days: 30&#10;  legal_footer: IN WITNESS WHEREOF...&#10;sections:&#10;  - type: static&#10;    content: |&#10;      ## 1. Confidential Information&#10;      Any information disclosed...&#10;  - type: form&#10;    fields:&#10;      - name: receiving_party&#10;        label: Receiving Party&#10;        type: text&#10;        required: true" style="width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.8rem; line-height:1.5; padding:0.75rem; border:1px solid var(--border-subtle); border-radius:0; background:var(--bg-base); color:var(--text-main); resize:vertical; outline:none;"></textarea>
+      <div style="margin-top:0.75rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <button id="deploy-btn" class="btn" style="padding:0.5rem 1rem; font-size:0.8rem;">Deploy Document</button>
+        <span id="deploy-status" style="font-size:0.8rem; color:var(--text-muted);"></span>
+      </div>
+    </div>
+    <div id="deploy-result" style="margin-top:0.75rem;"></div>
+  </div>`;
+
+async function deploySpecObject(spec) {
+  if (!spec || typeof spec !== 'object' || !spec.document || !spec.document.id) {
+    throw new Error('Spec must include a top-level document key with an id.');
   }
+  const docId = String(spec.document.id);
+  const slug = (await sha256Hex(`${docId}-${new Date().toISOString()}`)).slice(0, 12);
+  const expiresDays = Number(spec.document.expires_in_days || 30);
+  const expiresAt = Math.floor(Date.now() / 1000) + expiresDays * 86400;
+
+  const data = await safeFetchJson(`${API_BASE}/api/documents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: docId, slug, spec, expires_at: expiresAt })
+  });
+  const signLink = `${window.location.origin}/?slug=${data.slug}`;
+
+  await renderDashboard();
+  const result = document.getElementById('deploy-result');
+  if (result) {
+    result.innerHTML = `
+      <div style="border:1px solid var(--border-subtle); border-radius:0; padding:0.85rem; background:var(--bg-base); font-size:0.8rem;">
+        <div style="color: var(--success); font-weight:600; margin-bottom:0.5rem;">✓ Deployed — Document ID: ${esc(data.id)}</div>
+        <div style="color:var(--text-muted); margin-bottom:0.25rem;">Shareable signing link:</div>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <code style="word-break:break-all; color:var(--text-main);">${esc(signLink)}</code>
+          <button class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.7rem;" onclick="navigator.clipboard.writeText('${esc(signLink)}')">Copy</button>
+        </div>
+      </div>`;
+  }
+  return data;
+}
+
+window.deploySpecObject = deploySpecObject;
+window.esc = esc;
+window.showToast = showToast;
+
+function bindDeployPanel() {
+  const btn = document.getElementById('deploy-btn');
+  const textarea = document.getElementById('deploy-spec');
+  const status = document.getElementById('deploy-status');
+  const result = document.getElementById('deploy-result');
+
+  const tabBuilder = document.getElementById('tab-builder');
+  const tabYaml = document.getElementById('tab-yaml');
+  const paneBuilder = document.getElementById('deploy-builder-pane');
+  const paneYaml = document.getElementById('deploy-yaml-pane');
+
+  if (tabBuilder && tabYaml && paneBuilder && paneYaml) {
+    tabBuilder.addEventListener('click', () => {
+      tabBuilder.classList.add('active');
+      tabYaml.classList.remove('active');
+      paneBuilder.style.display = '';
+      paneYaml.style.display = 'none';
+    });
+    tabYaml.addEventListener('click', () => {
+      tabYaml.classList.add('active');
+      tabBuilder.classList.remove('active');
+      paneBuilder.style.display = 'none';
+      paneYaml.style.display = '';
+    });
+    if (window.LegalFormBuilder && typeof window.LegalFormBuilder.mount === 'function') {
+      window.LegalFormBuilder.mount(paneBuilder);
+    }
+  }
+
+  if (!btn || !textarea) return;
+
+  btn.addEventListener('click', async () => {
+    status.textContent = 'Parsing & deploying spec…';
+    result.innerHTML = '';
+    btn.disabled = true;
+
+    try {
+      const spec = typeof window.jsyaml !== 'undefined'
+        ? window.jsyaml.load(textarea.value)
+        : JSON.parse(textarea.value);
+
+      await deploySpecObject(spec);
+      status.textContent = '';
+      textarea.value = '';
+    } catch (err) {
+      status.textContent = '';
+      result.innerHTML = `<div style="color: var(--error); font-size:0.8rem; margin-top:0.5rem;">Deploy failed: ${esc(err.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
 }
 
 async function renderDashboard() {
@@ -475,13 +679,17 @@ async function renderDashboard() {
       <div class="signer-eyebrow">Sender Management Ledger</div>
       <h1 class="signer-title">Received Submissions & Documents</h1>
     </div>
-    <div class="signer-body" id="dash-body">
-      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching active document ledger and received submissions...</p>
+    <div class="signer-body">
+      ${deployPanelHtml}
+      <div id="dash-body">
+        <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px);">Fetching active document ledger and received submissions...</p>
+      </div>
     </div>`;
 
+  bindDeployPanel();
+
   try {
-    const res = await fetch(`${API_BASE}/api/documents/list`);
-    const data = await res.json();
+    const data = await safeFetchJson(`${API_BASE}/api/documents/list`);
     const docs = data.documents || [];
     const dashBody = document.getElementById('dash-body');
 
@@ -495,15 +703,14 @@ async function renderDashboard() {
       let subDataHtml = '<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">No submissions received yet.</p>';
       
       try {
-        const subRes = await fetch(`${API_BASE}/api/export/${d.id}`);
-        const subResult = await subRes.json();
+        const subResult = await safeFetchJson(`${API_BASE}/api/export/${d.id}`);
         const subs = subResult.submissions || [];
         
         if (subs.length > 0) {
           subDataHtml = subs.map(s => {
             let fieldsObj = {};
             try { fieldsObj = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {}); } catch(e) {}
-            const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<span style="display:inline-block; margin-right:1rem;"><strong>${esc(k)}:</strong> ${esc(v)}</span>`).join('');
+            const fieldPairs = Object.entries(fieldsObj).map(([k, v]) => `<div style="margin-bottom:0.5rem; white-space:pre-wrap; word-break:break-word;"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('');
             
             let interactionLogs = [];
             try { interactionLogs = typeof s.interaction_logs === 'string' ? JSON.parse(s.interaction_logs) : (s.interaction_logs || []); } catch(e) {}
@@ -514,7 +721,7 @@ async function renderDashboard() {
               const pastes = interactionLogs.filter(l => l.type === 'paste').length;
               const deletes = interactionLogs.filter(l => l.type === 'delete').length;
               logSummaryHtml = `
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; background: #f1f5f9; padding: 0.4rem 0.6rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; background: var(--bg-surface-hover); padding: 0.4rem 0.6rem; border: 1px solid var(--border-subtle);">
                   ⌨️ <strong>Interaction Telemetry Log:</strong> ${charAdds} characters typed, ${pastes} paste operations, ${deletes} deletions recorded across ${interactionLogs.length} total events.
                 </div>`;
             }
@@ -532,33 +739,23 @@ async function renderDashboard() {
               interaction_logs: interactionLogs
             });
 
-            const safeId = esc(s.id);
-
             return `
-              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1rem; margin-top: 0.75rem; font-size: 0.85rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                  <div>
-                    <strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})
-                  </div>
-                  <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <span style="font-variant-numeric: tabular-nums; color: var(--text-muted); font-size:0.75rem;">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</span>
-                    <button id="sub-toggle-btn-${safeId}" onclick="toggleSubContent('${safeId}')" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.7rem;">
-                      ▼ Minimize Content
-                    </button>
-                  </div>
-                </div>
-                
-                <div id="sub-content-${safeId}">
+              <details style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 0.75rem 1rem; margin-top: 0.75rem; font-size: 0.85rem;" open>
+                <summary style="cursor: pointer; user-select: none; display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; list-style:none;">
+                  <span><strong>Signer:</strong> ${esc(s.signer_name || 'N/A')} (${esc(s.signer_email || 'N/A')})</span>
+                  <span style="font-variant-numeric: tabular-nums; color: var(--text-muted);">${new Date((s.submitted_at || 0) * 1000).toLocaleString()}</span>
+                </summary>
+                <div style="margin-top: 0.75rem;">
                   <div style="margin-bottom: 0.5rem; color: var(--text-main); line-height: 1.5;">${fieldPairs || 'No custom fields'}</div>
-                  <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.5rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-bottom: 0.75rem;">SHA-256 Digest: ${esc(s.audit_hash)}</div>
                   ${logSummaryHtml}
-                  <div style="margin-top: 0.75rem;">
+                  <div style="margin-top:0.75rem;">
                     <button onclick='downloadSubPdf(${esc(JSON.stringify(subPayload))}, "${esc(s.id.slice(0, 8))}")' class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
                       📄 Download Signed PDF
                     </button>
                   </div>
                 </div>
-              </div>`;
+              </details>`;
           }).join('');
         }
       } catch(e) {
@@ -572,9 +769,14 @@ async function renderDashboard() {
               <strong style="font-size: 1rem;">${esc(d.id)}</strong>
               <span style="margin-left: 0.5rem; color: ${d.status === 'active' ? 'var(--success)' : 'var(--error)'}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${esc(d.status)}</span>
             </div>
-            <div>
-              <a href="/?slug=${esc(d.slug)}" target="_blank" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; margin-right: 0.4rem;">Open Sign Link</a>
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+              ${d.status === 'active'
+                ? `<a href="/?slug=${esc(d.slug)}" target="_blank" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Open Sign Link</a>
+                   <button onclick="revokeDocument('${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--error);">Revoke Sharing</button>`
+                : `<button onclick="restartDocument('${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--success);">Restart Sharing</button>`}
               <button onclick="exportDocData('${esc(d.id)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Export JSON</button>
+              <button onclick="editDocument('${esc(d.id)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Edit / Copy</button>
+              <button onclick="deleteDocument('${esc(d.id)}', '${esc(d.slug)}')" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--error);">Delete</button>
             </div>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
@@ -606,14 +808,13 @@ async function downloadSubPdf(payloadStr, subShortId) {
     a.click();
     URL.revokeObjectURL(url);
   } catch(err) {
-    alert(`PDF download error: ${err.message}`);
+    showToast(`PDF download error: ${err.message}`, 'error');
   }
 }
 
 async function exportDocData(docId) {
   try {
-    const res = await fetch(`${API_BASE}/api/export/${docId}`);
-    const data = await res.json();
+    const data = await safeFetchJson(`${API_BASE}/api/export/${docId}`);
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -622,8 +823,117 @@ async function exportDocData(docId) {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert(`Export failed: ${err.message}`);
+    showToast(`Export failed: ${err.message}`, 'error');
   }
+}
+
+async function revokeDocument(slug) {
+  if (!confirm('Are you sure you want to revoke this document? Signers will no longer be able to submit.')) return;
+  try {
+    await safeFetchJson(`${API_BASE}/api/doc/${slug}/close`, { method: 'POST' });
+    showToast('Document revoked successfully.', 'success');
+    renderDashboard();
+  } catch (err) {
+    showToast(`Revocation failed: ${err.message}`, 'error');
+  }
+}
+
+async function restartDocument(slug) {
+  try {
+    await safeFetchJson(`${API_BASE}/api/doc/${slug}/restart`, { method: 'POST' });
+    showToast('Document sharing restarted.', 'success');
+    renderDashboard();
+  } catch (err) {
+    showToast(`Restart failed: ${err.message}`, 'error');
+  }
+}
+
+async function deleteDocument(docId, slug) {
+  const confirmed = confirm(
+    `Permanently delete document "${docId}"?\n\n` +
+    `This will purge the document spec and ALL associated submissions from the ledger.\n\n` +
+    `This action CANNOT be undone.`
+  );
+  if (!confirmed) return;
+
+  const doubleConfirm = prompt(`Type "${docId}" to confirm permanent deletion:`);
+  if (doubleConfirm !== docId) {
+    showToast('Deletion cancelled — confirmation text did not match.', 'info');
+    return;
+  }
+
+  try {
+    try {
+      await safeFetchJson(`${API_BASE}/api/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' });
+    } catch (routeErr) {
+      if (routeErr.status === 404 && slug) {
+        await safeFetchJson(`${API_BASE}/api/doc/${slug}`, { method: 'DELETE' });
+      } else {
+        throw routeErr;
+      }
+    }
+    showToast(`Document "${docId}" and all submissions deleted.`, 'success');
+    renderDashboard();
+  } catch (err) {
+    showToast(`Delete failed: ${err.message}`, 'error');
+  }
+}
+
+async function editDocument(docId) {
+  let data;
+  try {
+    data = await safeFetchJson(`${API_BASE}/api/export/${docId}`);
+  } catch (err) {
+    showToast(`Could not load document: ${err.message}`, 'error');
+    return;
+  }
+  const spec = typeof data.spec === 'string' ? JSON.parse(data.spec) : data.spec;
+  if (!spec) {
+    showToast('Document has no spec attached to edit.', 'error');
+    return;
+  }
+
+  const tabYaml = document.getElementById('tab-yaml');
+  const tabBuilder = document.getElementById('tab-builder');
+  const paneYaml = document.getElementById('deploy-yaml-pane');
+  const paneBuilder = document.getElementById('deploy-builder-pane');
+  const textarea = document.getElementById('deploy-spec');
+
+  if (tabYaml && tabBuilder && paneYaml && paneBuilder && textarea) {
+    const yamlStr = typeof window.jsyaml !== 'undefined'
+      ? window.jsyaml.dump(spec, { indent: 2, lineWidth: -1 })
+      : JSON.stringify(spec, null, 2);
+
+    textarea.value = yamlStr;
+    tabYaml.classList.add('active');
+    tabBuilder.classList.remove('active');
+    paneBuilder.style.display = 'none';
+    paneYaml.style.display = '';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(`Loaded "${docId}" into the deploy editor. Modify the spec and click Deploy Document to publish changes.`, 'info');
+  }
+}
+
+function renderStaticBody(content) {
+  const lines = String(content ?? '').split('\n');
+  const parts = [];
+  let para = [];
+  const flush = () => {
+    if (para.length) { parts.push(`<p>${para.join('<br>')}</p>`); para = []; }
+  };
+  for (const raw of lines) {
+    if (raw.startsWith('## ')) {
+      flush();
+      parts.push(`<h2 class="static-heading">${esc(raw.slice(3))}</h2>`);
+    } else if (raw.trim() === '') {
+      flush();
+    } else {
+      para.push(esc(raw));
+    }
+  }
+  flush();
+  return parts.join('');
 }
 
 function renderSigner(doc, spec) {
@@ -634,11 +944,12 @@ function renderSigner(doc, spec) {
   
   let html = `
     <div class="signer-head">
-      <div class="signer-eyebrow">${esc(d.jurisdiction || 'Electronic Execution')}</div>
-      <h1 class="signer-title">${esc(d.title || 'Legal Document')}</h1>
+      <div class="signer-eyebrow">${esc(d.jurisdiction || 'Court-Enforceable Agreement')}</div>
+      <h1 class="signer-title">${esc(d.title || doc.id)}</h1>
       <div class="signer-meta">
         <span>Document ID ${esc(doc.id)}</span>
-        <span>Date ${new Date().toISOString().slice(0, 10)}</span>
+        <span>Valid for 60 Days</span>
+        <span>Cryptographic Audit Enabled</span>
       </div>
     </div>
     <div class="signer-body">
@@ -646,11 +957,11 @@ function renderSigner(doc, spec) {
 
   let sigPadInit = null;
 
-  (spec.sections || []).forEach((sec) => {
+  (spec.sections || []).forEach(sec => {
     if (sec.type === 'static') {
       html += `
         <div class="signer-section">
-          <div class="static-body">${esc(sec.content).replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</div>
+          <div class="static-body">${renderStaticBody(sec.content)}</div>
         </div>`;
     } else if (sec.type === 'form' || sec.type === 'signature') {
       html += `<div class="signer-section">`;
@@ -659,55 +970,62 @@ function renderSigner(doc, spec) {
       }
       
       (sec.fields || []).forEach(f => {
-        let defaultVal = queryPrefills[f.name] || f.value || '';
-        if (f.type === 'datetime-auto') {
-          defaultVal = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        }
+        const defaultVal = queryPrefills[f.name] ?? f.value ?? '';
         formValues[f.name] = defaultVal;
 
         if (f.type === 'checkbox') {
-          const isChecked = defaultVal === true || defaultVal === 'true' || defaultVal === 'on';
-          formValues[f.name] = isChecked ? 'Yes' : 'No';
+          formValues[f.name] = (defaultVal === true || defaultVal === 'true' || defaultVal === 'Yes') ? 'Yes' : 'No';
           html += `
-            <div class="form-group" style="display:flex; align-items:center; gap:0.75rem;">
+            <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
               <input type="checkbox" 
                      id="field-${esc(f.name)}" 
                      data-field="${esc(f.name)}" 
-                     ${isChecked ? 'checked' : ''} 
-                     style="width:20px; height:20px; cursor:pointer;" 
+                     ${formValues[f.name] === 'Yes' ? 'checked' : ''} 
+                     style="width:1.2rem; height:1.2rem; cursor:pointer;" 
                      ${f.required ? 'required' : ''}>
               <label for="field-${esc(f.name)}" style="margin-bottom:0; cursor:pointer;">${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
             </div>`;
         } else if (f.type === 'radio' && Array.isArray(f.options)) {
-          html += `<div class="form-group"><label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label><div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">`;
-          f.options.forEach((opt, oIdx) => {
-            const isSel = String(defaultVal) === String(opt);
-            html += `
-              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:normal; text-transform:none; letter-spacing:normal; cursor:pointer;">
-                <input type="radio" 
-                       name="field-${esc(f.name)}" 
-                       data-field="${esc(f.name)}" 
-                       value="${esc(opt)}" 
-                       ${isSel ? 'checked' : ''} 
-                       ${f.required ? 'required' : ''}>
-                ${esc(opt)}
-              </label>`;
-          });
-          html += `</div></div>`;
+          html += `
+            <div class="form-group">
+              <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+              <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                ${f.options.map(opt => `
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; text-transform:none; letter-spacing:normal;">
+                    <input type="radio" 
+                           name="field-${esc(f.name)}" 
+                           data-field="${esc(f.name)}" 
+                           value="${esc(opt)}" 
+                           ${String(defaultVal) === String(opt) ? 'checked' : ''} 
+                           ${f.required ? 'required' : ''}>
+                    <span>${esc(opt)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>`;
         } else if (f.type === 'select' && Array.isArray(f.options)) {
           html += `
             <div class="form-group">
               <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
               <select class="form-control" data-field="${esc(f.name)}" ${f.required ? 'required' : ''}>
+                <option value="">-- Select an option --</option>
                 ${f.options.map(o => `<option value="${esc(o)}" ${String(defaultVal) === String(o) ? 'selected' : ''}>${esc(o)}</option>`).join('')}
               </select>
             </div>`;
-        } else {
-          const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
+        } else if (f.type === 'textarea') {
+          const textRows = f.rows || 6;
           html += `
             <div class="form-group">
               <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
-              <input type="${f.type === 'email' ? 'email' : 'text'}" 
+              <textarea class="form-control" data-field="${esc(f.name)}" rows="${textRows}" style="min-height:${textRows * 1.7}em; resize:vertical;" ${f.required ? 'required' : ''}>${esc(defaultVal)}</textarea>
+            </div>`;
+        } else {
+          const isReadOnly = f.type === 'datetime-auto' ? 'readonly' : '';
+          const inputType = f.type === 'email' ? 'email' : f.type === 'datetime' ? 'datetime-local' : f.type === 'date' ? 'date' : 'text';
+          html += `
+            <div class="form-group">
+              <label>${esc(f.label || f.name)}${f.required ? ' *' : ''}</label>
+              <input type="${inputType}" 
                      class="form-control" 
                      data-field="${esc(f.name)}" 
                      value="${esc(defaultVal)}" 
@@ -723,11 +1041,21 @@ function renderSigner(doc, spec) {
         }
         html += `
           <div class="form-group">
-            <label>Draw Signature Above *</label>
-            <canvas id="signature-canvas" class="sig-pad"></canvas>
-            <div class="sig-actions">
-              <span class="sig-hint">Sign inside box using mouse or touch</span>
-              <button type="button" class="btn-danger-ghost" id="clear-sig">Clear</button>
+            <label>Signature *</label>
+            <div class="sig-mode">
+              <button type="button" class="sig-mode-btn active" data-sigmode="draw">Draw</button>
+              <button type="button" class="sig-mode-btn" data-sigmode="type">Type</button>
+            </div>
+            <div id="sig-draw-pane">
+              <canvas id="signature-canvas" class="sig-pad"></canvas>
+              <div class="sig-actions">
+                <span class="sig-hint">Sign inside box using mouse or touch</span>
+                <button type="button" class="btn-danger-ghost" id="clear-sig">Clear</button>
+              </div>
+            </div>
+            <div id="sig-type-pane" style="display:none;">
+              <input type="text" id="sig-type-input" class="form-control sig-type-input" placeholder="Type your full legal name" autocomplete="name" />
+              <span class="sig-hint">Your typed name is recorded as your signature</span>
             </div>
           </div>`;
       }
@@ -746,8 +1074,7 @@ function renderSigner(doc, spec) {
 
   container.innerHTML = html;
 
-  // Key stroke, paste, and character addition logging setup
-  container.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
+  container.querySelectorAll('input[data-field], select[data-field], textarea[data-field]').forEach(input => {
     const fn = e => {
       const fieldName = e.target.dataset.field;
       if (e.target.type === 'checkbox') {
@@ -759,7 +1086,6 @@ function renderSigner(doc, spec) {
     input.addEventListener('input', fn);
     input.addEventListener('change', fn);
 
-    // Record typing additions / deletions
     input.addEventListener('keydown', e => {
       const fieldName = e.target.dataset.field;
       if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -769,7 +1095,6 @@ function renderSigner(doc, spec) {
       }
     });
 
-    // Record paste events
     input.addEventListener('paste', e => {
       const fieldName = e.target.dataset.field;
       const pastedData = (e.clipboardData || window.clipboardData)?.getData('text') || '';
@@ -825,10 +1150,30 @@ function renderSigner(doc, spec) {
     };
   }
 
+  let sigMode = 'draw';
+  const modeBtns = container.querySelectorAll('[data-sigmode]');
+  const drawPane = document.getElementById('sig-draw-pane');
+  const typePane = document.getElementById('sig-type-pane');
+  const typeInput = document.getElementById('sig-type-input');
+  if (modeBtns.length) {
+    modeBtns.forEach(b => b.addEventListener('click', () => {
+      sigMode = b.dataset.sigmode;
+      modeBtns.forEach(x => x.classList.toggle('active', x === b));
+      if (drawPane) drawPane.style.display = sigMode === 'draw' ? '' : 'none';
+      if (typePane) typePane.style.display = sigMode === 'type' ? '' : 'none';
+    }));
+  }
+
   document.getElementById('submit-btn').addEventListener('click', async () => {
     const btn = document.getElementById('submit-btn');
-    if (sigPadInit && !sigPadInit.hasSignature()) {
-      btn.textContent = 'Signature required';
+    if (sigMode === 'draw') {
+      if (sigPadInit && !sigPadInit.hasSignature()) {
+        btn.textContent = 'Signature required';
+        setTimeout(() => { btn.textContent = 'Sign & Execute'; }, 2000);
+        return;
+      }
+    } else if (!typeInput || !typeInput.value.trim()) {
+      btn.textContent = 'Type your signature first';
       setTimeout(() => { btn.textContent = 'Sign & Execute'; }, 2000);
       return;
     }
@@ -839,22 +1184,21 @@ function renderSigner(doc, spec) {
     try {
       const payload = {
         fields: formValues,
-        signature_data: sigPadInit ? sigPadInit.toSVG() : '',
+        signature_data: sigMode === 'type'
+          ? (typeInput ? typeInput.value.trim() : '')
+          : (sigPadInit ? sigPadInit.toSVG() : ''),
         interaction_logs: interactionLogs
       };
 
-      const res = await fetch(`${API_BASE}/api/submit/${slug}`, {
+      const result = await safeFetchJson(`${API_BASE}/api/submit/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Submission failed');
-
       renderSuccess(doc, result);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
       btn.disabled = false;
       btn.textContent = 'Sign & Execute';
     }
@@ -910,7 +1254,7 @@ function renderSuccess(doc, result) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '📄 Download Compiled PDF Agreement';
