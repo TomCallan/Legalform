@@ -333,7 +333,8 @@ for (const [key, val] of params.entries()) {
   }
 }
 
-const DASHBOARD_AUTH_HASH = 'ed27cc4da76834c9eb5bd7c29e4b6001d93a7dc800323beaaa49ebda91361e08';
+// SHA-256 hash for passcode "admin"
+const DASHBOARD_AUTH_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
 const DASHBOARD_AUTH_KEY = 'legalform_dashboard_unlocked';
 
 function isDashboardUnlocked() {

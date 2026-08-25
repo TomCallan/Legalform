@@ -157,3 +157,4 @@ CREATE INDEX IF NOT EXISTS idx_submissions_doc ON submissions(document_id, submi
 - `wrangler.toml` (`worker/`) defines the Cloudflare Worker project (D1 DB binding, R2 bucket binding).
 - `npx wrangler dev --remote` is the production dev server.
 - `npx wrangler dev --local --port 8789` is the local dev server (for `127.0.0.1:8789`).
+- **Sender Ledger Passcode**: Gated by `DASHBOARD_AUTH_HASH` (default passcode: `admin`).
