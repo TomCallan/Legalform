@@ -283,6 +283,101 @@ test('api/verify preserves and validates multiline raw text with whitespace and 
   assert.equal(data.text, multilineText);
 });
 
+test('SaaS Auth & Credit Paywall: Magic link, verification, and 402 paywall', async () => {
+  const storedTokens: any[] = [];
+  const usersMap = new Map<string, any>();
+  const sessionsMap = new Map<string, any>();
+
+  const mockDB = {
+    prepare: (query: string) => {
+      let boundArgs: any[] = [];
+      return {
+        bind: (...args: any[]) => {
+          boundArgs = args;
+          return {
+            run: async () => {
+              if (query.includes('INSERT INTO auth_tokens')) {
+                storedTokens.push({ token: boundArgs[0], email: boundArgs[1], code: boundArgs[2], expires_at: boundArgs[3] });
+              } else if (query.includes('INSERT INTO users')) {
+                usersMap.set(boundArgs[0], { id: boundArgs[0], email: boundArgs[1], plan: boundArgs[2], credits: boundArgs[3] });
+              } else if (query.includes('INSERT INTO sessions')) {
+                sessionsMap.set(boundArgs[0], { token: boundArgs[0], user_id: boundArgs[1], expires_at: boundArgs[2] });
+              }
+              return { success: true };
+            },
+            first: async () => {
+              if (query.includes('SELECT * FROM auth_tokens')) {
+                return storedTokens.find(t => t.email === boundArgs[0] && t.code === boundArgs[1]) || null;
+              } else if (query.includes('SELECT * FROM users')) {
+                return Array.from(usersMap.values()).find(u => u.email === boundArgs[0]) || null;
+              } else if (query.includes('SELECT s.token')) {
+                const session = sessionsMap.get(boundArgs[0]);
+                if (!session) return null;
+                const user = usersMap.get(session.user_id);
+                return user ? { token: session.token, user_id: user.id, email: user.email, stripe_customer_id: null, plan: user.plan, credits: user.credits } : null;
+              }
+              return null;
+            },
+            all: async () => ({ results: [] })
+          };
+        }
+      };
+    }
+  };
+
+  // 1. Send Magic Link
+  const sendRes = await app.request('/api/auth/send-magic-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'founder@saas.com' })
+  }, { DB: mockDB as any });
+
+  assert.equal(sendRes.status, 200);
+  const sendData = await sendRes.json() as { success: boolean; dev_code: string; token: string };
+  assert.equal(sendData.success, true);
+  assert.ok(sendData.dev_code);
+
+  // 2. Verify Magic Link Code
+  const verifyRes = await app.request('/api/auth/verify-magic-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'founder@saas.com', code: sendData.dev_code })
+  }, { DB: mockDB as any });
+
+  assert.equal(verifyRes.status, 200);
+  const verifyData = await verifyRes.json() as { success: boolean; session_token: string; user: { plan: string; credits: number } };
+  assert.equal(verifyData.success, true);
+  assert.equal(verifyData.user.credits, 0); // Strict "nothing free": 0 credits
+
+  // 3. Attempt Deploy with 0 Credits -> Expect 402 PAYMENT_REQUIRED
+  const deployRes = await app.request('/api/documents', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${verifyData.session_token}`
+    },
+    body: JSON.stringify({ id: 'test-doc-1', slug: 'test-slug-1', spec: { document: { title: 'Test Spec' } } })
+  }, { DB: mockDB as any });
+
+  assert.equal(deployRes.status, 402);
+  const deployData = await deployRes.json() as { error: string; code: string };
+  assert.equal(deployData.code, 'PAYMENT_REQUIRED');
+
+  // 4. Purchase Credits via Billing Checkout Endpoint
+  const checkoutRes = await app.request('/api/billing/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${verifyData.session_token}`
+    },
+    body: JSON.stringify({ plan_type: 'credits_5' })
+  }, { DB: mockDB as any });
+
+  assert.equal(checkoutRes.status, 200);
+  const checkoutData = await checkoutRes.json() as { success: boolean; user: { credits: number } };
+  assert.equal(checkoutData.success, true);
+});
+
 
 
 

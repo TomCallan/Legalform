@@ -8,6 +8,8 @@ type Bindings = {
   R2: R2Bucket;
   RESEND_API_KEY?: string;
   ADMIN_EMAIL?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -24,6 +26,40 @@ app.notFound((c) => {
 app.use('*', cors());
 
 const now = () => Math.floor(Date.now() / 1000);
+
+// Helper to authenticate user session from Bearer token, Cookie, or query param
+async function getUserFromSession(c: any) {
+  const authHeader = c.req.header('Authorization');
+  let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+  if (!token) {
+    const cookieHeader = c.req.header('Cookie') || '';
+    const match = cookieHeader.match(/(?:^|;\s*)legalform_session=([^;]*)/);
+    if (match) token = decodeURIComponent(match[1]);
+  }
+  if (!token) {
+    token = c.req.query('session_token') || null;
+  }
+  if (!token) return null;
+
+  try {
+    const session = await c.env.DB.prepare(
+      'SELECT s.token, s.user_id, u.email, u.stripe_customer_id, u.plan, u.credits FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > ?'
+    ).bind(token, now()).first();
+
+    if (!session) return null;
+    return {
+      id: session.user_id as string,
+      email: session.email as string,
+      stripe_customer_id: session.stripe_customer_id as string | null,
+      plan: (session.plan as string) || 'none',
+      credits: (session.credits as number) ?? 0,
+      sessionToken: token
+    };
+  } catch (err) {
+    console.error('Session verification error:', err);
+    return null;
+  }
+}
 
 app.get('/', (c) => c.json({ status: 'ok', service: 'LegalForm API' }));
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: now() }));
@@ -88,8 +124,204 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines;
 }
 
-// ── Public: Deploy / Store Document Spec ──────────────────────
+// ── SaaS Auth: Send Magic Link Code ───────────────────────────
+app.post('/api/auth/send-magic-link', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const email = String(body.email || '').toLowerCase().trim();
+  if (!email || !email.includes('@')) {
+    return c.json({ error: 'Valid email address required' }, 400);
+  }
+
+  const token = crypto.randomUUID();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = now() + 900; // 15 mins
+
+  await c.env.DB.prepare(
+    'INSERT INTO auth_tokens (token, email, code, expires_at) VALUES (?, ?, ?, ?)'
+  ).bind(token, email, code, expiresAt).run();
+
+  if (c.env.RESEND_API_KEY) {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Legalform SaaS <noreply@resend.dev>',
+          to: email,
+          subject: `Your Legalform Sign-in Code: ${code}`,
+          html: `<p>Use verification code <strong>${code}</strong> to sign in to Legalform SaaS.</p>`
+        })
+      });
+    } catch (e) {
+      console.error('Failed to dispatch magic link email:', e);
+    }
+  }
+
+  return c.json({ success: true, message: 'Magic link verification code dispatched.', token, dev_code: code });
+});
+
+// ── SaaS Auth: Verify Magic Link Code & Create Session ───────
+app.post('/api/auth/verify-magic-link', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const email = String(body.email || '').toLowerCase().trim();
+  const code = String(body.code || '').trim();
+  const token = String(body.token || '').trim();
+
+  let authToken: any = null;
+  if (token) {
+    authToken = await c.env.DB.prepare(
+      'SELECT * FROM auth_tokens WHERE token = ? AND expires_at > ?'
+    ).bind(token, now()).first();
+  }
+  if (!authToken && email && code) {
+    authToken = await c.env.DB.prepare(
+      'SELECT * FROM auth_tokens WHERE email = ? AND code = ? AND expires_at > ?'
+    ).bind(email, code, now()).first();
+  }
+
+  if (!authToken) {
+    return c.json({ error: 'Invalid or expired login code' }, 400);
+  }
+
+  const userEmail = authToken.email as string;
+  let user: any = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(userEmail).first();
+
+  if (!user) {
+    const userId = crypto.randomUUID();
+    // Strict "nothing free": default 0 credits, plan 'none'
+    await c.env.DB.prepare(
+      "INSERT INTO users (id, email, plan, credits) VALUES (?, ?, 'none', 0)"
+    ).bind(userId, userEmail).run();
+    user = { id: userId, email: userEmail, plan: 'none', credits: 0 };
+  }
+
+  const sessionToken = crypto.randomUUID();
+  const sessionExpires = now() + 2592000; // 30 days
+  await c.env.DB.prepare(
+    'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'
+  ).bind(sessionToken, user.id, sessionExpires).run();
+
+  await c.env.DB.prepare('DELETE FROM auth_tokens WHERE token = ? OR email = ?').bind(authToken.token, userEmail).run();
+
+  c.header('Set-Cookie', `legalform_session=${sessionToken}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`);
+  return c.json({
+    success: true,
+    session_token: sessionToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      plan: user.plan || 'none',
+      credits: (user.credits as number) ?? 0
+    }
+  });
+});
+
+// ── SaaS Auth: Get Current Authenticated User ─────────────────
+app.get('/api/auth/me', async (c) => {
+  const user = await getUserFromSession(c);
+  if (!user) return c.json({ authenticated: false, user: null });
+  return c.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      plan: user.plan,
+      credits: user.credits
+    }
+  });
+});
+
+// ── SaaS Auth: Logout Session ─────────────────────────────────
+app.post('/api/auth/logout', async (c) => {
+  const user = await getUserFromSession(c);
+  if (user) {
+    await c.env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(user.sessionToken).run();
+  }
+  c.header('Set-Cookie', 'legalform_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+  return c.json({ success: true });
+});
+
+// ── SaaS Billing: Purchase Credits or Subscription ─────────────
+app.post('/api/billing/checkout', async (c) => {
+  const user = await getUserFromSession(c);
+  if (!user) {
+    return c.json({ error: 'Authentication required. Please sign in.' }, 401);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const planType = body.plan_type || 'credits_5'; // 'credits_5' ($10) or 'pro' ($19/mo)
+
+  if (c.env.STRIPE_SECRET_KEY) {
+    try {
+      const priceId = planType === 'pro' ? 'price_pro_subscription' : 'price_credits_pack';
+      const params = new URLSearchParams({
+        'payment_method_types[0]': 'card',
+        'line_items[0][price]': priceId,
+        'line_items[0][quantity]': '1',
+        'mode': planType === 'pro' ? 'subscription' : 'payment',
+        'success_url': `${c.req.header('Origin') || 'http://localhost:8080'}/?billing=success`,
+        'cancel_url': `${c.req.header('Origin') || 'http://localhost:8080'}/?billing=cancel`,
+        'client_reference_id': user.id,
+        'customer_email': user.email
+      });
+
+      const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      });
+
+      const session = await stripeRes.json() as { url?: string; error?: { message: string } };
+      if (session.url) {
+        return c.json({ url: session.url });
+      }
+    } catch (stripeErr) {
+      console.error('Stripe Checkout Error:', stripeErr);
+    }
+  }
+
+  // Developer / Demo Mode fallback (instant credit grant for local testing)
+  if (planType === 'pro') {
+    await c.env.DB.prepare("UPDATE users SET plan = 'pro' WHERE id = ?").bind(user.id).run();
+  } else {
+    await c.env.DB.prepare("UPDATE users SET credits = credits + 5, plan = 'payg' WHERE id = ?").bind(user.id).run();
+  }
+
+  const updatedUser: any = await c.env.DB.prepare('SELECT plan, credits FROM users WHERE id = ?').bind(user.id).first();
+
+  return c.json({
+    success: true,
+    demo_mode: true,
+    message: `Payment processed! Granted ${planType === 'pro' ? 'Pro Unlimited Plan' : '5 Document Credits'}.`,
+    user: {
+      plan: updatedUser?.plan || 'none',
+      credits: (updatedUser?.credits as number) ?? 0
+    }
+  });
+});
+
+// ── SaaS API: Deploy / Store Document Spec (Strict Paywall) ────
 app.post('/api/documents', async (c) => {
+  const user = await getUserFromSession(c);
+  if (!user) {
+    return c.json({ error: 'Authentication required to deploy documents. Please sign in.', code: 'UNAUTHORIZED' }, 401);
+  }
+
+  // Strict "nothing free" check: Must have active 'pro' plan or credits > 0
+  if (user.plan !== 'pro' && user.credits <= 0) {
+    return c.json({
+      error: 'No document credits remaining. Purchase credits ($2/doc) or upgrade to Pro ($19/mo) to publish.',
+      code: 'PAYMENT_REQUIRED',
+      user: { plan: user.plan, credits: user.credits }
+    }, 402);
+  }
+
   const body = await c.req.json();
   const { id, slug, spec, expires_at } = body;
 
@@ -100,24 +332,45 @@ app.post('/api/documents', async (c) => {
   const specString = typeof spec === 'string' ? spec : JSON.stringify(spec);
 
   await c.env.DB.prepare(
-    `INSERT INTO documents (id, slug, spec, status, expires_at)
-     VALUES (?, ?, ?, 'active', ?)
-     ON CONFLICT(id) DO UPDATE SET slug=excluded.slug, spec=excluded.spec, status='active', expires_at=excluded.expires_at`
-  ).bind(id, slug, specString, expires_at ?? null).run();
+    `INSERT INTO documents (id, slug, user_id, spec, status, expires_at)
+     VALUES (?, ?, ?, ?, 'active', ?)
+     ON CONFLICT(id) DO UPDATE SET slug=excluded.slug, user_id=excluded.user_id, spec=excluded.spec, status='active', expires_at=excluded.expires_at`
+  ).bind(id, slug, user.id, specString, expires_at ?? null).run();
 
-  return c.json({ success: true, id, slug });
+  // Deduct 1 credit for pay-as-you-go users
+  if (user.plan !== 'pro') {
+    await c.env.DB.prepare('UPDATE users SET credits = MAX(0, credits - 1) WHERE id = ?').bind(user.id).run();
+  }
+
+  const updatedUser: any = await c.env.DB.prepare('SELECT plan, credits FROM users WHERE id = ?').bind(user.id).first();
+
+  return c.json({
+    success: true,
+    id,
+    slug,
+    user: {
+      plan: updatedUser?.plan || 'none',
+      credits: (updatedUser?.credits as number) ?? 0
+    }
+  });
 });
 
-// ── Public: List All Documents ────────────────────────────────
+// ── SaaS API: List User Documents Only ────────────────────────
 app.get('/api/documents/list', async (c) => {
+  const user = await getUserFromSession(c);
+  if (!user) {
+    return c.json({ documents: [] });
+  }
+
   const docs = await c.env.DB.prepare(
     `SELECT d.id, d.slug, d.status, d.expires_at, d.created_at, 
             COUNT(s.id) AS submission_count 
      FROM documents d 
      LEFT JOIN submissions s ON d.id = s.document_id 
+     WHERE d.user_id = ?
      GROUP BY d.id, d.slug, d.status, d.expires_at, d.created_at 
      ORDER BY d.created_at DESC`
-  ).all();
+  ).bind(user.id).all();
 
   return c.json({ documents: docs.results });
 });
@@ -350,15 +603,20 @@ app.post('/api/verify', async (c) => {
   return c.json({ error: 'Please provide hash, text, or payload to verify.' }, 400);
 });
 
-// ── Public: Export Submission Data / Compact JSON Payload ────
+// ── SaaS API: Export Submission Data (Owner Only) ────────────
 app.get('/api/export/:doc_id', async (c) => {
   const docId = c.req.param('doc_id');
+  const user = await getUserFromSession(c);
 
-  const doc = await c.env.DB.prepare(
+  const doc: any = await c.env.DB.prepare(
     'SELECT * FROM documents WHERE id = ? OR slug = ?'
   ).bind(docId, docId).first();
 
   if (!doc) return c.json({ error: 'Document not found' }, 404);
+
+  if (doc.user_id && (!user || doc.user_id !== user.id)) {
+    return c.json({ error: 'Forbidden: You do not own this document' }, 403);
+  }
 
   const submissions = await c.env.DB.prepare(
     'SELECT * FROM submissions WHERE document_id = ? ORDER BY submitted_at DESC'

@@ -387,7 +387,34 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-async function safeFetchJson(url, options) {
+let currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
+
+async function fetchCurrentUser() {
+  const token = localStorage.getItem('legalform_session_token');
+  if (!token) {
+    currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
+    return currentUser;
+  }
+  try {
+    const data = await safeFetchJson(`${API_BASE}/api/auth/me`);
+    if (data.authenticated) {
+      currentUser = { authenticated: true, ...data.user };
+    } else {
+      currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
+    }
+  } catch (e) {
+    currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
+  }
+  return currentUser;
+}
+
+async function safeFetchJson(url, options = {}) {
+  const token = localStorage.getItem('legalform_session_token');
+  options.headers = options.headers || {};
+  if (token && !options.headers['Authorization'] && !options.headers['authorization']) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+
   let res;
   try {
     res = await fetch(url, options);
@@ -426,6 +453,9 @@ async function safeFetchJson(url, options) {
   }
 
   if (!res.ok) {
+    if (res.status === 402) {
+      showPaywallModal(data.error || 'No document credits remaining.');
+    }
     const msg = data.error || data.message || `Server returned error status ${res.status}`;
     const err = new Error(msg);
     err.status = res.status;
@@ -434,6 +464,78 @@ async function safeFetchJson(url, options) {
   }
 
   return data;
+}
+
+function showPaywallModal(message) {
+  let modal = document.getElementById('paywall-modal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'paywall-modal';
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center;
+    z-index: 10000; padding: 1rem;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: var(--bg-base); border: 2px solid var(--border-active); max-width: 520px; width: 100%; padding: 2rem; position: relative;">
+      <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--error); margin-bottom: 0.5rem;">[STRICT PAYWALL — NO FREE CREDITS]</div>
+      <h2 style="margin: 0 0 1rem 0; font-size: 1.4rem; text-transform: uppercase; letter-spacing: 0.08em;">Purchase Document Credits</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">${esc(message || 'Deploying legal documents requires an active plan or document credits.')}</p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="border: 1px solid var(--border-subtle); padding: 1rem; text-align: center;">
+          <div style="font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em;">5 CREDITS PACK</div>
+          <div style="font-size: 1.5rem; font-weight: 900; margin: 0.5rem 0;">$10</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">$2 per document link</div>
+          <button onclick="triggerCheckout('credits_5')" class="btn" style="width: 100%; font-size: 0.75rem; padding: 0.5rem;">BUY CREDITS</button>
+        </div>
+        <div style="border: 2px solid var(--text-main); padding: 1rem; text-align: center; background: var(--bg-surface-hover);">
+          <div style="font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em;">PRO UNLIMITED</div>
+          <div style="font-size: 1.5rem; font-weight: 900; margin: 0.5rem 0;">$19<span style="font-size: 0.8rem; font-weight: 400;">/mo</span></div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Unlimited documents</div>
+          <button onclick="triggerCheckout('pro')" class="btn" style="width: 100%; font-size: 0.75rem; padding: 0.5rem;">UPGRADE PRO</button>
+        </div>
+      </div>
+
+      <div style="text-align: right;">
+        <button onclick="document.getElementById('paywall-modal').remove()" class="btn btn-outline" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">CLOSE</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function triggerCheckout(planType) {
+  const token = localStorage.getItem('legalform_session_token');
+  if (!token) {
+    if (document.getElementById('paywall-modal')) document.getElementById('paywall-modal').remove();
+    renderAuthGate();
+    return;
+  }
+
+  showToast('Initiating checkout session...', 'info');
+  try {
+    const res = await safeFetchJson(`${API_BASE}/api/billing/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_type: planType })
+    });
+
+    if (res.url) {
+      window.location.href = res.url;
+    } else if (res.demo_mode) {
+      showToast(res.message, 'success');
+      await fetchCurrentUser();
+      if (document.getElementById('paywall-modal')) document.getElementById('paywall-modal').remove();
+      if (window.location.pathname.includes('dashboard') || params.has('dashboard') || isDashboardUnlocked()) {
+        renderDashboard();
+      }
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 function showToast(message, type = 'info') {
@@ -548,45 +650,94 @@ function renderAuthGate() {
   const container = document.getElementById('main-content');
   container.innerHTML = `
     <div class="signer-head">
-      <div class="signer-eyebrow">Sender Management Ledger</div>
-      <h1 class="signer-title">Restricted Access</h1>
-      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0; line-height: 1.6;">Enter administrative passcode to unlock sender document ledger, visual builder, and submissions.</p>
+      <div class="signer-eyebrow">Legalform SaaS Account Authentication</div>
+      <h1 class="signer-title">Sign In / Sign Up</h1>
+      <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0; line-height: 1.6;">Enter your email address to receive a 6-digit magic link sign-in code.</p>
     </div>
     <div class="signer-body">
-      <div class="form-group" style="max-width: 380px;">
-        <label for="auth-passcode">Sender Passcode</label>
-        <input id="auth-passcode" type="password" class="form-control" placeholder="Enter administrative passcode" autocomplete="current-password" />
+      <div id="auth-step-email">
+        <div class="form-group" style="max-width: 380px;">
+          <label for="auth-email">Work Email</label>
+          <input id="auth-email" type="email" class="form-control" placeholder="you@company.com" autocomplete="email" />
+        </div>
+        <div style="margin-top: 1.25rem;">
+          <button id="auth-send-code" class="btn">Send Sign-in Code</button>
+        </div>
       </div>
-      <div style="margin-top: 1.25rem;">
-        <button id="auth-submit" class="btn">Unlock Ledger</button>
+
+      <div id="auth-step-code" style="display: none;">
+        <div class="form-group" style="max-width: 380px;">
+          <label for="auth-code">6-Digit Verification Code</label>
+          <input id="auth-code" type="text" class="form-control" placeholder="123456" maxlength="6" />
+        </div>
+        <div style="margin-top: 1.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="auth-verify-code" class="btn">Verify Code & Sign In</button>
+          <button id="auth-back" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">Back</button>
+        </div>
       </div>
-      <div id="auth-error" style="color: var(--error); font-size: 0.85rem; font-weight: 600; margin-top: 1rem; display: none; text-transform: uppercase; letter-spacing: 0.08em;">Incorrect passcode. Access denied.</div>
+
+      <div id="auth-error" style="color: var(--error); font-size: 0.85rem; font-weight: 600; margin-top: 1rem; display: none; text-transform: uppercase; letter-spacing: 0.08em;"></div>
     </div>`;
 
-  const input = document.getElementById('auth-passcode');
-  const error = document.getElementById('auth-error');
-  const attempt = async () => {
-    const val = input.value.trim();
-    if (!val) return;
-    const computed = await sha256Hex(val);
-    const isValid = 
-      val === 'password123' ||
-      computed === DASHBOARD_AUTH_HASH ||
-      computed === 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f';
+  const emailInput = document.getElementById('auth-email');
+  const codeInput = document.getElementById('auth-code');
+  const errorDiv = document.getElementById('auth-error');
+  let activeToken = '';
 
-    if (isValid) {
-      setDashboardUnlocked();
-      renderDashboard();
-    } else {
-      error.style.display = 'block';
-      input.value = '';
-      input.focus();
+  document.getElementById('auth-send-code').addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if (!email || !email.includes('@')) {
+      errorDiv.textContent = 'Please enter a valid email address.';
+      errorDiv.style.display = 'block';
+      return;
     }
-  };
+    errorDiv.style.display = 'none';
 
-  document.getElementById('auth-submit').addEventListener('click', attempt);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') attempt(); });
-  input.focus();
+    try {
+      const res = await safeFetchJson(`${API_BASE}/api/auth/send-magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      activeToken = res.token;
+      document.getElementById('auth-step-email').style.display = 'none';
+      document.getElementById('auth-step-code').style.display = 'block';
+      showToast(res.dev_code ? `Sign-in code (dev mode): ${res.dev_code}` : 'Sign-in code dispatched to email.', 'success');
+      codeInput.focus();
+    } catch (err) {
+      errorDiv.textContent = err.message;
+      errorDiv.style.display = 'block';
+    }
+  });
+
+  document.getElementById('auth-verify-code').addEventListener('click', async () => {
+    const code = codeInput.value.trim();
+    const email = emailInput.value.trim();
+    if (!code) return;
+
+    try {
+      const res = await safeFetchJson(`${API_BASE}/api/auth/verify-magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, token: activeToken })
+      });
+
+      localStorage.setItem('legalform_session_token', res.session_token);
+      setDashboardUnlocked();
+      await fetchCurrentUser();
+      showToast('Signed in successfully.', 'success');
+      renderDashboard();
+    } catch (err) {
+      errorDiv.textContent = err.message;
+      errorDiv.style.display = 'block';
+    }
+  });
+
+  document.getElementById('auth-back')?.addEventListener('click', () => {
+    document.getElementById('auth-step-code').style.display = 'none';
+    document.getElementById('auth-step-email').style.display = 'block';
+    errorDiv.style.display = 'none';
+  });
 }
 
 function renderVerifyPage() {
@@ -857,21 +1008,40 @@ function bindDeployPanel() {
   });
 }
 
+async function logoutSaaS() {
+  try {
+    await safeFetchJson(`${API_BASE}/api/auth/logout`, { method: 'POST' });
+  } catch (e) {}
+  localStorage.removeItem('legalform_session_token');
+  lockDashboard();
+  currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
+  showToast('Logged out of SaaS session.', 'info');
+  renderAuthGate();
+}
+
 async function renderDashboard() {
-  if (!isDashboardUnlocked()) {
+  await fetchCurrentUser();
+
+  if (!currentUser.authenticated && !isDashboardUnlocked()) {
     renderAuthGate();
     return;
   }
 
   const container = document.getElementById('main-content');
+  const userPlanText = currentUser.plan === 'pro' 
+    ? '<span style="color: var(--success); font-weight: 700;">PRO UNLIMITED</span>' 
+    : `<span style="font-weight: 700;">${currentUser.credits} CREDITS REMAINING</span>`;
+
   container.innerHTML = `
     <div class="signer-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
       <div>
-        <div class="signer-eyebrow">Sender Management Ledger</div>
-        <h1 class="signer-title" style="margin-bottom:0;">Submissions & Documents</h1>
+        <div class="signer-eyebrow">Sender Management Ledger — SaaS Portal</div>
+        <h1 class="signer-title" style="margin-bottom:0.25rem;">Submissions & Documents</h1>
+        ${currentUser.email ? `<div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;">Account: <strong>${esc(currentUser.email)}</strong> • ${userPlanText}</div>` : ''}
       </div>
-      <div>
-        <button onclick="lockDashboard()" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Lock Ledger</button>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button onclick="showPaywallModal('Buy credits or upgrade plan to deploy new agreement links.')" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">BUY CREDITS</button>
+        <button onclick="logoutSaaS()" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Log Out</button>
       </div>
     </div>
     <div class="signer-body">
