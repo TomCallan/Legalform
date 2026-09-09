@@ -306,6 +306,43 @@ app.post('/api/billing/checkout', async (c) => {
   });
 });
 
+// ── SaaS Billing: Stripe Webhook Listener ──────────────────────
+app.post('/api/billing/webhook', async (c) => {
+  const bodyText = await c.req.text();
+  let event: any = null;
+
+  try {
+    event = JSON.parse(bodyText);
+  } catch (err) {
+    return c.json({ error: 'Invalid payload' }, 400);
+  }
+
+  if (event && (event.type === 'checkout.session.completed' || event.type === 'invoice.payment_succeeded')) {
+    const sessionObj = event.data?.object || {};
+    const userId = sessionObj.client_reference_id;
+    const customerEmail = (sessionObj.customer_email || sessionObj.customer_details?.email || '').toLowerCase().trim();
+    const mode = sessionObj.mode; // 'subscription' or 'payment'
+
+    let user: any = null;
+    if (userId) {
+      user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+    }
+    if (!user && customerEmail) {
+      user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(customerEmail).first();
+    }
+
+    if (user) {
+      if (mode === 'subscription') {
+        await c.env.DB.prepare("UPDATE users SET plan = 'pro' WHERE id = ?").bind(user.id).run();
+      } else {
+        await c.env.DB.prepare("UPDATE users SET credits = credits + 5, plan = 'payg' WHERE id = ?").bind(user.id).run();
+      }
+    }
+  }
+
+  return c.json({ received: true });
+});
+
 // ── SaaS API: Deploy / Store Document Spec (Strict Paywall) ────
 app.post('/api/documents', async (c) => {
   const user = await getUserFromSession(c);

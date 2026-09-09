@@ -597,6 +597,58 @@ async function sha256Hex(input) {
   return '';
 }
 
+function renderSaaSLanding() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = `
+    <div class="signer-head">
+      <div class="signer-eyebrow">Developer-First e-Signatures</div>
+      <h1 class="signer-title" style="margin-bottom: 0.5rem;">Cryptographic Agreements for Founders</h1>
+      <p style="color: var(--text-muted); font-size: clamp(14px, 1.05vw, 17px); margin: 0; line-height: 1.6; max-width: 680px;">
+        Lightweight, developer-first electronic agreements with SHA-256 audit certificates. 
+        Pay <strong>$2 per document</strong> or <strong>$19/month flat</strong>. No bloated $60/mo per-user subscriptions.
+      </p>
+      <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button onclick="renderAuthGate()" class="btn">Sign In / Sign Up</button>
+        <button onclick="renderVerifyPage()" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.6rem 1rem;">Cryptographic Audit Tool</button>
+      </div>
+    </div>
+    <div class="signer-body">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div style="border: 1px solid var(--border-subtle); padding: 1.25rem;">
+          <div style="font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-main); margin-bottom: 0.4rem;">01. SHA-256 AUDIT LOG</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">Every signature computes an immutable SHA-256 digest storing signer telemetry, timestamp, and field state.</p>
+        </div>
+        <div style="border: 1px solid var(--border-subtle); padding: 1.25rem;">
+          <div style="font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-main); margin-bottom: 0.4rem;">02. PDF & R2 ARCHIVE</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">Automatic PDF generation with embedded signature blocks and official audit certificates sent to Cloudflare R2.</p>
+        </div>
+        <div style="border: 1px solid var(--border-subtle); padding: 1.25rem;">
+          <div style="font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-main); margin-bottom: 0.4rem;">03. ZERO BLOAT SAAS</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">No heavy client JS bundles. Instant load times, email magic link auth, and flexible pay-as-you-go pricing.</p>
+        </div>
+      </div>
+
+      <div style="border: 2px solid var(--border-active); padding: 1.5rem; background: var(--bg-surface-hover);">
+        <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem;">SaaS Pricing Tiers</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="border: 1px solid var(--border-subtle); padding: 1rem; background: var(--bg-base); text-align: center;">
+            <div style="font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em;">5-CREDITS PACK</div>
+            <div style="font-size: 1.75rem; font-weight: 900; margin: 0.4rem 0;">$10</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">$2 per document link</div>
+            <button onclick="renderAuthGate()" class="btn" style="width: 100%; font-size: 0.75rem; padding: 0.5rem;">GET CREDITS</button>
+          </div>
+          <div style="border: 2px solid var(--text-main); padding: 1rem; background: var(--bg-base); text-align: center;">
+            <div style="font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em;">PRO UNLIMITED</div>
+            <div style="font-size: 1.75rem; font-weight: 900; margin: 0.4rem 0;">$19<span style="font-size: 0.85rem; font-weight: 400;">/mo</span></div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Unlimited documents</div>
+            <button onclick="renderAuthGate()" class="btn" style="width: 100%; font-size: 0.75rem; padding: 0.5rem;">START PRO</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function loadDocument() {
   const container = document.getElementById('main-content');
 
@@ -638,11 +690,11 @@ async function loadDocument() {
     return;
   }
 
-  // Root URL /: If already unlocked via cookie or localStorage, show Dashboard; else default to Verify flow
+  // Root URL /: If unlocked show Dashboard; else render SaaS Landing Page
   if (isDashboardUnlocked()) {
     renderDashboard();
   } else {
-    renderVerifyPage();
+    renderSaaSLanding();
   }
 }
 
