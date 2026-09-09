@@ -333,8 +333,8 @@ for (const [key, val] of params.entries()) {
   }
 }
 
-// SHA-256 hash for passcode "admin"
-const DASHBOARD_AUTH_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
+// SHA-256 hash for passcode "password123"
+const DASHBOARD_AUTH_HASH = 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f';
 const DASHBOARD_AUTH_KEY = 'legalform_dashboard_unlocked';
 
 function getCookie(name) {
@@ -570,10 +570,9 @@ function renderAuthGate() {
     if (!val) return;
     const computed = await sha256Hex(val);
     const isValid = 
-      val.toLowerCase() === 'admin' ||
+      val === 'password123' ||
       computed === DASHBOARD_AUTH_HASH ||
-      computed === '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' ||
-      computed === 'ed27cc4da76834c9eb5bd7c29e4b6001d93a7dc800323beaaa49ebda91361e08';
+      computed === 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f';
 
     if (isValid) {
       setDashboardUnlocked();
