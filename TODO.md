@@ -60,6 +60,8 @@ Run these commands in the terminal (`worker/` directory) to configure production
   - `TXT send.signful.co = v=spf1 include:amazonses.com ~all`
   Resend status: `verified` 2026-09-11 (needed 4th record: `CNAME rsend`).
 - [x] Update worker `from` address to `noreply@signful.co` once domain verifies. Deployed + proven: live sign-in email to outlook delivered (`delivered` event).
+- [x] DMARC added: `TXT _dmarc.signful.co = v=DMARC1; p=none; rua=mailto:dmarc@signful.co` (fixes Outlook spam placement).
+- [x] Fix failing GitHub Actions (every push since phase 0/1): `cloudflare/wrangler-action@v3` broke on wrangler v4 project. Replaced with direct `npx wrangler deploy`, node 20 -> 22, added typecheck gate. Green on `073e965`.
 
 ---
 
