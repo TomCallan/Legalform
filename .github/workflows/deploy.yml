@@ -11,24 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Worker Dependencies
         run: cd worker && npm ci
+
+      - name: Typecheck Worker
+        run: cd worker && npm run typecheck
 
       - name: Run Worker Tests
         run: cd worker && npm test
 
       - name: Deploy Worker to Cloudflare
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: 'worker'
+        run: cd worker && npx wrangler deploy
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-pages:
@@ -39,10 +40,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Wrangler CLI
-        run: npm install --global wrangler
+        run: npm install --global wrangler@4
 
       - name: Deploy Pages to Cloudflare
         run: wrangler pages deploy pages --project-name=legalform-ui
