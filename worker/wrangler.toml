@@ -4,11 +4,12 @@ compatibility_date = "2026-08-05"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "signful-db"
+database_name = "legalform-db"
+database_id = "ef2bce22-24a5-4e2c-9df9-31baf909aa4e"
 
 [[r2_buckets]]
 binding = "R2"
-bucket_name = "signful-docs"
+bucket_name = "legalform-docs"
 
 [vars]
 # RESEND_API_KEY and ADMIN_API_KEY are configured via `wrangler secret put`
