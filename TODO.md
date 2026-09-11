@@ -58,8 +58,8 @@ Run these commands in the terminal (`worker/` directory) to configure production
   - `TXT resend._domainkey.signful.co` (DKIM, resolving)
   - `MX send.signful.co = feedback-smtp.us-east-1.amazonses.com`
   - `TXT send.signful.co = v=spf1 include:amazonses.com ~all`
-  Resend status: `pending` (auto-verifies once it rechecks DNS).
-- [ ] Update worker `from` address to `noreply@signful.co` once domain verifies (still `noreply@resend.dev`).
+  Resend status: `verified` 2026-09-11 (needed 4th record: `CNAME rsend`).
+- [x] Update worker `from` address to `noreply@signful.co` once domain verifies. Deployed + proven: live sign-in email to outlook delivered (`delivered` event).
 
 ---
 

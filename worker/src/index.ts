@@ -173,7 +173,7 @@ app.post('/api/auth/send-magic-link', async (c) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'Signful SaaS <noreply@resend.dev>',
+          from: 'Signful SaaS <noreply@signful.co>',
           to: email,
           subject: `Your Signful Sign-in Code: ${code}`,
           html: `<p>Use verification code <strong>${code}</strong> to sign in to Signful SaaS.</p>`
@@ -605,7 +605,7 @@ app.post('/api/submit/:slug', async (c) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'Signful <noreply@resend.dev>',
+            from: 'Signful <noreply@signful.co>',
             to: adminEmail,
             subject: `[EXECUTED AGREEMENT] ${doc.id} signed by ${email}`,
             html: `
