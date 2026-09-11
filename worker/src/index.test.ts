@@ -72,7 +72,7 @@ function extractPdfTexts(pdfBytes: Uint8Array): string[] {
   for (const m of src.matchAll(/stream\r?\n([\s\S]*?)endstream/g)) {
     let content: string;
     try {
-      content = inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1');
+      content = Buffer.from(inflateSync(Buffer.from(m[1], 'latin1'))).toString('latin1');
     } catch {
       continue; // not a deflate stream (font programs etc.)
     }
@@ -371,7 +371,7 @@ test('SaaS Auth & Credit Paywall: Magic link, verification, and 402 paywall', as
       'Authorization': `Bearer ${verifyData.session_token}`
     },
     body: JSON.stringify({ plan_type: 'credits_5' })
-  }, { DB: mockDB as any });
+  }, { DB: mockDB as any, DEMO_MODE: 'true' });
 
   assert.equal(checkoutRes.status, 200);
   const checkoutData = await checkoutRes.json() as { success: boolean; user: { credits: number } };

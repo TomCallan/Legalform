@@ -22,8 +22,8 @@ A lightweight, developer-first electronic document platform to create, share, pr
 
 ### 1. Cloudflare Environment (Optional for Cloud Hosting)
 - **Account:** Cloudflare account (free tier compatible).
-- **D1 Database:** `npx wrangler d1 create signful-db`
-- **R2 Storage Bucket:** `npx wrangler r2 bucket create signful-docs`
+- **D1 Database:** `npx wrangler d1 create legalform-db`
+- **R2 Storage Bucket:** `npx wrangler r2 bucket create legalform-docs`
 
 ### 2. Resend API Key (For Sender Email Notifications)
 - **Where to get:** Sign up at [resend.com](https://resend.com), create an API Key, and verify your domain (or use `noreply@resend.dev` for testing).
@@ -98,7 +98,7 @@ sections:
 # 1. Start Cloudflare Worker Local Backend API
 cd worker
 npm install
-npx wrangler d1 execute signful-db --local --file=../schema.sql
+npx wrangler d1 execute legalform-db --local --file=../schema.sql
 npx wrangler dev --local --port 8787
 
 # 2. Start Local Web Server with Automatic API Proxying
@@ -204,7 +204,7 @@ node --check builder.js     # Syntax check
 ├── pages/
 │   ├── index.html       # Single-file UI (dashboard + signer flow + inline <script>)
 │   ├── builder.js       # Visual drag-drop builder
-│   └── server.py        # Dev server with API proxy
+│   └── _routes.json     # Pages routing
 ├── worker/
 │   ├── src/
 │   │   ├── index.ts     # Hono Worker: API + PDF rendering

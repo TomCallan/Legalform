@@ -262,6 +262,18 @@ def generate_pdf(
         except Exception: fields = {}
 
     sig_data = sub.get("signature_data") or sub.get("signature_svg") or ""
+    _ = sig_data  # parsed by build_pdf_bytes; kept for log clarity below
+
+    if not data.get("spec") and spec_path.exists():
+        try:
+            import yaml as _yaml
+            data = {**data, "spec": _yaml.safe_load(spec_path.read_text())}
+        except Exception as e:
+            console.print(f"[yellow]Warning: could not load spec {spec_path}: {e}[/yellow]")
+
+    pdf_bytes = build_pdf_bytes(data)
+    Path(output).write_bytes(pdf_bytes)
+    console.print(f"[bold green]PDF written:[/bold green] {output} ({len(pdf_bytes)} bytes)")
 
 def build_pdf_bytes(payload: dict) -> bytes:
     import base64

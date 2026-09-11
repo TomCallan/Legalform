@@ -10,6 +10,7 @@ type Bindings = {
   ADMIN_EMAIL?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+  DEMO_MODE?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -23,11 +24,34 @@ app.notFound((c) => {
   return c.json({ error: 'Route Not Found', path: c.req.path }, 404);
 });
 
-app.use('*', cors());
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/([a-z0-9-]+\.)?signful\.(co|click|cloud)$/,
+  /^https:\/\/[a-z0-9-]+\.pages\.dev$/,
+  /^https:\/\/[a-z0-9-]+\.workers\.dev$/,
+];
+
+app.use('*', cors({
+  origin: (origin) => (ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin)) ? origin : undefined),
+}));
 
 const now = () => Math.floor(Date.now() / 1000);
 
-// Helper to authenticate user session from Bearer token, Cookie, or query param
+// In-memory per-isolate rate limiter (best-effort; use CF Rate Limiting for hard guarantees)
+const rateBuckets = new Map<string, { count: number; reset: number }>();
+function rateLimited(key: string, max: number, windowSecs: number): boolean {
+  const t = now();
+  const b = rateBuckets.get(key);
+  if (!b || b.reset <= t) {
+    rateBuckets.set(key, { count: 1, reset: t + windowSecs });
+    return false;
+  }
+  b.count += 1;
+  return b.count > max;
+}
+
+// Helper to authenticate user session from Bearer token or Cookie
 async function getUserFromSession(c: any) {
   const authHeader = c.req.header('Authorization');
   let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
@@ -35,9 +59,6 @@ async function getUserFromSession(c: any) {
     const cookieHeader = c.req.header('Cookie') || '';
     const match = cookieHeader.match(/(?:^|;\s*)signful_session=([^;]*)/);
     if (match) token = decodeURIComponent(match[1]);
-  }
-  if (!token) {
-    token = c.req.query('session_token') || null;
   }
   if (!token) return null;
 
@@ -131,6 +152,9 @@ app.post('/api/auth/send-magic-link', async (c) => {
   if (!email || !email.includes('@')) {
     return c.json({ error: 'Valid email address required' }, 400);
   }
+  if (rateLimited(`send:${email}`, 5, 3600)) {
+    return c.json({ error: 'Too many sign-in attempts. Try again later.' }, 429);
+  }
 
   const token = crypto.randomUUID();
   const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -160,7 +184,14 @@ app.post('/api/auth/send-magic-link', async (c) => {
     }
   }
 
-  return c.json({ success: true, message: 'Magic link verification code dispatched.', token, dev_code: code });
+  // dev_code only leaks when no mail provider configured (local dev). Prod sets RESEND_API_KEY.
+  const includeDevCode = !c.env.RESEND_API_KEY;
+  return c.json({
+    success: true,
+    message: 'Magic link verification code dispatched.',
+    token,
+    ...(includeDevCode ? { dev_code: code } : {})
+  });
 });
 
 // ── SaaS Auth: Verify Magic Link Code & Create Session ───────
@@ -169,6 +200,10 @@ app.post('/api/auth/verify-magic-link', async (c) => {
   const email = String(body.email || '').toLowerCase().trim();
   const code = String(body.code || '').trim();
   const token = String(body.token || '').trim();
+
+  if (rateLimited(`verify:${token || email}`, 10, 900)) {
+    return c.json({ error: 'Too many verification attempts. Request a new code.' }, 429);
+  }
 
   let authToken: any = null;
   if (token) {
@@ -206,7 +241,8 @@ app.post('/api/auth/verify-magic-link', async (c) => {
 
   await c.env.DB.prepare('DELETE FROM auth_tokens WHERE token = ? OR email = ?').bind(authToken.token, userEmail).run();
 
-  c.header('Set-Cookie', `signful_session=${sessionToken}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`);
+  const secureFlag = new URL(c.req.url).protocol === 'https:' ? '; Secure' : '';
+  c.header('Set-Cookie', `signful_session=${sessionToken}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax${secureFlag}`);
   return c.json({
     success: true,
     session_token: sessionToken,
@@ -281,12 +317,18 @@ app.post('/api/billing/checkout', async (c) => {
       if (session.url) {
         return c.json({ url: session.url });
       }
+      console.error('Stripe Checkout Error:', stripeRes.status, JSON.stringify(session).slice(0, 500));
+      return c.json({ error: 'Billing provider error. Please try again.' }, 502);
     } catch (stripeErr) {
       console.error('Stripe Checkout Error:', stripeErr);
+      return c.json({ error: 'Billing provider unreachable. Please try again.' }, 502);
     }
   }
 
-  // Developer / Demo Mode fallback (instant credit grant for local testing)
+  // Explicit local-dev fallback only. Prod never grants without Stripe: set DEMO_MODE=true in .dev.vars.
+  if (c.env.DEMO_MODE !== 'true') {
+    return c.json({ error: 'Billing not configured. Contact support.' }, 503);
+  }
   if (planType === 'pro') {
     await c.env.DB.prepare("UPDATE users SET plan = 'pro' WHERE id = ?").bind(user.id).run();
   } else {
@@ -306,9 +348,36 @@ app.post('/api/billing/checkout', async (c) => {
   });
 });
 
+// Verify Stripe webhook signature (t=<ts>,v1=<hmac hex> over "<ts>.<rawBody>")
+async function verifyStripeSignature(rawBody: string, header: string, secret: string): Promise<boolean> {
+  const ts = header.match(/t=(\d+)/)?.[1];
+  const v1 = header.match(/v1=([0-9a-f]+)/)?.[1];
+  if (!ts || !v1) return false;
+  if (Math.abs(now() - parseInt(ts, 10)) > 300) return false; // 5-min tolerance
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${ts}.${rawBody}`));
+  const hex = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  if (hex.length !== v1.length) return false;
+  let diff = 0;
+  for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
+  return diff === 0;
+}
+
 // ── SaaS Billing: Stripe Webhook Listener ──────────────────────
 app.post('/api/billing/webhook', async (c) => {
+  const secret = c.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('Webhook rejected: STRIPE_WEBHOOK_SECRET not configured');
+    return c.json({ error: 'Webhook not configured' }, 503);
+  }
   const bodyText = await c.req.text();
+  const sigHeader = c.req.header('stripe-signature') || '';
+  if (!(await verifyStripeSignature(bodyText, sigHeader, secret))) {
+    return c.json({ error: 'Invalid signature' }, 400);
+  }
+
   let event: any = null;
 
   try {
@@ -367,6 +436,14 @@ app.post('/api/documents', async (c) => {
   }
 
   const specString = typeof spec === 'string' ? spec : JSON.stringify(spec);
+
+  if (specString.length > 100 * 1024) {
+    return c.json({ error: 'Spec too large (max 100KB)' }, 413);
+  }
+  const parsed = typeof spec === 'string' ? safeParseJson(spec) : spec;
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as any).sections)) {
+    return c.json({ error: 'Invalid spec: object with sections[] required' }, 400);
+  }
 
   await c.env.DB.prepare(
     `INSERT INTO documents (id, slug, user_id, spec, status, expires_at)
@@ -640,20 +717,26 @@ app.post('/api/verify', async (c) => {
   return c.json({ error: 'Please provide hash, text, or payload to verify.' }, 400);
 });
 
+// Owner check shared by close/restart/delete/export. Legacy NULL-owner docs are locked (redeploy to claim).
+async function requireDocOwner(c: any, slugOrId: string) {
+  const user = await getUserFromSession(c);
+  if (!user) return { error: c.json({ error: 'Authentication required. Please sign in.' }, 401) as Response };
+  const doc: any = await c.env.DB.prepare(
+    'SELECT * FROM documents WHERE slug = ? OR id = ?'
+  ).bind(slugOrId, slugOrId).first();
+  if (!doc) return { error: c.json({ error: 'Document not found' }, 404) as Response };
+  if (!doc.user_id || doc.user_id !== user.id) {
+    return { error: c.json({ error: 'Forbidden: You do not own this document' }, 403) as Response };
+  }
+  return { user, doc };
+}
+
 // ── SaaS API: Export Submission Data (Owner Only) ────────────
 app.get('/api/export/:doc_id', async (c) => {
   const docId = c.req.param('doc_id');
-  const user = await getUserFromSession(c);
-
-  const doc: any = await c.env.DB.prepare(
-    'SELECT * FROM documents WHERE id = ? OR slug = ?'
-  ).bind(docId, docId).first();
-
-  if (!doc) return c.json({ error: 'Document not found' }, 404);
-
-  if (doc.user_id && (!user || doc.user_id !== user.id)) {
-    return c.json({ error: 'Forbidden: You do not own this document' }, 403);
-  }
+  const owned = await requireDocOwner(c, docId);
+  if (owned.error) return owned.error;
+  const doc = owned.doc;
 
   const submissions = await c.env.DB.prepare(
     'SELECT * FROM submissions WHERE document_id = ? ORDER BY submitted_at DESC'
@@ -951,33 +1034,34 @@ app.post('/api/render-pdf', async (c) => {
   });
 });
 
-// ── Public: Close / Revoke Document ─────────────────────────
+// ── Owner Only: Close / Revoke Document ──────────────────────
 app.post('/api/doc/:slug/close', async (c) => {
   const slug = c.req.param('slug');
-  await c.env.DB.prepare('UPDATE documents SET status = ? WHERE slug = ? OR id = ?').bind('closed', slug, slug).run();
+  const owned = await requireDocOwner(c, slug);
+  if (owned.error) return owned.error;
+  await c.env.DB.prepare('UPDATE documents SET status = ? WHERE id = ?').bind('closed', owned.doc.id).run();
   return c.json({ success: true, message: `Document '${slug}' closed.` });
 });
 
-// ── Public: Restart / Reopen a Document for Signing ─────────
+// ── Owner Only: Restart / Reopen a Document for Signing ──────
 app.post('/api/doc/:slug/restart', async (c) => {
   const slug = c.req.param('slug');
+  const owned = await requireDocOwner(c, slug);
+  if (owned.error) return owned.error;
   await c.env.DB.prepare(
     `UPDATE documents SET status = 'active',
        expires_at = CASE WHEN expires_at IS NOT NULL AND expires_at < ? THEN NULL ELSE expires_at END
-     WHERE slug = ? OR id = ?`
-  ).bind(now(), slug, slug).run();
+      WHERE id = ?`
+  ).bind(now(), owned.doc.id).run();
   return c.json({ success: true, message: `Document '${slug}' reopened for signing.` });
 });
 
-// ── Public: Permanently Delete a Document Run ───────────────
+// ── Owner Only: Permanently Delete a Document Run ────────────
 app.delete('/api/doc/:id', async (c) => {
   const docId = c.req.param('id');
-
-  const doc = await c.env.DB.prepare(
-    'SELECT id, slug FROM documents WHERE id = ? OR slug = ?'
-  ).bind(docId, docId).first();
-
-  if (!doc) return c.json({ error: 'Document not found' }, 404);
+  const owned = await requireDocOwner(c, docId);
+  if (owned.error) return owned.error;
+  const doc = owned.doc;
 
   // Purge archived submission payloads from R2
   if (c.env.R2) {

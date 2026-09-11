@@ -17,9 +17,20 @@ env/
 # Local configuration & secrets
 .env
 .env.local
-.legalform_registry.json
+worker/.dev.vars
+.signful_registry.json
 *.db
 *.sqlite
+
+# Personal archive (PII templates) — never commit
+archive/
+
+# Local test artifacts
+executed-agreement.pdf
+test.pdf
+test_contract.pdf
+submission.json
+my-nda.yaml
 
 # OS / IDE
 .DS_Store

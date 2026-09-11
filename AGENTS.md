@@ -44,7 +44,7 @@ Note: `wrangler.dev` uses the built `wrangler.toml` in the `worker/` directory. 
 - **Platform**: Windows + Git Bash (Bash via Git)
 - **Python**: `python` (not `python3`) — required for CLI scripts
 - **Node**: available; `js-yaml` NOT in worker/node_modules — use pyyaml bridge or stub for tests
-- **DB**: Cloudflare D1 (`signful-db`) — production `submissions` table had an outdated schema (missing `signer_email`, `signer_name`, `signature_data` columns) that caused 500 on every submit. Fixed by migrating the table schema to match `schema.sql`.
+- **DB**: Cloudflare D1 (`legalform-db`) + R2 (`legalform-docs`).
 - **Cloudflare blocks python-urllib UA on `/api/*`** — expected, not a bug. `curl` works fine.
 
 ## Design System (MONARCH)
@@ -157,4 +157,4 @@ CREATE INDEX IF NOT EXISTS idx_submissions_doc ON submissions(document_id, submi
 - `wrangler.toml` (`worker/`) defines the Cloudflare Worker project (D1 DB binding, R2 bucket binding).
 - `npx wrangler dev --remote` is the production dev server.
 - `npx wrangler dev --local --port 8789` is the local dev server (for `127.0.0.1:8789`).
-- **Sender Ledger Passcode**: Gated by `DASHBOARD_AUTH_HASH` (default passcode: `password123`).
+- **Sender Ledger**: gated by magic-link session. Worker enforces doc ownership on close/restart/delete/export. No shared passcode.

@@ -34,9 +34,9 @@ Run these commands in the terminal (`worker/` directory) to configure production
 
 ## 2. Database Migration (Cloudflare D1)
 
-- [ ] Apply [schema.sql](file:///C:/Users/TomCa/Documents/Signful/schema.sql) to your remote production D1 database (`signful-db`):
+- [ ] Apply `schema.sql` to your remote production D1 database (`legalform-db`):
   ```bash
-  npx wrangler d1 execute signful-db --remote --file=schema.sql
+  npx wrangler d1 execute legalform-db --remote --file=../schema.sql
   ```
 
 ---
