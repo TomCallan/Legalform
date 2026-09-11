@@ -173,10 +173,18 @@ app.post('/api/auth/send-magic-link', async (c) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'Signful SaaS <noreply@signful.co>',
+          from: 'Signful <noreply@signful.co>',
+          reply_to: 'support@signful.co',
           to: email,
-          subject: `Your Signful Sign-in Code: ${code}`,
-          html: `<p>Use verification code <strong>${code}</strong> to sign in to Signful SaaS.</p>`
+          subject: `Your Signful sign-in code: ${code}`,
+          text: `Hi there,\n\nYour Signful sign-in code is: ${code}\n\nEnter it in the app within 15 minutes to sign in. If you did not request this, you can safely ignore this email.\n\n— The Signful team\nhttps://signful.co`,
+          html: `<div style="font-family: Arial, Helvetica, sans-serif; color: #111; line-height: 1.6; max-width: 560px;">
+            <p>Hi there,</p>
+            <p>Your Signful sign-in code is:</p>
+            <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+            <p>Enter it in the app within 15 minutes to sign in. If you did not request this, you can safely ignore this email.</p>
+            <p>— The Signful team<br><a href="https://signful.co">signful.co</a></p>
+          </div>`
         })
       });
     } catch (e) {
