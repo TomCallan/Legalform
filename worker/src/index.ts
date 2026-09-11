@@ -33,7 +33,7 @@ async function getUserFromSession(c: any) {
   let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
   if (!token) {
     const cookieHeader = c.req.header('Cookie') || '';
-    const match = cookieHeader.match(/(?:^|;\s*)legalform_session=([^;]*)/);
+    const match = cookieHeader.match(/(?:^|;\s*)signful_session=([^;]*)/);
     if (match) token = decodeURIComponent(match[1]);
   }
   if (!token) {
@@ -61,7 +61,7 @@ async function getUserFromSession(c: any) {
   }
 }
 
-app.get('/', (c) => c.json({ status: 'ok', service: 'LegalForm API' }));
+app.get('/', (c) => c.json({ status: 'ok', service: 'Signful API' }));
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: now() }));
 
 async function sha256(message: string): Promise<string> {
@@ -149,10 +149,10 @@ app.post('/api/auth/send-magic-link', async (c) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'Legalform SaaS <noreply@resend.dev>',
+          from: 'Signful SaaS <noreply@resend.dev>',
           to: email,
-          subject: `Your Legalform Sign-in Code: ${code}`,
-          html: `<p>Use verification code <strong>${code}</strong> to sign in to Legalform SaaS.</p>`
+          subject: `Your Signful Sign-in Code: ${code}`,
+          html: `<p>Use verification code <strong>${code}</strong> to sign in to Signful SaaS.</p>`
         })
       });
     } catch (e) {
@@ -206,7 +206,7 @@ app.post('/api/auth/verify-magic-link', async (c) => {
 
   await c.env.DB.prepare('DELETE FROM auth_tokens WHERE token = ? OR email = ?').bind(authToken.token, userEmail).run();
 
-  c.header('Set-Cookie', `legalform_session=${sessionToken}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`);
+  c.header('Set-Cookie', `signful_session=${sessionToken}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`);
   return c.json({
     success: true,
     session_token: sessionToken,
@@ -240,7 +240,7 @@ app.post('/api/auth/logout', async (c) => {
   if (user) {
     await c.env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(user.sessionToken).run();
   }
-  c.header('Set-Cookie', 'legalform_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+  c.header('Set-Cookie', 'signful_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
   return c.json({ success: true });
 });
 
@@ -528,7 +528,7 @@ app.post('/api/submit/:slug', async (c) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'LegalForm <noreply@resend.dev>',
+            from: 'Signful <noreply@resend.dev>',
             to: adminEmail,
             subject: `[EXECUTED AGREEMENT] ${doc.id} signed by ${email}`,
             html: `
@@ -703,7 +703,7 @@ app.post('/api/render-pdf', async (c) => {
   const helvOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
   const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-  // Palette mirrors cli/legalform.py build_pdf_bytes
+  // Palette mirrors cli/signful.py build_pdf_bytes
   const ink = rgb(0.0588, 0.0902, 0.1647);      // #0f172a
   const muted = rgb(0.2784, 0.3333, 0.4118);    // #475569
   const cell = rgb(0.2, 0.2549, 0.3333);        // #334155

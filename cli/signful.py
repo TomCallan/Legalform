@@ -9,14 +9,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-app = typer.Typer(help="LegalForm CLI - Deploy, sign, export, and rebuild electronic legal documents.")
+app = typer.Typer(help="Signful CLI - Deploy, sign, export, and rebuild electronic legal documents.")
 console = Console()
 
-REGISTRY_FILE = Path(".legalform_registry.json")
+REGISTRY_FILE = Path(".signful_registry.json")
 
 def get_config():
-    api_base = os.getenv("LEGALFORM_API", "http://127.0.0.1:8787").strip(' "\'').rstrip("/")
-    pages_base = os.getenv("LEGALFORM_PAGES", "http://localhost:8080").strip(' "\'').rstrip("/")
+    api_base = os.getenv("SIGNFUL_API", "http://127.0.0.1:8787").strip(' "\'').rstrip("/")
+    pages_base = os.getenv("SIGNFUL_PAGES", "http://localhost:8080").strip(' "\'').rstrip("/")
     return api_base, pages_base
 
 @app.command()
@@ -218,7 +218,7 @@ def verify_signature(
         else:
             console.print("\n[bold green]SHA-256 Digest Provided (Offline Mode):[/bold green]")
             console.print(f"• SHA-256: [bold yellow]{target_hash or local_hash}[/bold yellow]")
-            console.print("[dim]Note: Start 'legalform serve' or connect to API server to verify against remote database.[/dim]")
+            console.print("[dim]Note: Start 'signful serve' or connect to API server to verify against remote database.[/dim]")
     else:
         console.print("[bold red]Unable to connect to verification API server and no local file/text provided.[/bold red]")
         raise typer.Exit(code=1)

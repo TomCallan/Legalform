@@ -186,7 +186,7 @@ test('render-pdf normalizes smart apostrophes, quotes, and em dashes without que
 });
 
 test('api/verify validates raw text content and computes SHA-256 hash', async () => {
-  const text = 'Legalform Agreement Content';
+  const text = 'Signful Agreement Content';
   const res = await app.request('/api/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -200,7 +200,7 @@ test('api/verify validates raw text content and computes SHA-256 hash', async ()
 });
 
 test('api/verify validates matching text and hash', async () => {
-  const text = 'Hello Legalform';
+  const text = 'Hello Signful';
   const msgUint8 = new TextEncoder().encode(text);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
   const expectedHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');

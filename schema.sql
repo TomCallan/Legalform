@@ -1,4 +1,4 @@
--- Schema for Legalform SaaS (Cloudflare D1 / SQLite)
+-- Schema for Signful SaaS (Cloudflare D1 / SQLite)
 
 -- Users table: stores user account, plan, and credit balance (Strict: default 0 credits)
 CREATE TABLE IF NOT EXISTS users (

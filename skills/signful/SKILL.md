@@ -1,11 +1,11 @@
 ---
-name: legalform
-description: Create, deploy, manage, pre-sign, and export court-enforceable legal agreements (NDAs, Waivers, SAFEs, Contracts) via LegalForm CLI and Cloudflare API.
+name: signful
+description: Create, deploy, manage, pre-sign, and export court-enforceable legal agreements (NDAs, Waivers, SAFEs, Contracts) via Signful CLI and Cloudflare API.
 ---
 
-# LegalForm AI Assistant Skill Guide
+# Signful AI Assistant Skill Guide
 
-This skill arms AI assistants (Claude Code, Antigravity CLI `agy`, OpenCode, Cursor, and IDE agents) with capabilities to generate, validate, deploy, re-up, pre-sign, and export legal document agreements using **LegalForm**.
+This skill arms AI assistants (Claude Code, Antigravity CLI `agy`, OpenCode, Cursor, and IDE agents) with capabilities to generate, validate, deploy, re-up, pre-sign, and export legal document agreements using **Signful**.
 
 ---
 
@@ -19,50 +19,50 @@ This skill arms AI assistants (Claude Code, Antigravity CLI `agy`, OpenCode, Cur
 
 ---
 
-## 🛠️ CLI Tool Commands (`cli/legalform.py`)
+## CLI Tool Commands (`cli/signful.py`)
 
 Run all CLI commands using your project's virtual environment python executable (`.\venv\Scripts\python.exe` on Windows or `python3` on Unix/Mac):
 
 ### 1. Deploy Document Spec
 ```bash
-python3 cli/legalform.py deploy my-nda.yaml --admin-email "admin@yourcompany.com" -f receiving_party="Acme Corp" -f signer_email="ceo@acme.com"
+python3 cli/signful.py deploy my-nda.yaml --admin-email "admin@yourcompany.com" -f receiving_party="Acme Corp" -f signer_email="ceo@acme.com"
 ```
 
 ### 2. List Deployed Slugs & Execution Counts
 ```bash
-python3 cli/legalform.py list
+python3 cli/signful.py list
 ```
 
 ### 3. Re-up / Reopen Document Slug
 ```bash
-python3 cli/legalform.py reopen <slug> --days 30
+python3 cli/signful.py reopen <slug> --days 30
 ```
 
 ### 4. Force Close / Revoke Document Slug
 ```bash
-python3 cli/legalform.py close <slug>
+python3 cli/signful.py close <slug>
 ```
 
 ### 5. Permanently Delete Document & Purge R2 Vault
 ```bash
-python3 cli/legalform.py delete <doc_id>
+python3 cli/signful.py delete <doc_id>
 ```
 
 ### 6. Export Submission Audit Records
 ```bash
-python3 cli/legalform.py export <doc_id> -o submission.json
+python3 cli/signful.py export <doc_id> -o submission.json
 ```
 
 ### 7. Convert Submission JSON to Court-Grade PDF Certificate
 ```bash
-python3 cli/legalform.py pdf submission.json -s my-nda.yaml -o executed_agreement.pdf
+python3 cli/signful.py pdf submission.json -s my-nda.yaml -o executed_agreement.pdf
 ```
 
 ---
 
 ## 📑 YAML Specification Format Standard
 
-LegalForm specs follow this schema:
+Signful specs follow this schema:
 
 ```yaml
 document:

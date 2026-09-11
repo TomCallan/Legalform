@@ -1,17 +1,17 @@
-# Legalform
+# Signful
 
 A lightweight, developer-first electronic document platform to create, share, pre-fill, sign, and cryptographically archive legal agreements.
 
 ---
 
-## 🚀 Key Features & Workflow
+## Key Features & Workflow
 
 1. **Shareable Legal Document**: Declare documents in simple YAML files and generate immediate shareable signing URLs.
 2. **Cryptographic Non-Repudiation**: SHA-256 digests lock submitted field data, signature data (drawn or typed), document ID, and execution timestamp.
 3. **End-User PDF Download**: Signers can instantly print / save the compiled PDF agreement directly upon completing execution.
 4. **Sender Email Notifications**: Senders automatically receive email execution alerts with signer details and SHA-256 hashes via Resend API.
 5. **Dynamic Data-Driven Form Creation**: Create new document templates rapidly with declarative fields and pre-fill values dynamically via CLI flags (`-f receiving_party="Acme Corp"`) or URL parameters (`?receiving_party=Acme+Corp`).
-6. **Lossless Local Rebuilding**: Export compact JSON datasets (`cli/legalform.py export`) and rebuild identical court-grade PDFs locally (`cli/legalform.py pdf`).
+6. **Lossless Local Rebuilding**: Export compact JSON datasets (`cli/signful.py export`) and rebuild identical court-grade PDFs locally (`cli/signful.py pdf`).
 7. **Visual Drag-Drop Builder**: Build documents visually in the browser — no YAML hand-writing required. Save custom templates locally.
 8. **Date Picker & Typed Signatures**: Native browser date/datetime-local inputs; signer can draw on canvas or type their full legal name.
 9. **Document Lifecycle Controls**: Revoke, restart, duplicate, edit, and delete document runs from the dashboard.
@@ -22,8 +22,8 @@ A lightweight, developer-first electronic document platform to create, share, pr
 
 ### 1. Cloudflare Environment (Optional for Cloud Hosting)
 - **Account:** Cloudflare account (free tier compatible).
-- **D1 Database:** `npx wrangler d1 create legalform-db`
-- **R2 Storage Bucket:** `npx wrangler r2 bucket create legalform-docs`
+- **D1 Database:** `npx wrangler d1 create signful-db`
+- **R2 Storage Bucket:** `npx wrangler r2 bucket create signful-docs`
 
 ### 2. Resend API Key (For Sender Email Notifications)
 - **Where to get:** Sign up at [resend.com](https://resend.com), create an API Key, and verify your domain (or use `noreply@resend.dev` for testing).
@@ -98,18 +98,18 @@ sections:
 # 1. Start Cloudflare Worker Local Backend API
 cd worker
 npm install
-npx wrangler d1 execute legalform-db --local --file=../schema.sql
+npx wrangler d1 execute signful-db --local --file=../schema.sql
 npx wrangler dev --local --port 8787
 
 # 2. Start Local Web Server with Automatic API Proxying
-python3 cli/legalform.py serve --port 8080
+python3 cli/signful.py serve --port 8080
 ```
 
 ### Deploying & Generating Dynamic Links
 
 ```bash
 # Deploy spec with dynamic pre-filled fields:
-python3 cli/legalform.py deploy templates/contractor-sow.yaml -f contractor_name="Acme Consulting" -f contractor_email="jane@acme.com"
+python3 cli/signful.py deploy templates/contractor-sow.yaml -f contractor_name="Acme Consulting" -f contractor_email="jane@acme.com"
 ```
 
 Output:
@@ -125,10 +125,10 @@ Output:
 
 ```bash
 # Export local compact JSON payload
-python3 cli/legalform.py export sow-2026-001 -o submission.json
+python3 cli/signful.py export sow-2026-001 -o submission.json
 
 # Rebuild exact signed PDF agreement locally
-python3 cli/legalform.py pdf submission.json -s templates/contractor-sow.yaml -o executed-contract.pdf
+python3 cli/signful.py pdf submission.json -s templates/contractor-sow.yaml -o executed-contract.pdf
 ```
 
 ---
@@ -156,7 +156,7 @@ python3 cli/legalform.py pdf submission.json -s templates/contractor-sow.yaml -o
 
 ### Custom Template Library
 - Save custom YAML specs as templates via the builder.
-- Templates persist in `localStorage` (`legalform_builder_templates`).
+- Templates persist in `localStorage` (`signful_builder_templates`).
 - Access saved templates from the builder panel.
 
 ---
@@ -194,7 +194,7 @@ node --check builder.js     # Syntax check
 # inline <script> in index.html: awk '/^<script>/{f=1;next} /^<\/script>/{f=0} f' index.html > .check.js && node --check .check.js
 ```
 
-**All tests pass.** Live API verified at `https://legalform-api.tomcallan0.workers.dev/` (submit, export, render-pdf).
+**All tests pass.** Live API verified at `https://signful-api.tomcallan0.workers.dev/` (submit, export, render-pdf).
 
 ---
 
@@ -214,7 +214,7 @@ node --check builder.js     # Syntax check
 ├── templates/
 │   ├── *.yaml           # Document specs (NDA, Contractor SOW, Affidavit, Personal Statement)
 ├── cli/
-│   └── legalform.py     # Deploy, export, pdf, serve
+│   └── signful.py     # Deploy, export, pdf, serve
 ├── schema.sql           # D1 database schema
 ├── DESIGN_SYSTEM.md     # MONARCH design tokens & rules
 └── AGENTS.md            # This guide

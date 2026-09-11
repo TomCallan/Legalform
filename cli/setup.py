@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="legalform-cli",
+    name="signful-cli",
     version="1.0.0",
-    py_modules=["legalform"],
+    py_modules=["signful"],
     package_dir={"": "."},
     install_requires=[
         "typer>=0.9.0",
@@ -13,7 +13,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "legalform=legalform:app",
+            "signful=signful:app",
         ],
     },
 )

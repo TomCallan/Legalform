@@ -1,5 +1,5 @@
 {
-  "name": "legalform-worker",
+  "name": "signful-worker",
   "version": "1.0.0",
   "description": "Backend Cloudflare Worker API for Legal Document Platform",
   "main": "src/index.ts",

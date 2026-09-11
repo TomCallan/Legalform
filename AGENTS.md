@@ -1,7 +1,7 @@
-# Legalform — Agent Guide
+# Signful — Agent Guide
 
 ## Project Overview
-Legalform is a lightweight, developer-first electronic document platform for creating, sharing, pre-filling, signing, and cryptographically archiving legal agreements.
+Signful is a lightweight, developer-first electronic document platform for creating, sharing, pre-filling, signing, and cryptographically archiving legal agreements.
 
 ## Architecture
 
@@ -34,7 +34,7 @@ cd worker
 npx wrangler dev          # listens on 127.0.0.1:8789
 
 # 2. Start local web server with API proxying (uses /api/* -> live worker)
-python3 cli/legalform.py serve --port 8080
+python3 cli/signful.py serve --port 8080
 ```
 
 Note: `wrangler.dev` uses the built `wrangler.toml` in the `worker/` directory. No entry-point override is needed — `main = "src/index.ts"` in wrangler.toml points to the worker script.
@@ -44,7 +44,7 @@ Note: `wrangler.dev` uses the built `wrangler.toml` in the `worker/` directory. 
 - **Platform**: Windows + Git Bash (Bash via Git)
 - **Python**: `python` (not `python3`) — required for CLI scripts
 - **Node**: available; `js-yaml` NOT in worker/node_modules — use pyyaml bridge or stub for tests
-- **DB**: Cloudflare D1 (`legalform-db`) — production `submissions` table had an outdated schema (missing `signer_email`, `signer_name`, `signature_data` columns) that caused 500 on every submit. Fixed by migrating the table schema to match `schema.sql`.
+- **DB**: Cloudflare D1 (`signful-db`) — production `submissions` table had an outdated schema (missing `signer_email`, `signer_name`, `signature_data` columns) that caused 500 on every submit. Fixed by migrating the table schema to match `schema.sql`.
 - **Cloudflare blocks python-urllib UA on `/api/*`** — expected, not a bug. `curl` works fine.
 
 ## Design System (MONARCH)
@@ -109,7 +109,7 @@ sections:
 
 ## Custom Templates
 
-Custom templates are persisted in `localStorage` key `legalform_builder_templates` (`{name: yaml-string}`).
+Custom templates are persisted in `localStorage` key `signful_builder_templates` (`{name: yaml-string}`).
 
 ## Worker PDF Rendering
 

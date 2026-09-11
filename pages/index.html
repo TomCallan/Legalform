@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Legalform - Cryptographic Legal Agreements</title>
+  <title>Signful - Cryptographic Legal Agreements</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -284,7 +284,7 @@
   <header>
     <div class="container header-inner">
       <a href="/" onclick="navigateTo(event, 'verify')" class="brand">
-        Legalform
+        Signful
       </a>
       <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
         <a href="/verify" onclick="navigateTo(event, 'verify')" id="verify-link" style="font-size: clamp(11px, 0.8vw, 13px); font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-main);">
@@ -311,7 +311,7 @@
 
   <footer>
     <div class="container">
-      LEGALFORM — MONARCH DESIGN SYSTEM • COURT-ENFORCEABLE SIGNATURE INFRASTRUCTURE
+      SIGNFUL — MONARCH DESIGN SYSTEM • COURT-ENFORCEABLE SIGNATURE INFRASTRUCTURE
     </div>
   </footer>
 
@@ -321,9 +321,9 @@ const params = new URLSearchParams(window.location.search);
 const isPagesDev = window.location.hostname.includes('pages.dev');
 const isLocalProxy = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port === '8080';
 const DEFAULT_API_BASE = (isPagesDev || !isLocalProxy)
-  ? 'https://legalform-api.tomcallan0.workers.dev'
+  ? 'https://signful-api.tomcallan0.workers.dev'
   : '';
-const API_BASE = window.LEGALFORM_API_BASE || params.get('api_base') || localStorage.getItem('LEGALFORM_API_BASE') || DEFAULT_API_BASE;
+const API_BASE = window.SIGNFUL_API_BASE || params.get('api_base') || localStorage.getItem('SIGNFUL_API_BASE') || DEFAULT_API_BASE;
 const slug = params.get('slug') || '';
 
 const queryPrefills = {};
@@ -335,7 +335,7 @@ for (const [key, val] of params.entries()) {
 
 // SHA-256 hash for passcode "password123"
 const DASHBOARD_AUTH_HASH = 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f';
-const DASHBOARD_AUTH_KEY = 'legalform_dashboard_unlocked';
+const DASHBOARD_AUTH_KEY = 'signful_dashboard_unlocked';
 
 function getCookie(name) {
   try {
@@ -350,7 +350,7 @@ function isDashboardUnlocked() {
   try {
     if (sessionStorage.getItem(DASHBOARD_AUTH_KEY) === '1') return true;
     if (localStorage.getItem(DASHBOARD_AUTH_KEY) === '1') return true;
-    if (getCookie(DASHBOARD_AUTH_KEY) === '1' || getCookie('legalform_auth') === '1' || getCookie('auth') === '1' || getCookie('legalform_sender') === '1') return true;
+    if (getCookie(DASHBOARD_AUTH_KEY) === '1' || getCookie('signful_auth') === '1' || getCookie('auth') === '1' || getCookie('signful_sender') === '1') return true;
   } catch (e) {}
   return false;
 }
@@ -378,7 +378,7 @@ function lockDashboard() {
   try { sessionStorage.removeItem(DASHBOARD_AUTH_KEY); } catch (e) {}
   try { localStorage.removeItem(DASHBOARD_AUTH_KEY); } catch (e) {}
   try { document.cookie = `${DASHBOARD_AUTH_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`; } catch (e) {}
-  try { document.cookie = `legalform_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`; } catch (e) {}
+  try { document.cookie = `signful_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`; } catch (e) {}
   renderVerifyPage();
   showToast('Sender ledger locked.', 'info');
 }
@@ -390,7 +390,7 @@ function esc(s) {
 let currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
 
 async function fetchCurrentUser() {
-  const token = localStorage.getItem('legalform_session_token');
+  const token = localStorage.getItem('signful_session_token');
   if (!token) {
     currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
     return currentUser;
@@ -409,7 +409,7 @@ async function fetchCurrentUser() {
 }
 
 async function safeFetchJson(url, options = {}) {
-  const token = localStorage.getItem('legalform_session_token');
+  const token = localStorage.getItem('signful_session_token');
   options.headers = options.headers || {};
   if (token && !options.headers['Authorization'] && !options.headers['authorization']) {
     options.headers['Authorization'] = `Bearer ${token}`;
@@ -508,7 +508,7 @@ function showPaywallModal(message) {
 }
 
 async function triggerCheckout(planType) {
-  const token = localStorage.getItem('legalform_session_token');
+  const token = localStorage.getItem('signful_session_token');
   if (!token) {
     if (document.getElementById('paywall-modal')) document.getElementById('paywall-modal').remove();
     renderAuthGate();
@@ -702,7 +702,7 @@ function renderAuthGate() {
   const container = document.getElementById('main-content');
   container.innerHTML = `
     <div class="signer-head">
-      <div class="signer-eyebrow">Legalform SaaS Account Authentication</div>
+      <div class="signer-eyebrow">Signful SaaS Account Authentication</div>
       <h1 class="signer-title">Sign In / Sign Up</h1>
       <p style="color: var(--text-muted); font-size: clamp(13px, 0.95vw, 15px); margin: 0; line-height: 1.6;">Enter your email address to receive a 6-digit magic link sign-in code.</p>
     </div>
@@ -774,7 +774,7 @@ function renderAuthGate() {
         body: JSON.stringify({ email, code, token: activeToken })
       });
 
-      localStorage.setItem('legalform_session_token', res.session_token);
+      localStorage.setItem('signful_session_token', res.session_token);
       setDashboardUnlocked();
       await fetchCurrentUser();
       showToast('Signed in successfully.', 'success');
@@ -1031,8 +1031,8 @@ function bindDeployPanel() {
       paneBuilder.style.display = 'none';
       paneYaml.style.display = '';
     });
-    if (window.LegalFormBuilder && typeof window.LegalFormBuilder.mount === 'function') {
-      window.LegalFormBuilder.mount(paneBuilder);
+    if (window.SignfulBuilder && typeof window.SignfulBuilder.mount === 'function') {
+      window.SignfulBuilder.mount(paneBuilder);
     }
   }
 
@@ -1064,7 +1064,7 @@ async function logoutSaaS() {
   try {
     await safeFetchJson(`${API_BASE}/api/auth/logout`, { method: 'POST' });
   } catch (e) {}
-  localStorage.removeItem('legalform_session_token');
+  localStorage.removeItem('signful_session_token');
   lockDashboard();
   currentUser = { authenticated: false, email: '', plan: 'none', credits: 0 };
   showToast('Logged out of SaaS session.', 'info');

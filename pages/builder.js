@@ -1,4 +1,4 @@
-/* LegalForm Visual Document Builder — builds a document spec (document +
+/* Signful Visual Document Builder — builds a document spec (document +
  * sections) via a drag-and-drop interface with a live YAML preview, then
  * deploys through the shared deploy path. Depends on page globals:
  * window.jsyaml, window.esc, window.showToast, window.deploySpecObject. */
@@ -514,7 +514,7 @@ sections:
   }
 
   /* custom templates — persisted in localStorage */
-  const SAVED_KEY = 'legalform_builder_templates';
+  const SAVED_KEY = 'signful_builder_templates';
 
   function getSavedTemplates() {
     try {

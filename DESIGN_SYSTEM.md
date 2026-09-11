@@ -1,6 +1,6 @@
-# Legalform Design System
+# Signful Design System
 
-Legalform follows the **MONARCH** design language: *Apple meets capital markets meets Anduril*.
+Signful follows the **MONARCH** design language: *Apple meets capital markets meets Anduril*.
 
 - **Apple** — clean sans-serif type, generous whitespace, hairline separators, muted secondary text.
 - **Capital markets** — tabular numerals, small uppercase readouts with wide tracking, thin rule lines separating rows, precise information density.

@@ -1,4 +1,4 @@
-# Legalform SaaS — Deployment & Production Setup TODO
+# Signful SaaS — Deployment & Production Setup TODO
 
 ## Overview
 All multi-tenancy, magic link authentication, credit billing ($10 for 5 credits pack / $19/mo Pro plan), strict paywalls (0 free credits default), and UI components have been built, verified, and committed to `main`.
@@ -34,9 +34,9 @@ Run these commands in the terminal (`worker/` directory) to configure production
 
 ## 2. Database Migration (Cloudflare D1)
 
-- [ ] Apply [schema.sql](file:///C:/Users/TomCa/Documents/Legalform/schema.sql) to your remote production D1 database (`legalform-db`):
+- [ ] Apply [schema.sql](file:///C:/Users/TomCa/Documents/Signful/schema.sql) to your remote production D1 database (`signful-db`):
   ```bash
-  npx wrangler d1 execute legalform-db --remote --file=schema.sql
+  npx wrangler d1 execute signful-db --remote --file=schema.sql
   ```
 
 ---
@@ -44,7 +44,7 @@ Run these commands in the terminal (`worker/` directory) to configure production
 ## 3. Stripe Webhook Registration
 
 - [ ] In [Stripe Webhooks Dashboard](https://dashboard.stripe.com/webhooks), click **Add Endpoint**.
-- [ ] Set **Endpoint URL**: `https://legalform-api.tomcallan0.workers.dev/api/billing/webhook` (or your custom API domain).
+- [ ] Set **Endpoint URL**: `https://signful-api.tomcallan0.workers.dev/api/billing/webhook` (or your custom API domain).
 - [ ] Select **Event to send**: `checkout.session.completed` and `invoice.payment_succeeded`.
 - [ ] Copy the signing secret (`whsec_...`) and save it to Wrangler as `STRIPE_WEBHOOK_SECRET`.
 
@@ -67,7 +67,7 @@ Run these commands in the terminal (`worker/` directory) to configure production
 
 - [ ] Deploy Cloudflare Pages Frontend:
   ```bash
-  npx wrangler pages deploy pages --project-name=legalform
+  npx wrangler pages deploy pages --project-name=signful
   ```
 
 ---
