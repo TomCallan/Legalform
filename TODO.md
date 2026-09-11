@@ -54,10 +54,11 @@ Run these commands in the terminal (`worker/` directory) to configure production
 ## 4. Transactional Email Setup (Resend)
 
 - [x] Add your sending domain in [Resend Dashboard](https://resend.com/domains).
-  `signful.co` added 2026-09-11 (ID `5a443235-...`). Pending DNS at Porkbun:
-  - `TXT resend._domainkey.signful.co = p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDPLoZJo7tC5iXjOOifDygVZ3oJqfElpavuMqrnazS/zP8aVgwexRjssIumvtfCzsVYZqMOCeLWZuY431v8ZdA5+AMT6Tj41+bC1hefkvijd/P2Y2LJ6eFUKPfU5eO8PvQzz6k0gT8zTu56HjE/m8eVGyKVavhG92DqxROrRmZQkwIDAQAB`
+  `signful.co` added 2026-09-11 (ID `5a443235-...`). DNS records live in Porkbun (verified via Google DoH):
+  - `TXT resend._domainkey.signful.co` (DKIM, resolving)
   - `MX send.signful.co = feedback-smtp.us-east-1.amazonses.com`
   - `TXT send.signful.co = v=spf1 include:amazonses.com ~all`
+  Resend status: `pending` (auto-verifies once it rechecks DNS).
 - [ ] Update worker `from` address to `noreply@signful.co` once domain verifies (still `noreply@resend.dev`).
 
 ---
