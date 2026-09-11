@@ -11,49 +11,54 @@ Follow this checklist to complete the production launch on Cloudflare, Stripe, a
 
 Run these commands in the terminal (`worker/` directory) to configure production API secrets in your Cloudflare Worker:
 
-- [ ] Set **Stripe Secret Key**:
+- [x] Set **Stripe Secret Key** (test key live on Worker):
   ```bash
   cd worker
-  npx wrangler secret put STRIPE_SECRET_KEY
-  # Enter sk_live_... or sk_test_... when prompted
+  echo "<sk_test/rk_test>" | npx wrangler secret put STRIPE_SECRET_KEY
   ```
+  Test products created 2026-09-11: `Signful Credits - 5 Pack` (`price_1UEJm9CobHzbIE2KcKqv3Jgi`, $10) + `Signful Pro` (`price_1UEJmECobHzbIE2KAlOsIvvw`, $19/mo). IDs wired into `worker/src/index.ts`.
 
-- [ ] Set **Stripe Webhook Signing Secret**:
+- [x] Set **Stripe Webhook Signing Secret**:
   ```bash
-  npx wrangler secret put STRIPE_WEBHOOK_SECRET
-  # Enter whsec_... when prompted
+  echo "<whsec>" | npx wrangler secret put STRIPE_WEBHOOK_SECRET
   ```
+  Endpoint `we_1UEJmNCobHzbIE2KwrNDTcPK` registered via API for `checkout.session.completed` + `invoice.payment_succeeded`. Worker verifies HMAC signatures (400 on forgery).
 
-- [ ] Set **Resend API Key**:
+- [x] Set **Resend API Key**:
   ```bash
-  npx wrangler secret put RESEND_API_KEY
-  # Enter re_... when prompted
+  echo "<re_...>" | npx wrangler secret put RESEND_API_KEY
   ```
 
 ---
 
 ## 2. Database Migration (Cloudflare D1)
 
-- [ ] Apply `schema.sql` to your remote production D1 database (`legalform-db`):
+- [x] Apply migrations to remote production D1 (`legalform-db`):
   ```bash
-  npx wrangler d1 execute legalform-db --remote --file=../schema.sql
+  npx wrangler d1 execute legalform-db --remote --file=../migrations/0002_saas_auth.sql
   ```
+  Applied 2026-09-11 (12 tables). `migrations/0001_init.sql` = fresh-DB baseline. Note: 2 legacy docs have NULL `user_id` (locked until backfilled to owner).
 
 ---
 
 ## 3. Stripe Webhook Registration
 
-- [ ] In [Stripe Webhooks Dashboard](https://dashboard.stripe.com/webhooks), click **Add Endpoint**.
-- [ ] Set **Endpoint URL**: `https://signful-api.tomcallan0.workers.dev/api/billing/webhook` (or your custom API domain).
-- [ ] Select **Event to send**: `checkout.session.completed` and `invoice.payment_succeeded`.
-- [ ] Copy the signing secret (`whsec_...`) and save it to Wrangler as `STRIPE_WEBHOOK_SECRET`.
+- [x] In [Stripe Webhooks Dashboard](https://dashboard.stripe.com/webhooks), click **Add Endpoint**.
+- [x] Set **Endpoint URL**: `https://signful-api.tomcallan0.workers.dev/api/billing/webhook` (or your custom API domain).
+- [x] Select **Event to send**: `checkout.session.completed` and `invoice.payment_succeeded`.
+- [x] Copy the signing secret (`whsec_...`) and save it to Wrangler as `STRIPE_WEBHOOK_SECRET`.
+  (All four done via Stripe API 2026-09-11; verify in dashboard.)
 
 ---
 
 ## 4. Transactional Email Setup (Resend)
 
-- [ ] Add your sending domain in [Resend Dashboard](https://resend.com/domains).
-- [ ] Update DNS records (SPF & DKIM) to ensure reliable deliverability for 6-digit magic codes and signed PDF attachments.
+- [x] Add your sending domain in [Resend Dashboard](https://resend.com/domains).
+  `signful.co` added 2026-09-11 (ID `5a443235-...`). Pending DNS at Porkbun:
+  - `TXT resend._domainkey.signful.co = p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDPLoZJo7tC5iXjOOifDygVZ3oJqfElpavuMqrnazS/zP8aVgwexRjssIumvtfCzsVYZqMOCeLWZuY431v8ZdA5+AMT6Tj41+bC1hefkvijd/P2Y2LJ6eFUKPfU5eO8PvQzz6k0gT8zTu56HjE/m8eVGyKVavhG92DqxROrRmZQkwIDAQAB`
+  - `MX send.signful.co = feedback-smtp.us-east-1.amazonses.com`
+  - `TXT send.signful.co = v=spf1 include:amazonses.com ~all`
+- [ ] Update worker `from` address to `noreply@signful.co` once domain verifies (still `noreply@resend.dev`).
 
 ---
 

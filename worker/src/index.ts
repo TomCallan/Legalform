@@ -292,7 +292,7 @@ app.post('/api/billing/checkout', async (c) => {
 
   if (c.env.STRIPE_SECRET_KEY) {
     try {
-      const priceId = planType === 'pro' ? 'price_pro_subscription' : 'price_credits_pack';
+      const priceId = planType === 'pro' ? 'price_1UEJmECobHzbIE2KAlOsIvvw' : 'price_1UEJm9CobHzbIE2KcKqv3Jgi';
       const params = new URLSearchParams({
         'payment_method_types[0]': 'card',
         'line_items[0][price]': priceId,
